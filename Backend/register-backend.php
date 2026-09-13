@@ -70,6 +70,20 @@ if (isset($_POST['register'])) {
     }
 
     try {
+        // Auto-add any missing columns to prevent SQL errors during registration
+        try {
+            $pdo->exec("ALTER TABLE users ADD COLUMN profile_image VARCHAR(255) NULL");
+        } catch (PDOException $e) {}
+        try {
+            $pdo->exec("ALTER TABLE users ADD COLUMN user_type VARCHAR(50) DEFAULT 'customer'");
+        } catch (PDOException $e) {}
+        try {
+            $pdo->exec("ALTER TABLE users ADD COLUMN phone VARCHAR(20) NULL");
+        } catch (PDOException $e) {}
+        try {
+            $pdo->exec("ALTER TABLE users ADD COLUMN newsletter TINYINT(1) DEFAULT 0");
+        } catch (PDOException $e) {}
+
         // Check if username or email already exists using PDO
         $checkStmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
         $checkStmt->execute([$username, $email]);
