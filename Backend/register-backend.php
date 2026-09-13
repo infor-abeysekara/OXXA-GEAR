@@ -4,58 +4,68 @@ include('../include/connection.php');
 include('../include/functions.php');
 
 if (isset($_POST['register'])) {
+    
+    // Ensure session error array is fresh
+    $_SESSION['reg_errors'] = [];
+    
     // Get form data
     $firstname = trim($_POST['firstname']);
     $lastname = trim($_POST['lastname']);
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
+    $phone = trim($_POST['phone']);
     $password = $_POST['password'];
     $confirm = $_POST['confirm'];
     $user_type = isset($_POST['user_type']) ? $_POST['user_type'] : '';
-
+    $newsletter = isset($_POST['newsletter']) ? 1 : 0;
+    
+    // Regex Patterns
+    $nameRegex = '/^[A-Za-z ]{2,50}$/';
+    $usernameRegex = '/^[a-zA-Z0-9_]{3,20}$/';
+    $phoneRegex = '/^(?:\+94|0)?7[0-9]{8}$/';
+    
     // Validation
-    if (empty($firstname)) {
-        header('Location: ../site/register.php?error=firstname');
-        exit();
+    if (!preg_match($nameRegex, $firstname)) {
+        $_SESSION['reg_errors'][] = "First name must be 2-50 letters only.";
     }
     
-    if (empty($lastname)) {
-        header('Location: ../site/register.php?error=lastname');
-        exit();
+    if (!preg_match($nameRegex, $lastname)) {
+        $_SESSION['reg_errors'][] = "Last name must be 2-50 letters only.";
     }
     
-    if (empty($username)) {
-        header('Location: ../site/register.php?error=username');
-        exit();
+    if (!preg_match($usernameRegex, $username)) {
+        $_SESSION['reg_errors'][] = "Username must be 3-20 characters, letters, numbers, and underscores only.";
     }
     
-    if (empty($email)) {
-        header('Location: ../site/register.php?error=email');
-        exit();
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['reg_errors'][] = "Invalid email format.";
     }
     
-    if (empty($password)) {
-        header('Location: ../site/register.php?error=password');
-        exit();
-    }
-    
-    if (empty($confirm)) {
-        header('Location: ../site/register.php?error=confirm');
-        exit();
+    if (!preg_match($phoneRegex, $phone)) {
+        $_SESSION['reg_errors'][] = "Invalid Sri Lankan phone number.";
+    } else {
+        // Format phone to 947XXXXXXXX
+        $phone = preg_replace('/^(?:\+94|0)?/', '94', $phone);
     }
     
     if ($password !== $confirm) {
-        header('Location: ../site/register.php?error=notmatch');
-        exit();
+        $_SESSION['reg_errors'][] = "Passwords do not match.";
     }
     
-    if (strlen($password) < 6) {
-        header('Location: ../site/register.php?error=password_length');
-        exit();
+    if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/', $password)) {
+        $_SESSION['reg_errors'][] = "Password must be at least 8 characters with upper, lower, number, and special character.";
     }
     
-    if (empty($user_type)) {
-        header('Location: ../site/register.php?error=account_type');
+    if (!in_array($user_type, ['customer', 'seller'])) {
+        $_SESSION['reg_errors'][] = "Invalid account type selected.";
+    }
+    
+    if (!isset($_POST['terms'])) {
+        $_SESSION['reg_errors'][] = "You must agree to the Terms of Service.";
+    }
+
+    if (!empty($_SESSION['reg_errors'])) {
+        header('Location: ../site/index.php?open=register');
         exit();
     }
 
@@ -65,16 +75,15 @@ if (isset($_POST['register'])) {
         $checkStmt->execute([$username, $email]);
         
         if ($checkStmt->rowCount() > 0) {
-            header('Location: ../site/register.php?error=exists');
+            $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+            if ($existing['username'] === $username) {
+                $_SESSION['reg_errors'][] = "Username is already taken.";
+            }
+            if ($existing['email'] === $email) {
+                $_SESSION['reg_errors'][] = "Email is already registered.";
+            }
+            header('Location: ../site/index.php?open=register');
             exit();
-        }
-
-        // Add missing columns if they don't exist
-        try {
-            $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_image VARCHAR(255) NULL");
-            $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS user_type VARCHAR(50) DEFAULT 'customer'");
-        } catch (PDOException $e) {
-            // Ignore if columns already exist or syntax not supported (older MySQL)
         }
 
         // Handle profile photo upload
@@ -86,25 +95,34 @@ if (isset($_POST['register'])) {
                 mkdir($uploadDir, 0755, true);
             }
             
-            $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-            $fileType = $_FILES['profile_photo']['type'];
+            $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+            $fileType = mime_content_type($_FILES['profile_photo']['tmp_name']);
             
             if (!in_array($fileType, $allowedTypes)) {
-                header('Location: ../site/register.php?error=format');
+                $_SESSION['reg_errors'][] = "Only JPG, PNG, and WEBP images are allowed.";
+                header('Location: ../site/index.php?open=register');
                 exit();
             }
             
-            if ($_FILES['profile_photo']['size'] > 5 * 1024 * 1024) { // 5MB limit
-                header('Location: ../site/register.php?error=large');
+            if ($_FILES['profile_photo']['size'] > 2 * 1024 * 1024) { // 2MB limit
+                $_SESSION['reg_errors'][] = "Profile photo must be less than 2MB.";
+                header('Location: ../site/index.php?open=register');
                 exit();
             }
             
             $imageExt = pathinfo($_FILES['profile_photo']['name'], PATHINFO_EXTENSION);
+            if (empty($imageExt)) {
+                if ($fileType == 'image/jpeg') $imageExt = 'jpg';
+                else if ($fileType == 'image/png') $imageExt = 'png';
+                else if ($fileType == 'image/webp') $imageExt = 'webp';
+            }
+            
             $imageName = 'user_' . uniqid() . '.' . $imageExt;
             $imagePath = $uploadDir . $imageName;
             
             if (!move_uploaded_file($_FILES['profile_photo']['tmp_name'], $imagePath)) {
-                header('Location: ../site/register.php?error=upload');
+                $_SESSION['reg_errors'][] = "Failed to upload profile photo.";
+                header('Location: ../site/index.php?open=register');
                 exit();
             }
             $dbImagePath = 'assets/uploads/profiles/' . $imageName;
@@ -113,17 +131,18 @@ if (isset($_POST['register'])) {
         // Generate new user ID using mysqli connection for compatibility with existing function
         $userid = generateUserId($conn);
         
-        // Hash password
-        $hashedPassword = md5($password);
+        // Hash password securely
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
         
-        // FIXED: Set approval status to 1 for both buyers and sellers
+        // Approve is 1 for both customer and seller for now
         $approve = 1;
         
         // Insert user into database using PDO
-        $insertStmt = $pdo->prepare("INSERT INTO users (user_id, firstname, lastname, username, email, password, image, type, approve, profile_image, user_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $insertStmt = $pdo->prepare("INSERT INTO users (user_id, firstname, lastname, username, email, phone, password, image, type, approve, profile_image, user_type, newsletter) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         
-        if ($insertStmt->execute([$userid, $firstname, $lastname, $username, $email, $hashedPassword, $imageName, $user_type, $approve, $dbImagePath, $user_type])) {
-            // Set session variables for immediate login for both buyers and sellers
+        if ($insertStmt->execute([$userid, $firstname, $lastname, $username, $email, $phone, $hashedPassword, $imageName, $user_type, $approve, $dbImagePath, $user_type, $newsletter])) {
+            
+            // Log them in automatically
             $_SESSION['userid'] = $userid;
             $_SESSION['firstname'] = $firstname;
             $_SESSION['lastname'] = $lastname;
@@ -136,13 +155,19 @@ if (isset($_POST['register'])) {
             $_SESSION['approve'] = $approve;
             
             header('Location: ../site/index.php?success=registered');
+            exit();
         } else {
-            header('Location: ../site/register.php?error=database');
+            $_SESSION['reg_errors'][] = "Database error occurred during registration.";
+            header('Location: ../site/index.php?open=register');
+            exit();
         }
     } catch (PDOException $e) {
-        header('Location: ../site/register.php?error=database');
+        $_SESSION['reg_errors'][] = "Database error occurred: " . $e->getMessage();
+        header('Location: ../site/index.php?open=register');
+        exit();
     }
 } else {
-    header('Location: ../site/register.php');
+    header('Location: ../site/index.php');
+    exit();
 }
 ?>
