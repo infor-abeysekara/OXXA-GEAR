@@ -1,0 +1,52 @@
+/* Home Page Specific Styles */
+
+/* Custom Styles */
+.hero-section {
+    background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://miro.medium.com/v2/resize:fit:720/format:webp/1*Cg39p8kwDQDYWCMtyzkiKQ.jpeg');
+    background-size: cover;
+    background-position: center;
+    padding: 80px 0;
+    color: white;
+    border-radius: 0 0 20px 20px;
+}
+
+.hover-card {
+    transition: all 0.3s ease;
+    border: 1px solid rgba(25, 135, 84, 0.1);
+}
+
+.hover-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+}
+
+.product-card {
+    transition: all 0.3s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.carousel-control-prev, .carousel-control-next {
+    width: 40px;
+    height: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 50%;
+    opacity: 0.8;
+}
+
+.carousel-control-prev {
+    left: -20px;
+}
+
+.carousel-control-next {
+    right: -20px;
+}
+
+.carousel-control-prev-icon, .carousel-control-next-icon {
+    width: 20px;
+    height: 20px;
+}

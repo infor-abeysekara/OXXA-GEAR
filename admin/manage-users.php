@@ -1,0 +1,512 @@
+<?php
+session_start();
+include_once("../include/connection.php");
+
+// Check if admin is logged in
+if(!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
+    header("Location: index.php");
+    exit();
+}
+
+// Handle user actions
+if(isset($_POST['action']) && isset($_POST['user_id'])) {
+    $user_id = $_POST['user_id'];
+    $action = $_POST['action'];
+    
+    if($action == 'approve') {
+        $update_query = "UPDATE users SET approve = 1 WHERE user_id = ?";
+    } elseif($action == 'suspend') {
+        $update_query = "UPDATE users SET approve = 0 WHERE user_id = ?";
+    } elseif($action == 'delete') {
+        $update_query = "DELETE FROM users WHERE user_id = ?";
+    }
+    
+    if(isset($update_query)) {
+        $stmt = $conn->prepare($update_query);
+        $stmt->bind_param("s", $user_id);
+        
+        if($stmt->execute()) {
+            $success_message = ucfirst($action) . " action completed successfully!";
+        } else {
+            $error_message = "Failed to " . $action . " user.";
+        }
+    }
+}
+
+// Handle search
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$user_type = isset($_GET['type']) ? $_GET['type'] : '';
+
+// Build search conditions
+$search_conditions = [];
+$search_params = [];
+$param_types = '';
+
+if (!empty($search)) {
+    $search_conditions[] = "(u.firstname LIKE ? OR u.lastname LIKE ? OR u.username LIKE ? OR u.email LIKE ?)";
+    $search_term = "%$search%";
+    $search_params = array_merge($search_params, [$search_term, $search_term, $search_term, $search_term]);
+    $param_types .= 'ssss';
+}
+
+if (!empty($user_type)) {
+    $search_conditions[] = "u.type = ?";
+    $search_params[] = $user_type;
+    $param_types .= 's';
+}
+
+$where_clause = !empty($search_conditions) ? 'WHERE ' . implode(' AND ', $search_conditions) : '';
+
+// Get sellers
+$sellers_query = "SELECT u.*, br.bname, br.approve as business_approved 
+                 FROM users u 
+                 LEFT JOIN businessregistration br ON u.user_id = br.user_id 
+                 $where_clause " . (!empty($user_type) ? "" : "AND u.type = 'seller'") . "
+                 ORDER BY u.id DESC";
+
+if (!empty($user_type) && $user_type !== 'seller') {
+    $sellers_query = "SELECT u.*, br.bname, br.approve as business_approved 
+                     FROM users u 
+                     LEFT JOIN businessregistration br ON u.user_id = br.user_id 
+                     WHERE 1=0"; // No results for sellers when filtering by buyer
+}
+
+$sellers_stmt = $conn->prepare($sellers_query);
+if (!empty($search_params) && (empty($user_type) || $user_type === 'seller')) {
+    $sellers_stmt->bind_param($param_types, ...$search_params);
+}
+$sellers_stmt->execute();
+$sellers_result = $sellers_stmt->get_result();
+
+// Get buyers
+$buyers_query = "SELECT * FROM users u 
+                $where_clause " . (!empty($user_type) ? "" : "AND u.type = 'buyer'") . "
+                ORDER BY u.id DESC";
+
+if (!empty($user_type) && $user_type !== 'buyer') {
+    $buyers_query = "SELECT * FROM users WHERE 1=0"; // No results for buyers when filtering by seller
+}
+
+$buyers_stmt = $conn->prepare($buyers_query);
+if (!empty($search_params) && (empty($user_type) || $user_type === 'buyer')) {
+    $buyers_stmt->bind_param($param_types, ...$search_params);
+}
+$buyers_stmt->execute();
+$buyers_result = $buyers_stmt->get_result();
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .sidebar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 250px;
+            z-index: 1000;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            margin: 5px 0;
+            transition: all 0.3s ease;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        .search-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .user-tabs {
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+        .user-tabs .nav-link {
+            color: #6c757d;
+            border: none;
+            border-bottom: 3px solid transparent;
+            border-radius: 0;
+            margin: 0 10px;
+            padding: 10px 20px;
+            font-weight: 600;
+        }
+        .user-tabs .nav-link.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+            background: transparent;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="p-4">
+            <div class="text-center text-white mb-4">
+                <i class="fas fa-shield-alt fa-2x mb-2"></i>
+                <h5>Admin Panel</h5>
+                <small><?php echo $_SESSION['firstname'] . ' ' . $_SESSION['lastname']; ?></small>
+            </div>
+            
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="dashboard.php">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="manage-users.php">
+                        <i class="fas fa-users me-2"></i>Manage Users
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="manage-products.php">
+                        <i class="fas fa-box me-2"></i>Manage Products
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="business-registrations.php">
+                        <i class="fas fa-building me-2"></i>Business Registrations
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="manage-coupons.php">
+                        <i class="fas fa-tags me-2"></i>Manage Coupons
+                    </a>
+                </li>
+                <li class="nav-item mt-4">
+                    <a class="nav-link text-warning" href="../index.php" target="_blank">
+                        <i class="fas fa-globe me-2"></i>View Website
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-danger" href="include/admin-logout.php">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container-fluid">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="fw-bold text-dark">Manage Users</h2>
+                    <p class="text-muted">Search and manage sellers and buyers on the platform</p>
+                </div>
+            </div>
+
+            <?php if(isset($success_message)): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <?php echo $success_message; ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+
+            <?php if(isset($error_message)): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <?php echo $error_message; ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+
+            <!-- Search Container -->
+            <div class="search-container">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-6">
+                        <label for="search" class="form-label fw-semibold">Search Users</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   placeholder="Search by name, username, or email..." 
+                                   value="<?php echo htmlspecialchars($search); ?>">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="type" class="form-label fw-semibold">Filter by Type</label>
+                        <select class="form-select" id="type" name="type">
+                            <option value="">All Users</option>
+                            <option value="seller" <?php echo $user_type === 'seller' ? 'selected' : ''; ?>>Sellers Only</option>
+                            <option value="buyer" <?php echo $user_type === 'buyer' ? 'selected' : ''; ?>>Buyers Only</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search me-2"></i>Search
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                
+                <?php if (!empty($search) || !empty($user_type)): ?>
+                    <div class="mt-3">
+                        <a href="manage-users.php" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-times me-2"></i>Clear Filters
+                        </a>
+                        <span class="text-muted ms-3">
+                            Showing results for: 
+                            <?php if (!empty($search)): ?>
+                                <strong>"<?php echo htmlspecialchars($search); ?>"</strong>
+                            <?php endif; ?>
+                            <?php if (!empty($user_type)): ?>
+                                <strong><?php echo ucfirst($user_type); ?>s</strong>
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- User Tabs -->
+            <ul class="nav nav-tabs user-tabs" id="userTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="sellers-tab" data-bs-toggle="tab" 
+                            data-bs-target="#sellers" type="button" role="tab">
+                        <i class="fas fa-store me-2"></i>Sellers 
+                        <span class="badge bg-primary ms-2"><?php echo $sellers_result->num_rows; ?></span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="buyers-tab" data-bs-toggle="tab" 
+                            data-bs-target="#buyers" type="button" role="tab">
+                        <i class="fas fa-shopping-bag me-2"></i>Buyers 
+                        <span class="badge bg-success ms-2"><?php echo $buyers_result->num_rows; ?></span>
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content" id="userTabsContent">
+                <!-- Sellers Tab -->
+                <div class="tab-pane fade show active" id="sellers" role="tabpanel">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-store me-2"></i>Sellers Management</h5>
+                        </div>
+                        <div class="card-body">
+                            <?php if($sellers_result->num_rows > 0): ?>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>User ID</th>
+                                                <th>Name</th>
+                                                <th>Email</th>
+                                                <th>Business</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php while($row = $sellers_result->fetch_assoc()): ?>
+                                            <tr>
+                                                <td><?php echo $row['user_id']; ?></td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <?php if(!empty($row['image'])): ?>
+                                                            <img src="../image/profile/<?php echo $row['image']; ?>" alt="Profile" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                                        <?php else: ?>
+                                                            <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                                <i class="fas fa-user text-white"></i>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                        <div>
+                                                            <strong><?php echo $row['firstname'] . ' ' . $row['lastname']; ?></strong><br>
+                                                            <small class="text-muted">@<?php echo $row['username']; ?></small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td><?php echo $row['email']; ?></td>
+                                                <td>
+                                                    <?php if($row['bname']): ?>
+                                                        <?php echo $row['bname']; ?>
+                                                        <?php if($row['business_approved'] == 1): ?>
+                                                            <span class="badge bg-success ms-1">Approved</span>
+                                                        <?php elseif($row['business_approved'] == 0): ?>
+                                                            <span class="badge bg-warning ms-1">Pending</span>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-danger ms-1">Rejected</span>
+                                                        <?php endif; ?>
+                                                    <?php else: ?>
+                                                        <span class="text-muted">Not Registered</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <?php if($row['approve'] == 1): ?>
+                                                        <span class="badge bg-success">Active</span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-danger">Suspended</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <form method="POST" style="display: inline;">
+                                                        <input type="hidden" name="user_id" value="<?php echo $row['user_id']; ?>">
+                                                        <?php if($row['approve'] == 1): ?>
+                                                            <button type="submit" name="action" value="suspend" class="btn btn-sm btn-warning" onclick="return confirm('Suspend this seller?')">
+                                                                <i class="fas fa-pause"></i> Suspend
+                                                            </button>
+                                                        <?php else: ?>
+                                                            <button type="submit" name="action" value="approve" class="btn btn-sm btn-success" onclick="return confirm('Activate this seller?')">
+                                                                <i class="fas fa-play"></i> Activate
+                                                            </button>
+                                                        <?php endif; ?>
+                                                        <button type="submit" name="action" value="delete" class="btn btn-sm btn-danger" onclick="return confirm('Delete this seller? This action cannot be undone!')">
+                                                            <i class="fas fa-trash"></i> Delete
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            <?php endwhile; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <?php else: ?>
+                                <div class="text-center py-5">
+                                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No sellers found</h5>
+                                    <p class="text-muted">
+                                        <?php if (!empty($search) || !empty($user_type)): ?>
+                                            Try adjusting your search criteria.
+                                        <?php else: ?>
+                                            No sellers have registered yet.
+                                        <?php endif; ?>
+                                    </p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Buyers Tab -->
+                <div class="tab-pane fade" id="buyers" role="tabpanel">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-shopping-bag me-2"></i>Buyers Management</h5>
+                        </div>
+                        <div class="card-body">
+                            <?php if($buyers_result->num_rows > 0): ?>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>User ID</th>
+                                                <th>Name</th>
+                                                <th>Email</th>
+                                                <th>Registration</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php while($row = $buyers_result->fetch_assoc()): ?>
+                                            <tr>
+                                                <td><?php echo $row['user_id']; ?></td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <?php if(!empty($row['image'])): ?>
+                                                            <img src="../image/profile/<?php echo $row['image']; ?>" alt="Profile" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                                        <?php else: ?>
+                                                            <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                                <i class="fas fa-user text-white"></i>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                        <div>
+                                                            <strong><?php echo $row['firstname'] . ' ' . $row['lastname']; ?></strong><br>
+                                                            <small class="text-muted">@<?php echo $row['username']; ?></small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td><?php echo $row['email']; ?></td>
+                                                <td>
+                                                    <?php 
+                                                    // Check if Add_date field exists and is not null
+                                                    if(isset($row['Add_date']) && !empty($row['Add_date'])) {
+                                                        echo date('M d, Y', strtotime($row['Add_date']));
+                                                    } else {
+                                                        echo '<span class="text-muted">Not Available</span>';
+                                                    }
+                                                    ?>
+                                                </td>
+                                                <td>
+                                                    <?php if($row['approve'] == 1): ?>
+                                                        <span class="badge bg-success">Active</span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-danger">Suspended</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <form method="POST" style="display: inline;">
+                                                        <input type="hidden" name="user_id" value="<?php echo $row['user_id']; ?>">
+                                                        <?php if($row['approve'] == 1): ?>
+                                                            <button type="submit" name="action" value="suspend" class="btn btn-sm btn-warning" onclick="return confirm('Suspend this buyer?')">
+                                                                <i class="fas fa-pause"></i> Suspend
+                                                            </button>
+                                                        <?php else: ?>
+                                                            <button type="submit" name="action" value="approve" class="btn btn-sm btn-success" onclick="return confirm('Activate this buyer?')">
+                                                                <i class="fas fa-play"></i> Activate
+                                                            </button>
+                                                        <?php endif; ?>
+                                                        <button type="submit" name="action" value="delete" class="btn btn-sm btn-danger" onclick="return confirm('Delete this buyer? This action cannot be undone!')">
+                                                            <i class="fas fa-trash"></i> Delete
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            <?php endwhile; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <?php else: ?>
+                                <div class="text-center py-5">
+                                    <i class="fas fa-shopping-bag fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No buyers found</h5>
+                                    <p class="text-muted">
+                                        <?php if (!empty($search) || !empty($user_type)): ?>
+                                            Try adjusting your search criteria.
+                                        <?php else: ?>
+                                            No buyers have registered yet.
+                                        <?php endif; ?>
+                                    </p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

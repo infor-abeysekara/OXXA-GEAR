@@ -1,0 +1,133 @@
+/* Admin Panel Specific Styles */
+
+.admin-container {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 50%, #0f172a 100%);
+    min-height: 100vh;
+}
+
+.admin-sidebar {
+    background: rgba(31, 41, 55, 0.95);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid rgba(75, 85, 99, 0.3);
+    min-height: 100vh;
+}
+
+.admin-main-content {
+    background: rgba(17, 24, 39, 0.8);
+    min-height: 100vh;
+    padding: 2rem;
+}
+
+.admin-card {
+    background: rgba(31, 41, 55, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(75, 85, 99, 0.3);
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.admin-table {
+    background: rgba(31, 41, 55, 0.8);
+    color: #ffffff;
+}
+
+.admin-table th {
+    background: rgba(24, 135, 84, 0.2);
+    border-bottom: 1px solid rgba(75, 85, 99, 0.5);
+    color: #10b981;
+}
+
+.admin-table td {
+    border-bottom: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+.admin-btn-primary {
+    background: linear-gradient(135deg, #188754, #10b981);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.admin-btn-primary:hover {
+    background: linear-gradient(135deg, #15803d, #059669);
+    transform: translateY(-2px);
+}
+
+.admin-btn-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.admin-btn-danger:hover {
+    background: linear-gradient(135deg, #c82333, #a71e2a);
+    transform: translateY(-2px);
+}
+
+.admin-stats-card {
+    background: linear-gradient(135deg, rgba(24, 135, 84, 0.1), rgba(16, 185, 129, 0.1));
+    border: 1px solid rgba(24, 135, 84, 0.3);
+    border-radius: 15px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.admin-stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(24, 135, 84, 0.2);
+}
+
+.admin-stats-number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #10b981;
+    margin-bottom: 0.5rem;
+}
+
+.admin-stats-label {
+    color: #9ca3af;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Responsive admin design */
+@media (max-width: 768px) {
+    .admin-sidebar {
+        position: fixed;
+        left: -250px;
+        width: 250px;
+        z-index: 1000;
+        transition: left 0.3s ease;
+    }
+    
+    .admin-sidebar.active {
+        left: 0;
+    }
+    
+    .admin-main-content {
+        padding: 1rem;
+    }
+    
+    .admin-stats-card {
+        margin-bottom: 1rem;
+    }
+    
+    .admin-table {
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .admin-main-content {
+        padding: 0.5rem;
+    }
+    
+    .admin-card {
+        margin-bottom: 1rem;
+    }
+    
+    .admin-stats-number {
+        font-size: 2rem;
+    }
+}

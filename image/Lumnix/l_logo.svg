@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Slanted top cut matching the K style -->
+  <path d="M15,90 L85,90 C90.523,90 95,85.523 95,80 L95,65 C95,59.477 90.523,55 85,55 L50,55 L50,20 C50,14.477 45.523,10 40,10 L25,10 C19.477,10 15,14.477 15,20 L15,90 Z" fill="#0ea5e9"/>
+  <!-- Decorative corner cut or overlapping element to make it dynamic -->
+  <path d="M15,20 L50,20 L15,60 Z" fill="#0284c7" opacity="0.9"/>
+</svg>
