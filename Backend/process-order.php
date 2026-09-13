@@ -15,138 +15,134 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$user_id = $_SESSION['userid'];
+$user_id = $_SESSION['userid']; // This is now INT
 $action = $_POST['action'] ?? '';
 
 try {
     if ($action === 'place_order') {
         // Get form data
-        $customerName = sanitizeInput($_POST['customerName'] ?? '');
-        $address = sanitizeInput($_POST['address'] ?? '');
-        $postalCode = sanitizeInput($_POST['postalCode'] ?? '');
-        $province = sanitizeInput($_POST['province'] ?? '');
-        $contact1 = sanitizeInput($_POST['contact1'] ?? '');
-        $contact2 = sanitizeInput($_POST['contact2'] ?? '');
-        $deliveryMethod = sanitizeInput($_POST['deliveryMethod'] ?? 'Speed Post');
-        $paymentMethod = sanitizeInput($_POST['paymentMethod'] ?? 'COD');
-        $couponCode = sanitizeInput($_POST['coupon_code'] ?? '');
-        $discountAmount = floatval($_POST['discount_amount'] ?? 0);
-        $finalTotal = floatval($_POST['final_total'] ?? 0);
-
+        $customerName = trim($_POST['customerName'] ?? '');
+        $address = trim($_POST['address'] ?? '');
+        $postalCode = trim($_POST['postalCode'] ?? '');
+        $province = trim($_POST['province'] ?? '');
+        $city = trim($_POST['city'] ?? 'Colombo'); // Default to Colombo if not passed
+        $contact1 = trim($_POST['contact1'] ?? '');
+        $contact2 = trim($_POST['contact2'] ?? '');
+        $paymentMethod = trim($_POST['paymentMethod'] ?? 'COD');
+        $couponCode = trim($_POST['coupon_code'] ?? '');
+        $couponDiscount = floatval($_POST['discount_amount'] ?? 0);
+        
         // Validate required fields
         if (empty($customerName) || empty($address) || empty($contact1) || empty($paymentMethod)) {
             echo json_encode(['success' => false, 'message' => 'Please fill all required fields']);
             exit;
         }
 
-        // Get cart items
-        $cartItems = getCartItems($conn, $user_id);
+        // Generate new Order Code (ORD-XXXX)
+        $orderCode = 'ORD-' . date('Ymd') . rand(1000, 9999);
+
+        // Fetch Cart Items from NEW structure
+        $cartStmt = $pdo->prepare("
+            SELECT c.product_id, c.variant_id, c.quantity,
+                   p.name, p.base_price,
+                   v.size, v.price as variant_price,
+                   (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image_path
+            FROM cart c
+            JOIN products p ON c.product_id = p.id
+            LEFT JOIN product_variants v ON c.variant_id = v.id
+            WHERE c.user_id = ?
+        ");
+        $cartStmt->execute([$user_id]);
+        $cartItems = $cartStmt->fetchAll(PDO::FETCH_ASSOC);
+
         if (empty($cartItems)) {
             echo json_encode(['success' => false, 'message' => 'Your cart is empty']);
             exit;
         }
 
-        // Generate order ID
-        $orderId = generateOrderId();
+        // Calculate Subtotal
+        $subtotal = 0;
+        foreach ($cartItems as &$item) {
+            $unitPrice = (!empty($item['variant_price']) && $item['variant_price'] > 0) ? $item['variant_price'] : $item['base_price'];
+            $item['unit_price'] = $unitPrice;
+            $item['total_price'] = $unitPrice * $item['quantity'];
+            $subtotal += $item['total_price'];
+        }
+        
+        $deliveryFee = 450.00;
+        $totalAmount = ($subtotal + $deliveryFee) - $couponDiscount;
 
-        // Start transaction
-        $conn->autocommit(false);
+        // DB Transaction
+        $pdo->beginTransaction();
 
         try {
-            // Process each cart item and create orders
+            // 1. Insert Shipping Address to user_addresses
+            $addrStmt = $pdo->prepare("
+                INSERT INTO user_addresses (user_id, full_name, address_line1, city, province, postal_code, phone1, phone2, is_default_shipping)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+            ");
+            $addrStmt->execute([$user_id, $customerName, $address, $city, $province, $postalCode, $contact1, $contact2]);
+            $addressId = $pdo->lastInsertId();
+
+            // 2. Insert into orders (Header)
+            $orderStmt = $pdo->prepare("
+                INSERT INTO orders (order_code, user_id, shipping_address_id, subtotal, delivery_fee, coupon_code, coupon_discount, total_amount, payment_method, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+            ");
+            $orderStmt->execute([$orderCode, $user_id, $addressId, $subtotal, $deliveryFee, $couponCode, $couponDiscount, $totalAmount, $paymentMethod]);
+            $orderId = $pdo->lastInsertId();
+
+            // 3. Insert into order_items (Lines) and update stock
             foreach ($cartItems as $item) {
-                // Get seller ID for this product
-                $sellerQuery = "SELECT user_id FROM production WHERE pid = ?";
-                $sellerStmt = $conn->prepare($sellerQuery);
-                $sellerStmt->bind_param("s", $item['pid']);
-                $sellerStmt->execute();
-                $sellerResult = $sellerStmt->get_result();
-                $seller = $sellerResult->fetch_assoc();
-                $sellerId = $seller['user_id'] ?? '';
-
-                // Insert into ordertable using only existing columns
-                $insertOrderQuery = "INSERT INTO ordertable (
-                    orderid, user_id, pid, size, qty, price, 
-                    payment_method, status, orderdate
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())";
-
-                $insertOrderStmt = $conn->prepare($insertOrderQuery);
-                $insertOrderStmt->bind_param(
-                    "ssssids",
-                    $orderId,
-                    $user_id,
-                    $item['pid'],
-                    $item['size'],
-                    $item['qty'],
-                    $item['price'],
-                    $paymentMethod
-                );
-
-                if (!$insertOrderStmt->execute()) {
-                    throw new Exception("Failed to create order for product: " . $item['pname']);
-                }
+                // Insert line item
+                $itemStmt = $pdo->prepare("
+                    INSERT INTO order_items (order_id, product_id, variant_id, product_name, product_image, size, quantity, unit_price, total_price)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                $itemStmt->execute([
+                    $orderId, 
+                    $item['product_id'], 
+                    $item['variant_id'], 
+                    $item['name'], 
+                    $item['image_path'], 
+                    $item['size'] ?: 'Standard', 
+                    $item['quantity'], 
+                    $item['unit_price'], 
+                    $item['total_price']
+                ]);
 
                 // Update product stock
-                if ($item['size'] === 'Standard' || empty($item['size'])) {
-                    // Update main product stock
-                    $updateStockQuery = "UPDATE production SET qty = qty - ? WHERE pid = ? AND qty >= ?";
-                    $updateStockStmt = $conn->prepare($updateStockQuery);
-                    $updateStockStmt->bind_param("isi", $item['qty'], $item['pid'], $item['qty']);
-                } else {
-                    // Update size-specific stock
-                    $updateStockQuery = "UPDATE productsize SET qty = qty - ? WHERE pid = ? AND size = ? AND qty >= ?";
-                    $updateStockStmt = $conn->prepare($updateStockQuery);
-                    $updateStockStmt->bind_param("issi", $item['qty'], $item['pid'], $item['size'], $item['qty']);
+                if ($item['variant_id']) {
+                    $stockStmt = $pdo->prepare("UPDATE product_variants SET qty = qty - ? WHERE id = ?");
+                    $stockStmt->execute([$item['quantity'], $item['variant_id']]);
                 }
-
-                if (!$updateStockStmt->execute() || $updateStockStmt->affected_rows === 0) {
-                    throw new Exception("Insufficient stock for product: " . $item['pname']);
-                }
-
-                // Add notification to seller if seller exists
-                if (!empty($sellerId)) {
-                    $message = "New order #{$orderId} received for {$item['pname']} (Qty: {$item['qty']})";
-                    addNotification($conn, $sellerId, $message, 'order');
-                }
+                
+                // Update total_qty in products table
+                $mainStockStmt = $pdo->prepare("UPDATE products SET total_qty = total_qty - ? WHERE id = ?");
+                $mainStockStmt->execute([$item['quantity'], $item['product_id']]);
             }
 
-            // Clear cart after successful order placement
-            $clearCartQuery = "DELETE FROM cart WHERE Userid = ?";
-            $clearCartStmt = $conn->prepare($clearCartQuery);
-            $clearCartStmt->bind_param("s", $user_id);
+            // 4. Empty Cart
+            $emptyCartStmt = $pdo->prepare("DELETE FROM cart WHERE user_id = ?");
+            $emptyCartStmt->execute([$user_id]);
 
-            if (!$clearCartStmt->execute()) {
-                throw new Exception("Failed to clear cart");
-            }
-
-            // Commit transaction
-            $conn->commit();
-            $conn->autocommit(true);
-
-            // Add notification to buyer
-            $buyerMessage = "Your order #{$orderId} has been placed successfully. Total: Rs. " . number_format($finalTotal, 2);
-            addNotification($conn, $user_id, $buyerMessage, 'success');
+            $pdo->commit();
 
             echo json_encode([
-                'success' => true,
+                'success' => true, 
                 'message' => 'Order placed successfully!',
-                'order_id' => $orderId
+                'redirect' => 'order-success.php?id=' . $orderCode
             ]);
+
         } catch (Exception $e) {
-            $conn->rollback();
-            $conn->autocommit(true);
+            $pdo->rollBack();
             throw $e;
         }
-    } elseif ($action === 'prepare_payment') {
-        // For PayHere payment preparation
-        echo json_encode([
-            'success' => true,
-            'order_id' => generateOrderId(),
-            'amount' => $_POST['final_total']
-        ]);
+
     } else {
         echo json_encode(['success' => false, 'message' => 'Invalid action']);
     }
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => 'An error occurred: ' . $e->getMessage()]);
 }
+?>

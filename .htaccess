@@ -1,0 +1,12 @@
+Options -Indexes
+
+ErrorDocument 404 /OXXA%20GEAR/site/404.php
+
+<FilesMatch "\.(env|sql)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^assets/uploads/.*\.(php|phtml|php3|php4|php5|php7|php8|pl|py|jsp|asp|htm|shtml|sh|cgi)$ - [F,L,NC]
+</IfModule>

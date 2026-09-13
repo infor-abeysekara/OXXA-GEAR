@@ -30,12 +30,12 @@ if (!function_exists('uploadImage')) {
     // Generate sequential User ID starting from U0001
     function generateUserId($conn)
     {
-        $query = "SELECT user_id FROM users ORDER BY id DESC LIMIT 1";
+        $query = "SELECT user_code FROM users ORDER BY id DESC LIMIT 1";
         $result = mysqli_query($conn, $query);
 
         if (mysqli_num_rows($result) > 0) {
             $row = mysqli_fetch_assoc($result);
-            $lastId = $row['user_id'];
+            $lastId = $row['user_code'];
             // Extract number from U0001 format
             $number = intval(substr($lastId, 1));
             $newNumber = $number + 1;

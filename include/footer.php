@@ -16,8 +16,8 @@
                     <span class="font-space uppercase tracking-wide text-sm font-bold">100% Authentic</span>
                 </div>
                 <div class="flex items-center justify-center gap-3">
-                    <i class="fas fa-credit-card text-primary text-xl"></i>
-                    <span class="font-space uppercase tracking-wide text-sm font-bold">KOKO Pay in 3</span>
+                    <img src="<?php echo $base_path; ?>image/KOKO_logo.png" class="h-4 w-auto" alt="KOKO">
+                    <span class="font-space uppercase tracking-wide text-sm font-bold">Pay in 3</span>
                 </div>
                 <div class="flex items-center justify-center gap-3">
                     <i class="fas fa-undo-alt text-primary text-xl"></i>
@@ -133,7 +133,7 @@
             <i class="fab fa-cc-visa text-3xl text-white"></i>
             <i class="fab fa-cc-mastercard text-3xl text-white"></i>
             <div class="h-6 flex items-center bg-white rounded px-2">
-                <span class="font-black text-black tracking-tighter text-xs">Koko</span>
+                <img src="<?php echo $base_path; ?>image/KOKO_logo.png" class="h-3 w-auto" alt="KOKO">
             </div>
             <div class="h-6 flex items-center border border-gray-600 rounded px-2">
                 <span class="font-bold text-gray-300 tracking-widest text-xs">COD</span>

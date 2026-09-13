@@ -146,7 +146,7 @@ $coupons_result = mysqli_query($conn, $coupons_query);
             <div class="text-center text-white mb-4">
                 <i class="fas fa-shield-alt fa-2x mb-2"></i>
                 <h5>Admin Panel</h5>
-                <small><?php echo $_SESSION['firstname'] . ' ' . $_SESSION['lastname']; ?></small>
+                <small><?php echo $_SESSION['first_name'] . ' ' . $_SESSION['last_name']; ?></small>
             </div>
             
             <ul class="nav flex-column">

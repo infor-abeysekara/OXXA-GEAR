@@ -14,16 +14,16 @@ if(isset($_POST['action']) && isset($_POST['user_id'])) {
     $action = $_POST['action'];
     
     if($action == 'approve') {
-        $update_query = "UPDATE users SET approve = 1 WHERE user_id = ?";
+        $update_query = "UPDATE users SET is_approved = 1 WHERE id = ?";
     } elseif($action == 'suspend') {
-        $update_query = "UPDATE users SET approve = 0 WHERE user_id = ?";
+        $update_query = "UPDATE users SET is_approved = 0 WHERE id = ?";
     } elseif($action == 'delete') {
-        $update_query = "DELETE FROM users WHERE user_id = ?";
+        $update_query = "DELETE FROM users WHERE id = ?";
     }
     
     if(isset($update_query)) {
         $stmt = $conn->prepare($update_query);
-        $stmt->bind_param("s", $user_id);
+        $stmt->bind_param("i", $user_id);
         
         if($stmt->execute()) {
             $success_message = ucfirst($action) . " action completed successfully!";
@@ -43,32 +43,32 @@ $search_params = [];
 $param_types = '';
 
 if (!empty($search)) {
-    $search_conditions[] = "(u.firstname LIKE ? OR u.lastname LIKE ? OR u.username LIKE ? OR u.email LIKE ?)";
+    $search_conditions[] = "(u.first_name LIKE ? OR u.last_name LIKE ? OR u.username LIKE ? OR u.email LIKE ?)";
     $search_term = "%$search%";
     $search_params = array_merge($search_params, [$search_term, $search_term, $search_term, $search_term]);
     $param_types .= 'ssss';
 }
 
 if (!empty($user_type)) {
-    $search_conditions[] = "u.type = ?";
+    $search_conditions[] = "u.user_type = ?";
     $search_params[] = $user_type;
     $param_types .= 's';
 }
 
-$where_clause = !empty($search_conditions) ? 'WHERE ' . implode(' AND ', $search_conditions) : '';
+$where_clause = !empty($search_conditions) ? 'WHERE ' . implode(' AND ', $search_conditions) : 'WHERE 1=1';
 
 // Get sellers
-$sellers_query = "SELECT u.*, br.bname, br.approve as business_approved 
+$sellers_query = "SELECT u.*, sp.business_name, sp.is_approved as business_approved 
                  FROM users u 
-                 LEFT JOIN businessregistration br ON u.user_id = br.user_id 
-                 $where_clause " . (!empty($user_type) ? "" : "AND u.type = 'seller'") . "
+                 LEFT JOIN seller_profiles sp ON u.id = sp.user_id 
+                 $where_clause " . (!empty($user_type) ? "" : "AND u.user_type = 'seller'") . "
                  ORDER BY u.id DESC";
 
 if (!empty($user_type) && $user_type !== 'seller') {
-    $sellers_query = "SELECT u.*, br.bname, br.approve as business_approved 
+    $sellers_query = "SELECT u.*, sp.business_name, sp.is_approved as business_approved 
                      FROM users u 
-                     LEFT JOIN businessregistration br ON u.user_id = br.user_id 
-                     WHERE 1=0"; // No results for sellers when filtering by buyer
+                     LEFT JOIN seller_profiles sp ON u.id = sp.user_id 
+                     WHERE 1=0"; // No results for sellers when filtering by customer
 }
 
 $sellers_stmt = $conn->prepare($sellers_query);
@@ -78,17 +78,17 @@ if (!empty($search_params) && (empty($user_type) || $user_type === 'seller')) {
 $sellers_stmt->execute();
 $sellers_result = $sellers_stmt->get_result();
 
-// Get buyers
+// Get buyers (customers)
 $buyers_query = "SELECT * FROM users u 
-                $where_clause " . (!empty($user_type) ? "" : "AND u.type = 'buyer'") . "
+                $where_clause " . (!empty($user_type) ? "" : "AND u.user_type = 'customer'") . "
                 ORDER BY u.id DESC";
 
-if (!empty($user_type) && $user_type !== 'buyer') {
-    $buyers_query = "SELECT * FROM users WHERE 1=0"; // No results for buyers when filtering by seller
+if (!empty($user_type) && $user_type !== 'customer') {
+    $buyers_query = "SELECT * FROM users WHERE 1=0"; // No results for customers when filtering by seller
 }
 
 $buyers_stmt = $conn->prepare($buyers_query);
-if (!empty($search_params) && (empty($user_type) || $user_type === 'buyer')) {
+if (!empty($search_params) && (empty($user_type) || $user_type === 'customer')) {
     $buyers_stmt->bind_param($param_types, ...$search_params);
 }
 $buyers_stmt->execute();
@@ -171,7 +171,7 @@ $buyers_result = $buyers_stmt->get_result();
             <div class="text-center text-white mb-4">
                 <i class="fas fa-shield-alt fa-2x mb-2"></i>
                 <h5>Admin Panel</h5>
-                <small><?php echo $_SESSION['firstname'] . ' ' . $_SESSION['lastname']; ?></small>
+                <small><?php echo $_SESSION['first_name'] . ' ' . $_SESSION['last_name']; ?></small>
             </div>
             
             <ul class="nav flex-column">
@@ -257,7 +257,7 @@ $buyers_result = $buyers_stmt->get_result();
                         <select class="form-select" id="type" name="type">
                             <option value="">All Users</option>
                             <option value="seller" <?php echo $user_type === 'seller' ? 'selected' : ''; ?>>Sellers Only</option>
-                            <option value="buyer" <?php echo $user_type === 'buyer' ? 'selected' : ''; ?>>Buyers Only</option>
+                            <option value="customer" <?php echo $user_type === 'customer' ? 'selected' : ''; ?>>Buyers Only</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -331,26 +331,26 @@ $buyers_result = $buyers_stmt->get_result();
                                         <tbody>
                                             <?php while($row = $sellers_result->fetch_assoc()): ?>
                                             <tr>
-                                                <td><?php echo $row['user_id']; ?></td>
+                                                <td><?php echo $row['id']; ?></td>
                                                 <td>
                                                     <div class="d-flex align-items-center">
-                                                        <?php if(!empty($row['image'])): ?>
-                                                            <img src="../image/profile/<?php echo $row['image']; ?>" alt="Profile" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                                        <?php if(!empty($row['profile_image'])): ?>
+                                                            <img src="../assets/uploads/profiles/<?php echo $row['profile_image']; ?>" alt="Profile" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
                                                         <?php else: ?>
                                                             <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
                                                                 <i class="fas fa-user text-white"></i>
                                                             </div>
                                                         <?php endif; ?>
                                                         <div>
-                                                            <strong><?php echo $row['firstname'] . ' ' . $row['lastname']; ?></strong><br>
+                                                            <strong><?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></strong><br>
                                                             <small class="text-muted">@<?php echo $row['username']; ?></small>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td><?php echo $row['email']; ?></td>
                                                 <td>
-                                                    <?php if($row['bname']): ?>
-                                                        <?php echo $row['bname']; ?>
+                                                    <?php if($row['business_name']): ?>
+                                                        <?php echo htmlspecialchars($row['business_name']); ?>
                                                         <?php if($row['business_approved'] == 1): ?>
                                                             <span class="badge bg-success ms-1">Approved</span>
                                                         <?php elseif($row['business_approved'] == 0): ?>
@@ -363,7 +363,7 @@ $buyers_result = $buyers_stmt->get_result();
                                                     <?php endif; ?>
                                                 </td>
                                                 <td>
-                                                    <?php if($row['approve'] == 1): ?>
+                                                    <?php if($row['is_approved'] == 1): ?>
                                                         <span class="badge bg-success">Active</span>
                                                     <?php else: ?>
                                                         <span class="badge bg-danger">Suspended</span>
@@ -371,8 +371,8 @@ $buyers_result = $buyers_stmt->get_result();
                                                 </td>
                                                 <td>
                                                     <form method="POST" style="display: inline;">
-                                                        <input type="hidden" name="user_id" value="<?php echo $row['user_id']; ?>">
-                                                        <?php if($row['approve'] == 1): ?>
+                                                        <input type="hidden" name="user_id" value="<?php echo $row['id']; ?>">
+                                                        <?php if($row['is_approved'] == 1): ?>
                                                             <button type="submit" name="action" value="suspend" class="btn btn-sm btn-warning" onclick="return confirm('Suspend this seller?')">
                                                                 <i class="fas fa-pause"></i> Suspend
                                                             </button>
@@ -431,18 +431,18 @@ $buyers_result = $buyers_stmt->get_result();
                                         <tbody>
                                             <?php while($row = $buyers_result->fetch_assoc()): ?>
                                             <tr>
-                                                <td><?php echo $row['user_id']; ?></td>
+                                                <td><?php echo $row['id']; ?></td>
                                                 <td>
                                                     <div class="d-flex align-items-center">
-                                                        <?php if(!empty($row['image'])): ?>
-                                                            <img src="../image/profile/<?php echo $row['image']; ?>" alt="Profile" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                                        <?php if(!empty($row['profile_image'])): ?>
+                                                            <img src="../assets/uploads/profiles/<?php echo $row['profile_image']; ?>" alt="Profile" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">
                                                         <?php else: ?>
                                                             <div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
                                                                 <i class="fas fa-user text-white"></i>
                                                             </div>
                                                         <?php endif; ?>
                                                         <div>
-                                                            <strong><?php echo $row['firstname'] . ' ' . $row['lastname']; ?></strong><br>
+                                                            <strong><?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></strong><br>
                                                             <small class="text-muted">@<?php echo $row['username']; ?></small>
                                                         </div>
                                                     </div>
@@ -450,16 +450,15 @@ $buyers_result = $buyers_stmt->get_result();
                                                 <td><?php echo $row['email']; ?></td>
                                                 <td>
                                                     <?php 
-                                                    // Check if Add_date field exists and is not null
-                                                    if(isset($row['Add_date']) && !empty($row['Add_date'])) {
-                                                        echo date('M d, Y', strtotime($row['Add_date']));
+                                                    if(isset($row['created_at']) && !empty($row['created_at'])) {
+                                                        echo date('M d, Y', strtotime($row['created_at']));
                                                     } else {
                                                         echo '<span class="text-muted">Not Available</span>';
                                                     }
                                                     ?>
                                                 </td>
                                                 <td>
-                                                    <?php if($row['approve'] == 1): ?>
+                                                    <?php if($row['is_approved'] == 1): ?>
                                                         <span class="badge bg-success">Active</span>
                                                     <?php else: ?>
                                                         <span class="badge bg-danger">Suspended</span>
@@ -467,8 +466,8 @@ $buyers_result = $buyers_stmt->get_result();
                                                 </td>
                                                 <td>
                                                     <form method="POST" style="display: inline;">
-                                                        <input type="hidden" name="user_id" value="<?php echo $row['user_id']; ?>">
-                                                        <?php if($row['approve'] == 1): ?>
+                                                        <input type="hidden" name="user_id" value="<?php echo $row['id']; ?>">
+                                                        <?php if($row['is_approved'] == 1): ?>
                                                             <button type="submit" name="action" value="suspend" class="btn btn-sm btn-warning" onclick="return confirm('Suspend this buyer?')">
                                                                 <i class="fas fa-pause"></i> Suspend
                                                             </button>

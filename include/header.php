@@ -18,6 +18,9 @@ if (isset($_SESSION['userid'])) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <?php if(isset($is_404) && $is_404): ?>
+  <base href="/OXXA GEAR/site/">
+  <?php endif; ?>
   <title><?php echo isset($page_title) ? $page_title : 'OXXA GEAR - Your Ultimate Sports Destination'; ?></title>
   <meta name="description" content="OXXA GEAR is the ultimate destination for premium sports gear in Sri Lanka. Shop authentic equipment, footwear, and nutrition for cricket, football, gym, running & every sport.">
 
@@ -124,7 +127,7 @@ if (isset($_SESSION['userid'])) {
     <div class="bg-[#0A0A0A] text-white text-xs py-2.5 font-space tracking-widest uppercase font-bold">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center items-center space-x-4 md:space-x-8">
         <span class="flex items-center"><i class="fas fa-truck-fast text-primary me-2 animate-bounce"></i> Islandwide Delivery</span>
-        <span class="hidden sm:flex items-center"><i class="fas fa-credit-card text-primary me-2"></i> KOKO Pay in 3</span>
+        <span class="hidden sm:flex items-center"><img src="<?php echo $base_path; ?>image/KOKO_logo.png" class="h-3 w-auto me-2" alt="KOKO"> Pay in 3</span>
         <span class="flex items-center"><i class="fas fa-shield-check text-primary me-2"></i> 100% Authentic</span>
       </div>
     </div>
@@ -143,7 +146,7 @@ if (isset($_SESSION['userid'])) {
         </div>
 
         <!-- Navigation Links (Center) -->
-        <nav id="desktopNav" class="hidden lg:flex items-center space-x-4 xl:space-x-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 transition-all duration-[350ms] ease-in-out opacity-100">
+        <nav id="desktopNav" class="hidden lg:flex flex-1 justify-center items-center space-x-4 xl:space-x-8 z-10 transition-all duration-[350ms] ease-in-out opacity-100">
           <a href="<?php echo $base_path; ?>site/products.php?category=Sports+Wear" class="relative group">
             <span class="text-[13px] font-space font-bold uppercase tracking-[0.5px] text-black group-hover:text-primary transition-colors whitespace-nowrap">Sports Wear</span>
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
@@ -168,6 +171,7 @@ if (isset($_SESSION['userid'])) {
             <span class="text-[13px] font-space font-bold uppercase tracking-[0.5px] text-black group-hover:text-primary transition-colors whitespace-nowrap">Equipment</span>
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
           </a>
+          
         </nav>
         
         <!-- Absolute Center Search Bar (Hidden by default) -->
@@ -186,19 +190,27 @@ if (isset($_SESSION['userid'])) {
         <div class="flex items-center space-x-2 md:space-x-4 flex-shrink-0 z-10 relative">
           
           <!-- Search Toggle Button -->
-          <button id="searchToggleBtn" type="button" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group z-20">
+          <button id="searchToggleBtn" type="button" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black group z-20">
             <i class="fas fa-search text-lg group-hover:text-primary transition-colors"></i>
           </button>
           
           <?php if(isset($_SESSION['userid'])): ?>
             <!-- User Profile Dropdown -->
             <div class="relative dropdown">
-              <button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group dropdown-toggle" 
-                      data-bs-toggle="dropdown" aria-expanded="false" id="profileDropdown">
-                <i class="far fa-user text-lg group-hover:text-primary transition-colors"></i>
+              <button class="flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-black relative group dropdown-toggle" 
+                      data-bs-toggle="dropdown" aria-expanded="false" id="profileDropdown" style="padding: 4px 12px 4px 4px;">
+                <div class="flex items-center gap-2">
+                    <?php if (!empty($_SESSION['profile_image']) && file_exists(__DIR__ . '/../assets/uploads/profiles/' . $_SESSION['profile_image'])): ?>
+                        <img src="<?php echo $base_path; ?>assets/uploads/profiles/<?php echo $_SESSION['profile_image']; ?>" class="w-8 h-8 rounded-full ring-2 ring-gray-100 object-cover">
+                    <?php else: ?>
+                        <div class="bg-black text-white w-8 h-8 rounded-full flex items-center justify-center font-black">
+                            <?php echo strtoupper(substr($_SESSION['first_name'] ?? $_SESSION['firstname'] ?? '', 0, 1)); ?>
+                        </div>
+                    <?php endif; ?>
+                    <span class="text-[12px] font-black hidden sm:inline-block pr-1">HI, <?php echo strtoupper($_SESSION['first_name'] ?? $_SESSION['firstname'] ?? ''); ?></span>
+                </div>
               </button>
               <ul class="dropdown-menu dropdown-menu-end shadow-xl border border-gray-100 mt-2 rounded-2xl py-2 min-w-[200px]" aria-labelledby="profileDropdown">
-                <li><div class="px-4 py-2 text-xs text-gray-500 font-bold uppercase tracking-wider border-b border-gray-50 mb-1">Hi, <?php echo htmlspecialchars(substr($_SESSION['firstname'], 0, 8)); ?></div></li>
                 <li>
                   <a href="<?php echo $base_path; ?>site/profile.php" class="dropdown-item hover:bg-gray-50 hover:text-primary px-4 py-2 font-medium text-sm transition-colors">
                     <i class="far fa-user-circle me-2 w-5 text-gray-400"></i>Profile
@@ -210,7 +222,7 @@ if (isset($_SESSION['userid'])) {
                   </a>
                 </li>
                 
-                <?php if($_SESSION['type'] == 'seller'): ?>
+                <?php if(isset($_SESSION['type']) && $_SESSION['type'] == 'seller'): ?>
                   <li><hr class="dropdown-divider border-gray-50 my-1"></li>
                   <li>
                     <a href="<?php echo $base_path; ?>site/business-registration.php" class="dropdown-item hover:bg-gray-50 hover:text-primary px-4 py-2 font-medium text-sm transition-colors">
@@ -252,7 +264,16 @@ if (isset($_SESSION['userid'])) {
             <button onclick="toggleCartSidebar()" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
               <i class="fas fa-shopping-bag text-lg group-hover:text-primary transition-colors"></i>
               <?php 
-              $cartCount = isset($_SESSION['userid']) ? getOrderCount($conn, $_SESSION['userid']) : 0;
+              $cartCount = 0;
+              if (isset($_SESSION['userid'])) {
+                  try {
+                      $stmt = $pdo->prepare("SELECT SUM(quantity) FROM cart WHERE user_id = ?");
+                      $stmt->execute([$_SESSION['userid']]);
+                      $cartCount = $stmt->fetchColumn() ?: 0;
+                  } catch (PDOException $e) {
+                      $cartCount = 0;
+                  }
+              }
               ?>
               <span class="cart-badge absolute top-0 right-0 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white" id="cartBadge">
                 <?php echo $cartCount; ?>

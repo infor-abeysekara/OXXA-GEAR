@@ -11,7 +11,7 @@ if (!isset($_SESSION['userid'])) {
 
 // Get user details
 $user_id = $_SESSION['userid'];
-$user_query = "SELECT * FROM users WHERE user_id = ?";
+$user_query = "SELECT * FROM users WHERE id = ?";
 $stmt = $conn->prepare($user_query);
 $stmt->bind_param("s", $user_id);
 $stmt->execute();
@@ -19,7 +19,24 @@ $user_result = $stmt->get_result();
 $user = $user_result->fetch_assoc();
 
 // Get cart items
-$cartItems = getCartItems($conn, $user_id);
+// Get cart items via PDO
+$cartStmt = $pdo->prepare("
+    SELECT c.product_id, c.variant_id, c.quantity as qty,
+           p.name as pname, p.base_price, p.brand,
+           v.size, v.price as variant_price,
+           (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
+    FROM cart c
+    JOIN products p ON c.product_id = p.id
+    LEFT JOIN product_variants v ON c.variant_id = v.id
+    WHERE c.user_id = ?
+");
+$cartStmt->execute([$user_id]);
+$cartItems = $cartStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Normalize price
+foreach ($cartItems as &$item) {
+    $item['price'] = (!empty($item['variant_price']) && $item['variant_price'] > 0) ? $item['variant_price'] : $item['base_price'];
+}
 
 // If cart is empty, redirect to products page
 if (empty($cartItems)) {
@@ -80,7 +97,7 @@ include('../include/header.php');
                         <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100 transition-all hover:shadow-md">
                             <div class="shrink-0 w-16 h-16 bg-white rounded-lg p-1 border border-gray-200 flex items-center justify-center overflow-hidden">
                                 <?php if (!empty($item['image'])): ?>
-                                    <img src="../image/<?php echo htmlspecialchars($item['image']); ?>" 
+                                    <img src="<?php echo htmlspecialchars($base_path . $item['image']); ?>" 
                                          alt="<?php echo htmlspecialchars($item['pname']); ?>" 
                                          class="w-full h-full object-contain">
                                 <?php else: ?>
@@ -162,7 +179,7 @@ include('../include/header.php');
                             <div class="col-md-12">
                                 <label for="customerName" class="form-label font-bold text-gray-700 text-sm uppercase tracking-wide">Full Name *</label>
                                 <input type="text" class="form-control bg-gray-50 border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary py-3 rounded-xl font-medium" id="customerName" name="customerName" 
-                                       value="<?php echo htmlspecialchars($user['firstname'] . ' ' . $user['lastname']); ?>" required>
+                                       value="<?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?>" required>
                             </div>
                             
                             <div class="col-md-12">

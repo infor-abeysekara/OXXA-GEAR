@@ -14,21 +14,27 @@ if(isset($_POST['action']) && isset($_POST['product_id'])) {
     $action = $_POST['action'];
     
     if($action == 'approve') {
-        $update_query = "UPDATE production SET approve = 1 WHERE pid = ?";
+        $update_query = "UPDATE products SET is_approved = 1 WHERE id = ?";
     } elseif($action == 'suspend') {
-        $update_query = "UPDATE production SET approve = 0 WHERE pid = ?";
+        $update_query = "UPDATE products SET is_approved = 0 WHERE id = ?";
     } elseif($action == 'delete') {
-        $delete_sizes_query = "DELETE FROM productsize WHERE pid = ?";
-        $delete_product_query = "DELETE FROM production WHERE pid = ?";
+        $delete_variants_query = "DELETE FROM product_variants WHERE product_id = ?";
+        $delete_images_query = "DELETE FROM product_images WHERE product_id = ?";
+        $delete_product_query = "DELETE FROM products WHERE id = ?";
         
-        // Delete product sizes first
-        $stmt1 = $conn->prepare($delete_sizes_query);
-        $stmt1->bind_param("s", $product_id);
+        // Delete product variants first
+        $stmt1 = $conn->prepare($delete_variants_query);
+        $stmt1->bind_param("i", $product_id);
         $stmt1->execute();
+        
+        // Delete product images
+        $stmt1b = $conn->prepare($delete_images_query);
+        $stmt1b->bind_param("i", $product_id);
+        $stmt1b->execute();
         
         // Then delete product
         $stmt2 = $conn->prepare($delete_product_query);
-        $stmt2->bind_param("s", $product_id);
+        $stmt2->bind_param("i", $product_id);
         
         if($stmt2->execute()) {
             $success_message = "Product deleted successfully!";
@@ -39,7 +45,7 @@ if(isset($_POST['action']) && isset($_POST['product_id'])) {
     
     if(isset($update_query)) {
         $stmt = $conn->prepare($update_query);
-        $stmt->bind_param("s", $product_id);
+        $stmt->bind_param("i", $product_id);
         
         if($stmt->execute()) {
             $success_message = ucfirst($action) . " action completed successfully!";
@@ -50,9 +56,11 @@ if(isset($_POST['action']) && isset($_POST['product_id'])) {
 }
 
 // Get all products
-$products_query = "SELECT p.*, u.firstname, u.lastname FROM production p 
-                  JOIN users u ON p.user_id = u.user_id 
-                  ORDER BY p.Add_date DESC";
+$products_query = "SELECT p.*, u.first_name, u.last_name, 
+                  (SELECT pi.image_path FROM product_images pi WHERE pi.product_id = p.id LIMIT 1) as product_image
+                  FROM products p 
+                  JOIN users u ON p.seller_id = u.id 
+                  ORDER BY p.created_at DESC";
 $products_result = mysqli_query($conn, $products_query);
 ?>
 
@@ -113,7 +121,7 @@ $products_result = mysqli_query($conn, $products_query);
             <div class="text-center text-white mb-4">
                 <i class="fas fa-shield-alt fa-2x mb-2"></i>
                 <h5>Admin Panel</h5>
-                <small><?php echo $_SESSION['firstname'] . ' ' . $_SESSION['lastname']; ?></small>
+                <small><?php echo $_SESSION['first_name'] . ' ' . $_SESSION['last_name']; ?></small>
             </div>
             
             <ul class="nav flex-column">
@@ -203,8 +211,8 @@ $products_result = mysqli_query($conn, $products_query);
                                     <?php while($row = mysqli_fetch_assoc($products_result)): ?>
                                     <tr>
                                         <td>
-                                            <?php if(!empty($row['image'])): ?>
-                                                <img src="../image/<?php echo $row['image']; ?>" alt="Product" class="product-image">
+                                            <?php if(!empty($row['product_image'])): ?>
+                                                <img src="../<?php echo $row['product_image']; ?>" alt="Product" class="product-image">
                                             <?php else: ?>
                                                 <div class="bg-secondary d-flex align-items-center justify-content-center product-image">
                                                     <i class="fas fa-box text-white"></i>
@@ -213,35 +221,35 @@ $products_result = mysqli_query($conn, $products_query);
                                         </td>
                                         <td>
                                             <div>
-                                                <strong><?php echo $row['pname']; ?></strong><br>
-                                                <small class="text-muted">Brand: <?php echo $row['brand']; ?></small><br>
-                                                <small class="text-muted">ID: <?php echo $row['pid']; ?></small>
+                                                <strong><?php echo htmlspecialchars($row['name']); ?></strong><br>
+                                                <small class="text-muted">Brand: <?php echo htmlspecialchars($row['brand']); ?></small><br>
+                                                <small class="text-muted">ID: <?php echo $row['id']; ?></small>
                                             </div>
                                         </td>
                                         <td>
-                                            <strong><?php echo $row['firstname'] . ' ' . $row['lastname']; ?></strong>
+                                            <strong><?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></strong>
                                         </td>
                                         <td>
-                                            <span class="badge bg-info"><?php echo $row['categories']; ?></span>
+                                            <span class="badge bg-info"><?php echo $row['category_id']; ?></span>
                                         </td>
                                         <td>
-                                            <strong>Rs. <?php echo number_format($row['price'], 2); ?></strong><br>
-                                            <small class="text-muted">Qty: <?php echo $row['qty']; ?></small>
+                                            <strong>Rs. <?php echo number_format($row['base_price'], 2); ?></strong><br>
+                                            <small class="text-muted">Qty: <?php echo $row['total_qty']; ?></small>
                                         </td>
                                         <td>
-                                            <?php if($row['approve'] == 1): ?>
+                                            <?php if($row['is_approved'] == 1): ?>
                                                 <span class="badge bg-success">Active</span>
                                             <?php else: ?>
                                                 <span class="badge bg-warning">Pending</span>
                                             <?php endif; ?>
                                         </td>
                                         <td>
-                                            <button class="btn btn-sm btn-info mb-1" data-bs-toggle="modal" data-bs-target="#viewModal<?php echo $row['pid']; ?>">
+                                            <button class="btn btn-sm btn-info mb-1" data-bs-toggle="modal" data-bs-target="#viewModal<?php echo $row['id']; ?>">
                                                 <i class="fas fa-eye"></i> View
                                             </button><br>
                                             <form method="POST" style="display: inline;">
-                                                <input type="hidden" name="product_id" value="<?php echo $row['pid']; ?>">
-                                                <?php if($row['approve'] == 1): ?>
+                                                <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
+                                                <?php if($row['is_approved'] == 1): ?>
                                                     <button type="submit" name="action" value="suspend" class="btn btn-sm btn-warning mb-1" onclick="return confirm('Suspend this product?')">
                                                         <i class="fas fa-pause"></i> Suspend
                                                     </button>
@@ -258,7 +266,7 @@ $products_result = mysqli_query($conn, $products_query);
                                     </tr>
 
                                     <!-- View Modal -->
-                                    <div class="modal fade" id="viewModal<?php echo $row['pid']; ?>" tabindex="-1">
+                                    <div class="modal fade" id="viewModal<?php echo $row['id']; ?>" tabindex="-1">
                                         <div class="modal-dialog modal-lg">
                                             <div class="modal-content">
                                                 <div class="modal-header">
@@ -268,8 +276,8 @@ $products_result = mysqli_query($conn, $products_query);
                                                 <div class="modal-body">
                                                     <div class="row">
                                                         <div class="col-md-4">
-                                                            <?php if(!empty($row['image'])): ?>
-                                                                <img src="../image/<?php echo $row['image']; ?>" alt="Product" class="img-fluid rounded">
+                                                            <?php if(!empty($row['product_image'])): ?>
+                                                                <img src="../<?php echo $row['product_image']; ?>" alt="Product" class="img-fluid rounded">
                                                             <?php else: ?>
                                                                 <div class="bg-secondary d-flex align-items-center justify-content-center rounded" style="height: 200px;">
                                                                     <i class="fas fa-box fa-3x text-white"></i>
@@ -278,29 +286,29 @@ $products_result = mysqli_query($conn, $products_query);
                                                         </div>
                                                         <div class="col-md-8">
                                                             <h6>Product Information</h6>
-                                                            <p><strong>Name:</strong> <?php echo $row['pname']; ?></p>
-                                                            <p><strong>Brand:</strong> <?php echo $row['brand']; ?></p>
-                                                            <p><strong>Category:</strong> <?php echo $row['categories']; ?></p>
-                                                            <p><strong>Price:</strong> Rs. <?php echo number_format($row['price'], 2); ?></p>
-                                                            <p><strong>Quantity:</strong> <?php echo $row['qty']; ?></p>
-                                                            <p><strong>Added Date:</strong> <?php echo date('M d, Y', strtotime($row['Add_date'])); ?></p>
+                                                            <p><strong>Name:</strong> <?php echo htmlspecialchars($row['name']); ?></p>
+                                                            <p><strong>Brand:</strong> <?php echo htmlspecialchars($row['brand']); ?></p>
+                                                            <p><strong>Category:</strong> <?php echo $row['category_id']; ?></p>
+                                                            <p><strong>Price:</strong> Rs. <?php echo number_format($row['base_price'], 2); ?></p>
+                                                            <p><strong>Quantity:</strong> <?php echo $row['total_qty']; ?></p>
+                                                            <p><strong>Added Date:</strong> <?php echo date('M d, Y', strtotime($row['created_at'])); ?></p>
                                                             
                                                             <h6>Seller Information</h6>
-                                                            <p><strong>Seller:</strong> <?php echo $row['firstname'] . ' ' . $row['lastname']; ?></p>
+                                                            <p><strong>Seller:</strong> <?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></p>
                                                         </div>
                                                     </div>
                                                     <div class="row mt-3">
                                                         <div class="col-12">
                                                             <h6>Description</h6>
-                                                            <p><?php echo nl2br(htmlspecialchars($row['discription'])); ?></p>
+                                                            <p><?php echo nl2br(htmlspecialchars($row['description'])); ?></p>
                                                         </div>
                                                     </div>
                                                     
-                                                    <!-- Product Sizes -->
+                                                    <!-- Product Variants -->
                                                     <?php
-                                                    $sizes_query = "SELECT * FROM productsize WHERE pid = '{$row['pid']}'";
-                                                    $sizes_result = mysqli_query($conn, $sizes_query);
-                                                    if(mysqli_num_rows($sizes_result) > 0):
+                                                    $variants_query = "SELECT * FROM product_variants WHERE product_id = '{$row['id']}'";
+                                                    $variants_result = mysqli_query($conn, $variants_query);
+                                                    if($variants_result && mysqli_num_rows($variants_result) > 0):
                                                     ?>
                                                     <div class="row mt-3">
                                                         <div class="col-12">

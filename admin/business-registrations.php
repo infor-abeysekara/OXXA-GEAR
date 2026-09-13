@@ -15,7 +15,7 @@ if(isset($_POST['action']) && isset($_POST['user_id'])) {
     
     if($action == 'approve') {
         // Approve business registration
-        $update_query = "UPDATE businessregistration SET approve = 1 WHERE user_id = ?";
+        $update_query = "UPDATE seller_profiles SET is_approved = 1 WHERE user_id = ?";
         $stmt = $conn->prepare($update_query);
         $stmt->bind_param("s", $user_id);
         
@@ -26,7 +26,7 @@ if(isset($_POST['action']) && isset($_POST['user_id'])) {
         }
     } elseif($action == 'reject') {
         // Reject business registration
-        $update_query = "UPDATE businessregistration SET approve = -1 WHERE user_id = ?";
+        $update_query = "UPDATE seller_profiles SET is_approved = -1 WHERE user_id = ?";
         $stmt = $conn->prepare($update_query);
         $stmt->bind_param("s", $user_id);
         
@@ -37,7 +37,7 @@ if(isset($_POST['action']) && isset($_POST['user_id'])) {
         }
     } elseif($action == 'activate') {
         // Activate business registration (set to approved)
-        $update_query = "UPDATE businessregistration SET approve = 1 WHERE user_id = ?";
+        $update_query = "UPDATE seller_profiles SET is_approved = 1 WHERE user_id = ?";
         $stmt = $conn->prepare($update_query);
         $stmt->bind_param("s", $user_id);
         
@@ -48,7 +48,7 @@ if(isset($_POST['action']) && isset($_POST['user_id'])) {
         }
     } elseif($action == 'deactivate') {
         // Deactivate business registration (set to suspended)
-        $update_query = "UPDATE businessregistration SET approve = 0 WHERE user_id = ?";
+        $update_query = "UPDATE seller_profiles SET is_approved = 0 WHERE user_id = ?";
         $stmt = $conn->prepare($update_query);
         $stmt->bind_param("s", $user_id);
         
@@ -61,9 +61,9 @@ if(isset($_POST['action']) && isset($_POST['user_id'])) {
 }
 
 // Get all business registrations
-$registrations_query = "SELECT br.*, u.firstname, u.lastname, u.email, u.username 
-                       FROM businessregistration br 
-                       JOIN users u ON br.user_id = u.user_id 
+$registrations_query = "SELECT br.*, u.first_name, u.last_name, u.email, u.username 
+                       FROM seller_profiles br 
+                       JOIN users u ON br.user_id = u.id 
                        ORDER BY br.id DESC";
 $registrations_result = mysqli_query($conn, $registrations_query);
 ?>
@@ -119,7 +119,7 @@ $registrations_result = mysqli_query($conn, $registrations_query);
             <div class="text-center text-white mb-4">
                 <i class="fas fa-shield-alt fa-2x mb-2"></i>
                 <h5>Admin Panel</h5>
-                <small><?php echo $_SESSION['firstname'] . ' ' . $_SESSION['lastname']; ?></small>
+                <small><?php echo $_SESSION['first_name'] . ' ' . $_SESSION['last_name']; ?></small>
             </div>
             
             <ul class="nav flex-column">
@@ -208,16 +208,16 @@ $registrations_result = mysqli_query($conn, $registrations_query);
                                     <?php while($row = mysqli_fetch_assoc($registrations_result)): ?>
                                     <tr>
                                         <td>
-                                            <strong><?php echo $row['firstname'] . ' ' . $row['lastname']; ?></strong><br>
-                                            <small class="text-muted"><?php echo $row['email']; ?></small>
+                                            <strong><?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></strong><br>
+                                            <small class="text-muted"><?php echo htmlspecialchars($row['email']); ?></small>
                                         </td>
-                                        <td><?php echo $row['bname']; ?></td>
-                                        <td><?php echo $row['btype']; ?></td>
-                                        <td><?php echo $row['bregid']; ?></td>
+                                        <td><?php echo htmlspecialchars($row['business_name']); ?></td>
+                                        <td><?php echo htmlspecialchars($row['business_type']); ?></td>
+                                        <td><?php echo htmlspecialchars($row['business_reg_id']); ?></td>
                                         <td>
-                                            <?php if($row['approve'] == 1): ?>
+                                            <?php if($row['is_approved'] == 1): ?>
                                                 <span class="badge bg-success"><i class="fas fa-check me-1"></i>Active</span>
-                                            <?php elseif($row['approve'] == -1): ?>
+                                            <?php elseif($row['is_approved'] == -1): ?>
                                                 <span class="badge bg-danger"><i class="fas fa-times me-1"></i>Rejected</span>
                                             <?php else: ?>
                                                 <span class="badge bg-warning"><i class="fas fa-clock me-1"></i>Pending</span>
@@ -229,7 +229,7 @@ $registrations_result = mysqli_query($conn, $registrations_query);
                                                     <i class="fas fa-eye"></i> View
                                                 </button>
                                                 
-                                                <?php if($row['approve'] == 0): ?>
+                                                <?php if($row['is_approved'] == 0): ?>
                                                     <!-- Pending - Show Approve/Reject -->
                                                     <form method="POST" style="display: inline;">
                                                         <input type="hidden" name="user_id" value="<?php echo $row['user_id']; ?>">
@@ -240,7 +240,7 @@ $registrations_result = mysqli_query($conn, $registrations_query);
                                                             <i class="fas fa-times"></i> Reject
                                                         </button>
                                                     </form>
-                                                <?php elseif($row['approve'] == 1): ?>
+                                                <?php elseif($row['is_approved'] == 1): ?>
                                                     <!-- Active - Show Deactivate -->
                                                     <form method="POST" style="display: inline;">
                                                         <input type="hidden" name="user_id" value="<?php echo $row['user_id']; ?>">
@@ -248,7 +248,7 @@ $registrations_result = mysqli_query($conn, $registrations_query);
                                                             <i class="fas fa-pause"></i> Deactivate
                                                         </button>
                                                     </form>
-                                                <?php elseif($row['approve'] == -1): ?>
+                                                <?php elseif($row['is_approved'] == -1): ?>
                                                     <!-- Rejected - Show Activate -->
                                                     <form method="POST" style="display: inline;">
                                                         <input type="hidden" name="user_id" value="<?php echo $row['user_id']; ?>">
@@ -273,28 +273,28 @@ $registrations_result = mysqli_query($conn, $registrations_query);
                                                     <div class="row">
                                                         <div class="col-md-6">
                                                             <h6><i class="fas fa-user me-2"></i>Seller Information</h6>
-                                                            <p><strong>Name:</strong> <?php echo $row['firstname'] . ' ' . $row['lastname']; ?></p>
-                                                            <p><strong>Email:</strong> <?php echo $row['email']; ?></p>
-                                                            <p><strong>Username:</strong> <?php echo $row['username']; ?></p>
+                                                            <p><strong>Name:</strong> <?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></p>
+                                                            <p><strong>Email:</strong> <?php echo htmlspecialchars($row['email']); ?></p>
+                                                            <p><strong>Username:</strong> <?php echo htmlspecialchars($row['username']); ?></p>
                                                         </div>
                                                         <div class="col-md-6">
                                                             <h6><i class="fas fa-building me-2"></i>Business Information</h6>
-                                                            <p><strong>Business Name:</strong> <?php echo $row['bname']; ?></p>
-                                                            <p><strong>Business Type:</strong> <?php echo $row['btype']; ?></p>
-                                                            <p><strong>Registration ID:</strong> <?php echo $row['bregid']; ?></p>
-                                                            <p><strong>Contact Number:</strong> <?php echo $row['bnumber']; ?></p>
-                                                            <p><strong>Registration Date:</strong> <?php echo date('M d, Y', strtotime($row['date'])); ?></p>
+                                                            <p><strong>Business Name:</strong> <?php echo htmlspecialchars($row['business_name']); ?></p>
+                                                            <p><strong>Business Type:</strong> <?php echo htmlspecialchars($row['business_type']); ?></p>
+                                                            <p><strong>Registration ID:</strong> <?php echo htmlspecialchars($row['business_reg_id']); ?></p>
+                                                            <p><strong>Contact Number:</strong> <?php echo htmlspecialchars($row['business_number']); ?></p>
+                                                            <p><strong>Registration Date:</strong> <?php echo date('M d, Y', strtotime($row['created_at'])); ?></p>
                                                         </div>
                                                     </div>
                                                     
                                                     <div class="row mt-3">
                                                         <div class="col-12">
                                                             <h6><i class="fas fa-info-circle me-2"></i>Current Status</h6>
-                                                            <?php if($row['approve'] == 1): ?>
+                                                            <?php if($row['is_approved'] == 1): ?>
                                                                 <div class="alert alert-success">
                                                                     <i class="fas fa-check-circle me-2"></i>This business registration is currently <strong>ACTIVE</strong>. The seller can add and sell products.
                                                                 </div>
-                                                            <?php elseif($row['approve'] == -1): ?>
+                                                            <?php elseif($row['is_approved'] == -1): ?>
                                                                 <div class="alert alert-danger">
                                                                     <i class="fas fa-times-circle me-2"></i>This business registration is <strong>REJECTED</strong>. The seller cannot sell products.
                                                                 </div>
@@ -306,19 +306,19 @@ $registrations_result = mysqli_query($conn, $registrations_query);
                                                         </div>
                                                     </div>
                                                     
-                                                    <?php if(!empty($row['bcertificate'])): ?>
+                                                    <?php if(!empty($row['certificate_path'])): ?>
                                                         <div class="mt-3">
                                                             <h6><i class="fas fa-file-pdf me-2"></i>Business Certificate</h6>
-                                                            <a href="../image/certificates/<?php echo $row['bcertificate']; ?>" target="_blank" class="btn btn-outline-primary">
+                                                            <a href="../assets/uploads/seller_docs/<?php echo $row['certificate_path']; ?>" target="_blank" class="btn btn-outline-primary">
                                                                 <i class="fas fa-download me-2"></i>View Certificate
                                                             </a>
                                                         </div>
                                                     <?php endif; ?>
                                                     
-                                                    <?php if(!empty($row['blogo'])): ?>
+                                                    <?php if(!empty($row['logo_path'])): ?>
                                                         <div class="mt-3">
                                                             <h6><i class="fas fa-image me-2"></i>Business Logo</h6>
-                                                            <img src="../image/logos/<?php echo $row['blogo']; ?>" alt="Business Logo" class="img-fluid rounded" style="max-width: 200px; max-height: 200px;">
+                                                            <img src="../assets/uploads/seller_docs/<?php echo $row['logo_path']; ?>" alt="Business Logo" class="img-fluid rounded" style="max-width: 200px; max-height: 200px;">
                                                         </div>
                                                     <?php endif; ?>
                                                 </div>
@@ -345,9 +345,9 @@ $registrations_result = mysqli_query($conn, $registrations_query);
             <div class="row mt-4">
                 <?php
                 // Get statistics
-                $pending_count = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM businessregistration WHERE approve = 0"));
-                $active_count = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM businessregistration WHERE approve = 1"));
-                $rejected_count = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM businessregistration WHERE approve = -1"));
+                $pending_count = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM seller_profiles WHERE is_approved = 0"));
+                $active_count = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM seller_profiles WHERE is_approved = 1"));
+                $rejected_count = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM seller_profiles WHERE is_approved = -1"));
                 ?>
                 <div class="col-md-4">
                     <div class="card border-0 shadow-sm">

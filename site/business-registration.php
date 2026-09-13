@@ -1,9 +1,8 @@
 <?php
 session_start();
-$page_title = 'Business Registration - OXXA GEAR';
+$page_title = 'Business Profile - OXXA GEAR';
 include('../include/header.php');
 include('../include/connection.php');
-include('../include/functions.php');
 
 // Check if user is logged in and is a seller
 if (!isset($_SESSION['userid']) || $_SESSION['type'] != 'seller') {
@@ -11,373 +10,164 @@ if (!isset($_SESSION['userid']) || $_SESSION['type'] != 'seller') {
     exit();
 }
 
-// Check if business is already registered
-$business = getBusinessRegistration($conn, $_SESSION['userid']);
+// Check if business profile exists
+$stmt = $pdo->prepare("SELECT * FROM seller_profiles WHERE user_id = ?");
+$stmt->execute([$_SESSION['userid']]);
+$business = $stmt->fetch(PDO::FETCH_ASSOC);
+
 ?>
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8 col-md-10">
-            <?php if ($business): ?>
-                <!-- Business Already Registered -->
-                <div class="card border-0 shadow-lg">
-                    <div class="card-header text-white text-center" style="background-color: #188754;">
-                        <h4 class="mb-0">
-                            <i class="fas fa-building me-2"></i>Business Registration Status
-                        </h4>
-                    </div>
-                    <div class="card-body p-5">
-                        <?php if ($business['approve'] == 1): ?>
-                            <div class="alert alert-success text-center">
-                                <i class="fas fa-check-circle fa-3x mb-3" style="color: #188754;"></i>
-                                <h5 style="color: #188754;">Your business is already registered!</h5>
-                                <p class="mb-0">You can now add products to sell on our platform.</p>
-                            </div>
-                        <?php else: ?>
-                            <div class="alert alert-warning text-center">
-                                <i class="fas fa-clock fa-3x mb-3 text-warning"></i>
-                                <h5 class="text-warning">Registration Under Review</h5>
-                                <p class="mb-0">Your business registration is pending admin approval.</p>
-                            </div>
-                        <?php endif; ?>
-
-                        <!-- Business Details -->
-                        <div class="row mt-4">
-                            <div class="col-md-6">
-                                <h6><strong>Business Name:</strong></h6>
-                                <p><?php echo htmlspecialchars($business['bname']); ?></p>
-                            </div>
-                            <div class="col-md-6">
-                                <h6><strong>Registration Date:</strong></h6>
-                                <p><?php echo date('F d, Y', strtotime($business['date'])); ?></p>
-                            </div>
-                            <div class="col-md-6">
-                                <h6><strong>Business Number:</strong></h6>
-                                <p><?php echo htmlspecialchars($business['bnumber']); ?></p>
-                            </div>
-                            <div class="col-md-6">
-                                <h6><strong>Registration ID:</strong></h6>
-                                <p><?php echo htmlspecialchars($business['bregid']); ?></p>
-                            </div>
-                            <div class="col-md-12">
-                                <h6><strong>Business Type:</strong></h6>
-                                <p><?php echo htmlspecialchars($business['btype']); ?></p>
-                            </div>
-                        </div>
-
-                        <div class="text-center mt-4">
-                            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#updateModal">
-                                <i class="fas fa-edit me-2"></i>Update Registration
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            <?php else: ?>
-                <!-- New Business Registration Form -->
-                <div class="card border-0 shadow-lg">
-                    <div class="card-header text-white text-center" style="background-color: #188754;">
-                        <h4 class="mb-0">
-                            <i class="fas fa-building me-2"></i>Register Your Business
-                        </h4>
-                    </div>
-                    <div class="card-body p-5">
-                        <?php
-                        // Display error messages
-                        if(isset($_GET['error'])) {
-                            $error = $_GET['error'];
-                            $error_message = '';
-                            switch($error) {
-                                case 'bname': $error_message = 'Business name is required'; break;
-                                case 'bnumber': $error_message = 'Business number is required'; break;
-                                case 'bregid': $error_message = 'Business registration ID is required'; break;
-                                case 'btype': $error_message = 'Business type is required'; break;
-                                case 'bcertificate': $error_message = 'Business certificate is required'; break;
-                                case 'format': $error_message = 'Invalid file format. Use PDF, JPG, JPEG, PNG, GIF, or WEBP'; break;
-                                case 'large': $error_message = 'File size too large. Maximum 1MB allowed'; break;
-                                case 'upload': $error_message = 'Failed to upload file'; break;
-                                case 'database': $error_message = 'Database error occurred'; break;
-                                default: $error_message = 'An error occurred';
-                            }
-                            echo '<div class="alert alert-danger">' . $error_message . '</div>';
-                        }
-
-                        if(isset($_GET['success'])) {
-                            echo '<div class="alert alert-success">Business registration submitted successfully! Please wait for admin approval.</div>';
-                        }
-                        ?>
-
-                        <form action="../Backend/business-registration-backend.php" method="POST" enctype="multipart/form-data" id="businessForm">
-                            <div class="row">
-                                <!-- Business Name -->
-                                <div class="col-md-6 mb-3">
-                                    <label for="bname" class="form-label fw-semibold">Business Name *</label>
-                                    <input type="text" class="form-control" id="bname" name="bname" required>
-                                    <div id="bnameError" class="text-danger mt-1" style="display: none;"></div>
-                                </div>
-
-                                <!-- Business Number -->
-                                <div class="col-md-6 mb-3">
-                                    <label for="bnumber" class="form-label fw-semibold">Business Number *</label>
-                                    <input type="number" class="form-control" id="bnumber" name="bnumber" required>
-                                    <div id="bnumberError" class="text-danger mt-1" style="display: none;"></div>
-                                </div>
-
-                                <!-- Business Registration ID -->
-                                <div class="col-md-6 mb-3">
-                                    <label for="bregid" class="form-label fw-semibold">Business Registration ID *</label>
-                                    <input type="text" class="form-control" id="bregid" name="bregid" required>
-                                    <div id="bregidError" class="text-danger mt-1" style="display: none;"></div>
-                                </div>
-
-                                <!-- Registration Date -->
-                                <div class="col-md-6 mb-3">
-                                    <label for="date" class="form-label fw-semibold">Registration Date *</label>
-                                    <input type="date" class="form-control" id="date" name="date" required>
-                                    <div id="dateError" class="text-danger mt-1" style="display: none;"></div>
-                                </div>
-
-                                <!-- Business Type -->
-                                <div class="col-md-12 mb-3">
-                                    <label for="btype" class="form-label fw-semibold">Business Type *</label>
-                                    <select class="form-select" id="btype" name="btype" required>
-                                        <option value="">Select Business Type</option>
-                                        <option value="Sole Proprietorship">Sole Proprietorship</option>
-                                        <option value="Partnership">Partnership</option>
-                                        <option value="Private Limited Company">Private Limited Company</option>
-                                        <option value="Public Limited Company">Public Limited Company</option>
-                                        <option value="Non-Profit Organization">Non-Profit Organization</option>
-                                    </select>
-                                    <div id="btypeError" class="text-danger mt-1" style="display: none;"></div>
-                                </div>
-
-                                <!-- Business Certificate -->
-                                <div class="col-md-6 mb-3">
-                                    <label for="bcertificate" class="form-label fw-semibold">Business Certificate *</label>
-                                    <input type="file" class="form-control" id="bcertificate" name="bcertificate" 
-                                           accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" required>
-                                    <small class="text-muted">PDF, JPG, JPEG, PNG, GIF, WEBP (Max 1MB)</small>
-                                    <div id="bcertificateError" class="text-danger mt-1" style="display: none;"></div>
-                                </div>
-
-                                <!-- Business Logo (Optional) -->
-                                <div class="col-md-6 mb-3">
-                                    <label for="blogo" class="form-label fw-semibold">Business Logo (Optional)</label>
-                                    <input type="file" class="form-control" id="blogo" name="blogo" 
-                                           accept=".jpg,.jpeg,.png,.gif,.webp">
-                                    <small class="text-muted">JPG, JPEG, PNG, GIF, WEBP (Max 1MB)</small>
-                                    <div id="blogoError" class="text-danger mt-1" style="display: none;"></div>
-                                </div>
-                            </div>
-
-                            <div class="d-grid mt-4">
-                                <button type="submit" name="register_business" class="btn btn-lg" style="background-color: #188754; color: white;">
-                                    <i class="fas fa-paper-plane me-2"></i>Submit Registration
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            <?php endif; ?>
+<div class="bg-gray-50 min-h-[90vh] py-12">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="mb-8">
+            <h1 class="text-3xl font-black text-navy uppercase tracking-wide">Seller Dashboard</h1>
+            <p class="text-slate mt-1">Manage your business profile and verifications.</p>
         </div>
-    </div>
-</div>
 
-<!-- Update Modal -->
-<?php if ($business): ?>
-<div class="modal fade" id="updateModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header" style="background-color: #188754; color: white;">
-                <h5 class="modal-title">Update Business Registration</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <?php if (isset($_GET['success'])): ?>
+            <div class="bg-green-50 border border-green-200 text-green-700 px-6 py-4 rounded-xl mb-8 flex items-start">
+                <i class="fas fa-check-circle mt-1 me-3"></i>
+                <div>
+                    <h4 class="font-bold">Application Submitted!</h4>
+                    <p class="text-sm mt-1">Your business registration has been received. Please allow 1-2 business days for our admin team to verify your documents.</p>
+                </div>
             </div>
-            <form action="../Backend/business-registration-backend.php" method="POST" enctype="multipart/form-data" id="updateBusinessForm">
-                <input type="hidden" name="update_business" value="1">
-                <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Updating your registration will reset your approval status and require admin re-approval.
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Business Name *</label>
-                            <input type="text" class="form-control" name="bname" value="<?php echo htmlspecialchars($business['bname']); ?>" required>
+        <?php endif; ?>
+        
+        <?php if (isset($_GET['error'])): ?>
+            <div class="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-8 flex items-center">
+                <i class="fas fa-exclamation-circle me-3"></i>
+                <span class="font-bold">Error: Please check your form and try again.</span>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($business): ?>
+            <!-- Business Registration Status -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-8">
+                    <?php if ($business['is_approved'] == 1): ?>
+                        <div class="flex flex-col items-center text-center py-10">
+                            <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                                <i class="fas fa-check text-4xl text-green-600"></i>
+                            </div>
+                            <h2 class="text-2xl font-black text-navy uppercase tracking-wide">Business Verified</h2>
+                            <p class="text-slate mt-2 max-w-md mx-auto">Your business account is fully active. You can now add products and start selling on OXXA GEAR.</p>
+                            
+                            <a href="seller-dashboard.php" class="mt-8 bg-[#0066FF] text-white px-8 py-3 rounded-xl font-bold uppercase tracking-wide hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30">
+                                Go to My Products <i class="fas fa-arrow-right ms-2"></i>
+                            </a>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Business Number *</label>
-                            <input type="number" class="form-control" name="bnumber" value="<?php echo htmlspecialchars($business['bnumber']); ?>" required>
+                    <?php else: ?>
+                        <div class="flex flex-col items-center text-center py-10">
+                            <div class="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mb-6">
+                                <i class="fas fa-hourglass-half text-4xl text-yellow-600"></i>
+                            </div>
+                            <h2 class="text-2xl font-black text-navy uppercase tracking-wide">Verification Pending</h2>
+                            <p class="text-slate mt-2 max-w-md mx-auto">Your business documents are currently under review by our admin team. This usually takes 1-2 business days.</p>
+                            
+                            <div class="mt-8 w-full max-w-md bg-gray-50 rounded-xl p-6 text-left border border-gray-100">
+                                <h3 class="font-bold text-navy mb-4 border-b border-gray-200 pb-2">Application Details</h3>
+                                <div class="grid grid-cols-2 gap-y-4 text-sm">
+                                    <div class="text-gray-500">Business Name:</div>
+                                    <div class="font-semibold text-navy"><?= htmlspecialchars($business['business_name']) ?></div>
+                                    
+                                    <div class="text-gray-500">Business Type:</div>
+                                    <div class="font-semibold text-navy"><?= htmlspecialchars($business['business_type']) ?></div>
+                                    
+                                    <div class="text-gray-500">Reg ID:</div>
+                                    <div class="font-semibold text-navy"><?= htmlspecialchars($business['business_reg_id']) ?></div>
+                                    
+                                    <div class="text-gray-500">Contact Number:</div>
+                                    <div class="font-semibold text-navy"><?= htmlspecialchars($business['business_number']) ?></div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Registration ID *</label>
-                            <input type="text" class="form-control" name="bregid" value="<?php echo htmlspecialchars($business['bregid']); ?>" required>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+        <?php else: ?>
+            <!-- New Business Registration Form -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="bg-navy p-6">
+                    <h2 class="text-xl font-black text-white uppercase tracking-wide flex items-center">
+                        <i class="fas fa-id-card me-3 text-[#0066FF]"></i> Verify Your Business
+                    </h2>
+                    <p class="text-gray-400 text-sm mt-1">We require all sellers to be verified businesses to maintain platform quality.</p>
+                </div>
+                
+                <form action="../Backend/business-backend.php" method="POST" enctype="multipart/form-data" class="p-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- Business Name -->
+                        <div class="col-span-1">
+                            <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">Business Name *</label>
+                            <input type="text" name="bname" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Registration Date *</label>
-                            <input type="date" class="form-control" name="date" value="<?php echo $business['date']; ?>" required>
-                        </div>
-                        <div class="col-md-12 mb-3">
-                            <label class="form-label fw-semibold">Business Type *</label>
-                            <select class="form-select" name="btype" required>
-                                <option value="">Select Business Type</option>
-                                <option value="Sole Proprietorship" <?php echo ($business['btype'] == 'Sole Proprietorship') ? 'selected' : ''; ?>>Sole Proprietorship</option>
-                                <option value="Partnership" <?php echo ($business['btype'] == 'Partnership') ? 'selected' : ''; ?>>Partnership</option>
-                                <option value="Private Limited Company" <?php echo ($business['btype'] == 'Private Limited Company') ? 'selected' : ''; ?>>Private Limited Company</option>
-                                <option value="Public Limited Company" <?php echo ($business['btype'] == 'Public Limited Company') ? 'selected' : ''; ?>>Public Limited Company</option>
-                                <option value="Non-Profit Organization" <?php echo ($business['btype'] == 'Non-Profit Organization') ? 'selected' : ''; ?>>Non-Profit Organization</option>
+
+                        <!-- Business Type -->
+                        <div class="col-span-1">
+                            <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">Business Type *</label>
+                            <select name="btype" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all appearance-none">
+                                <option value="">Select Type...</option>
+                                <option value="Sole Proprietorship">Sole Proprietorship</option>
+                                <option value="Partnership">Partnership</option>
+                                <option value="Private Limited Company">Private Limited Company</option>
+                                <option value="Public Limited Company">Public Limited Company</option>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Update Certificate</label>
-                            <input type="file" class="form-control" name="bcertificate" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp">
-                            <small class="text-muted">Leave empty to keep current certificate (Max 1MB)</small>
+
+                        <!-- Business Reg ID -->
+                        <div class="col-span-1">
+                            <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">Business Reg ID (BR) *</label>
+                            <input type="text" name="bregid" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all">
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Update Logo</label>
-                            <input type="file" class="form-control" name="blogo" accept=".jpg,.jpeg,.png,.gif,.webp">
-                            <small class="text-muted">Leave empty to keep current logo (Max 1MB)</small>
+
+                        <!-- Business Contact Number -->
+                        <div class="col-span-1">
+                            <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">Business Contact Number *</label>
+                            <input type="text" name="bnumber" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all">
                         </div>
+
+                        <!-- Certificate Upload -->
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">Business Certificate (PDF/Image) *</label>
+                            <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#0066FF] transition-colors relative">
+                                <input type="file" name="bcertificate" accept=".pdf,.jpg,.jpeg,.png,.webp" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                <i class="fas fa-file-upload text-4xl text-gray-400 mb-3"></i>
+                                <p class="text-sm text-slate">Drag and drop your BR certificate here, or click to browse</p>
+                                <p class="text-xs text-gray-400 mt-1">PDF, JPG, PNG (Max 2MB)</p>
+                            </div>
+                        </div>
+
+                        <!-- Logo Upload -->
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">Business Logo (Optional)</label>
+                            <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-[#0066FF] transition-colors relative flex items-center justify-center gap-4">
+                                <input type="file" name="blogo" accept=".jpg,.jpeg,.png,.webp" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center shrink-0">
+                                    <i class="fas fa-camera text-gray-400"></i>
+                                </div>
+                                <div class="text-left">
+                                    <p class="text-sm text-slate">Upload your brand logo</p>
+                                    <p class="text-xs text-gray-400">JPG, PNG (Max 1MB)</p>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn" style="background-color: #188754; color: white;">Update Registration</button>
-                </div>
-            </form>
-        </div>
+
+                    <div class="mt-8 border-t border-gray-100 pt-8 flex justify-end">
+                        <button type="submit" name="register_business" class="bg-[#0066FF] hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-wide transition-all shadow-lg shadow-blue-500/30 flex items-center">
+                            Submit Application <i class="fas fa-paper-plane ms-2"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        <?php endif; ?>
+        
     </div>
 </div>
-<?php endif; ?>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('businessForm');
-    const updateForm = document.getElementById('updateBusinessForm');
-    
-    // File validation function
-    function validateFile(fileInput, errorElement, allowPdf = false) {
-        const file = fileInput.files[0];
-        if (!file) return true;
-        
-        // Validate file type
-        const allowedTypes = allowPdf ? 
-            ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'] :
-            ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-            
-        if (!allowedTypes.includes(file.type)) {
-            const typeText = allowPdf ? 'PDF, JPG, JPEG, PNG, GIF, and WEBP' : 'JPG, JPEG, PNG, GIF, and WEBP';
-            errorElement.textContent = `Invalid file type. Only ${typeText} are allowed.`;
-            errorElement.style.display = 'block';
-            fileInput.value = '';
-            return false;
-        }
-        
-        // Validate file size (1MB = 1048576 bytes)
-        if (file.size > 1048576) {
-            errorElement.textContent = 'File size too large. Maximum 1MB allowed.';
-            errorElement.style.display = 'block';
-            fileInput.value = '';
-            return false;
-        }
-        
-        errorElement.style.display = 'none';
-        return true;
-    }
-    
-    // Add file validation listeners
-    if (form) {
-        const bcertificateInput = document.getElementById('bcertificate');
-        const blogoInput = document.getElementById('blogo');
-        
-        bcertificateInput.addEventListener('change', function() {
-            validateFile(this, document.getElementById('bcertificateError'), true);
-        });
-        
-        blogoInput.addEventListener('change', function() {
-            validateFile(this, document.getElementById('blogoError'), false);
-        });
-        
-        // Form validation
-        form.addEventListener('submit', function(e) {
-            let isValid = true;
-            
-            // Clear previous errors
-            document.querySelectorAll('.text-danger').forEach(el => el.style.display = 'none');
-            
-            // Validate business name
-            const bname = document.getElementById('bname').value.trim();
-            if (!bname) {
-                document.getElementById('bnameError').textContent = 'Business name is required.';
-                document.getElementById('bnameError').style.display = 'block';
-                isValid = false;
-            }
-            
-            // Validate business number
-            const bnumber = document.getElementById('bnumber').value.trim();
-            if (!bnumber) {
-                document.getElementById('bnumberError').textContent = 'Business number is required.';
-                document.getElementById('bnumberError').style.display = 'block';
-                isValid = false;
-            }
-            
-            // Validate registration ID
-            const bregid = document.getElementById('bregid').value.trim();
-            if (!bregid) {
-                document.getElementById('bregidError').textContent = 'Business registration ID is required.';
-                document.getElementById('bregidError').style.display = 'block';
-                isValid = false;
-            }
-            
-            // Validate date
-            const date = document.getElementById('date').value;
-            if (!date) {
-                document.getElementById('dateError').textContent = 'Registration date is required.';
-                document.getElementById('dateError').style.display = 'block';
-                isValid = false;
-            }
-            
-            // Validate business type
-            const btype = document.getElementById('btype').value;
-            if (!btype) {
-                document.getElementById('btypeError').textContent = 'Please select a business type.';
-                document.getElementById('btypeError').style.display = 'block';
-                isValid = false;
-            }
-            
-            // Validate certificate file
-            const bcertificate = document.getElementById('bcertificate').files[0];
-            if (!bcertificate) {
-                document.getElementById('bcertificateError').textContent = 'Business certificate is required.';
-                document.getElementById('bcertificateError').style.display = 'block';
-                isValid = false;
-            }
-            
-            if (!isValid) {
-                e.preventDefault();
-            }
-        });
-    }
-    
-    // Update form file validation
-    if (updateForm) {
-        const updateCertInput = updateForm.querySelector('input[name="bcertificate"]');
-        const updateLogoInput = updateForm.querySelector('input[name="blogo"]');
-        
-        updateCertInput.addEventListener('change', function() {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'text-danger mt-1';
-            this.parentNode.appendChild(errorDiv);
-            validateFile(this, errorDiv, true);
-        });
-        
-        updateLogoInput.addEventListener('change', function() {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'text-danger mt-1';
-            this.parentNode.appendChild(errorDiv);
-            validateFile(this, errorDiv, false);
-        });
-    }
-});
-</script>
-
-<?php include("../include/footer.php"); ?>
+<?php include('../include/footer.php'); ?>

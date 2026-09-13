@@ -17,7 +17,6 @@ if (isset($_POST['register'])) {
     $password = $_POST['password'];
     $confirm = $_POST['confirm'];
     $user_type = isset($_POST['user_type']) ? $_POST['user_type'] : '';
-    $newsletter = isset($_POST['newsletter']) ? 1 : 0;
     
     // Regex Patterns
     $nameRegex = '/^[A-Za-z ]{2,50}$/';
@@ -70,20 +69,6 @@ if (isset($_POST['register'])) {
     }
 
     try {
-        // Auto-add any missing columns to prevent SQL errors during registration
-        try {
-            $pdo->exec("ALTER TABLE users ADD COLUMN profile_image VARCHAR(255) NULL");
-        } catch (PDOException $e) {}
-        try {
-            $pdo->exec("ALTER TABLE users ADD COLUMN user_type VARCHAR(50) DEFAULT 'customer'");
-        } catch (PDOException $e) {}
-        try {
-            $pdo->exec("ALTER TABLE users ADD COLUMN phone VARCHAR(20) NULL");
-        } catch (PDOException $e) {}
-        try {
-            $pdo->exec("ALTER TABLE users ADD COLUMN newsletter TINYINT(1) DEFAULT 0");
-        } catch (PDOException $e) {}
-
         // Check if username or email already exists using PDO
         $checkStmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
         $checkStmt->execute([$username, $email]);
@@ -102,7 +87,6 @@ if (isset($_POST['register'])) {
 
         // Handle profile photo upload
         $imageName = '';
-        $dbImagePath = '';
         if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] === UPLOAD_ERR_OK) {
             $uploadDir = '../assets/uploads/profiles/';
             if (!is_dir($uploadDir)) {
@@ -139,36 +123,36 @@ if (isset($_POST['register'])) {
                 header('Location: ../site/index.php?open=register');
                 exit();
             }
-            $dbImagePath = 'assets/uploads/profiles/' . $imageName;
         }
 
         // Generate new user ID using mysqli connection for compatibility with existing function
-        $userid = generateUserId($conn);
+        $user_code = generateUserId($conn);
         
-        // Hash password securely
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        
-        // Approve is 1 for both customer and seller for now
-        $approve = 1;
+        // Use md5 for backward compatibility with old login system
+        $hashedPassword = md5($password);
         
         // Insert user into database using PDO
-        $insertStmt = $pdo->prepare("INSERT INTO users (user_id, firstname, lastname, username, email, phone, password, image, type, approve, profile_image, user_type, newsletter) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $insertStmt = $pdo->prepare("INSERT INTO users (user_code, first_name, last_name, username, email, phone, password, profile_image, user_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
         
-        if ($insertStmt->execute([$userid, $firstname, $lastname, $username, $email, $phone, $hashedPassword, $imageName, $user_type, $approve, $dbImagePath, $user_type, $newsletter])) {
+        if ($insertStmt->execute([$user_code, $firstname, $lastname, $username, $email, $phone, $hashedPassword, $imageName, $user_type])) {
             
+            $new_id = $pdo->lastInsertId();
+
             // Log them in automatically
-            $_SESSION['userid'] = $userid;
-            $_SESSION['firstname'] = $firstname;
-            $_SESSION['lastname'] = $lastname;
+            $_SESSION['userid'] = $new_id;
+            $_SESSION['user_code'] = $user_code;
+            $_SESSION['first_name'] = $firstname;
+            $_SESSION['last_name'] = $lastname;
             $_SESSION['username'] = $username;
             $_SESSION['email'] = $email;
-            $_SESSION['image'] = $imageName;
-            $_SESSION['profile_image'] = $dbImagePath;
+            $_SESSION['profile_image'] = $imageName;
             $_SESSION['type'] = $user_type;
-            $_SESSION['user_type'] = $user_type;
-            $_SESSION['approve'] = $approve;
             
-            header('Location: ../site/index.php?success=registered');
+            if ($user_type == 'seller') {
+                header('Location: ../site/business-registration.php');
+            } else {
+                header('Location: ../site/index.php?success=registered');
+            }
             exit();
         } else {
             $_SESSION['reg_errors'][] = "Database error occurred during registration.";

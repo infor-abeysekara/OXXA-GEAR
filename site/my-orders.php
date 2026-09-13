@@ -1,287 +1,186 @@
 <?php
-$page_title = 'My Orders - OXXA GEAR';
-include('../include/header.php');
+session_start();
+include('../include/connection.php');
 
-// Check if user is logged in
 if (!isset($_SESSION['userid'])) {
-    header("Location: login.php");
+    header("Location: index.php?open=login");
     exit();
 }
 
-$user_id = $_SESSION['userid'];
+$userid = $_SESSION['userid'];
 
-// Fetch orders for the user, grouped by orderid
-// We will join with production table to get product details
-$orders_query = "
-    SELECT o.orderid, o.status, o.orderdate, o.payment_method, 
-           SUM(o.price * o.qty) as total_amount, 
-           COUNT(o.pid) as total_items
-    FROM ordertable o
-    WHERE o.user_id = ?
-    GROUP BY o.orderid
-    ORDER BY o.orderdate DESC
-";
-$stmt = $conn->prepare($orders_query);
-$stmt->bind_param("s", $user_id);
-$stmt->execute();
-$orders_result = $stmt->get_result();
+$stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+$stmt->execute([$userid]);
+$user = $stmt->fetch();
 
-$orders = [];
-while ($row = $orders_result->fetch_assoc()) {
-    $orders[] = $row;
+// Fetch orders
+$filter = $_GET['filter'] ?? 'all';
+$query = "SELECT * FROM orders WHERE user_id = ?";
+$params = [$userid];
+
+if ($filter !== 'all') {
+    $query .= " AND status = ?";
+    $params[] = $filter;
 }
 
-// Helper to determine active step in visual tracking
-function getStatusStep($status) {
-    switch (strtolower($status)) {
-        case 'pending': return 1;
-        case 'processing': return 2;
-        case 'shipped': return 3;
-        case 'delivered': return 4;
-        case 'cancelled': return -1;
-        default: return 1;
-    }
-}
+$query .= " ORDER BY created_at DESC";
+$ordersStmt = $pdo->prepare($query);
+$ordersStmt->execute($params);
+$orders = $ordersStmt->fetchAll();
+
+include("../include/header.php");
 ?>
 
-<div class="container my-10 max-w-7xl mx-auto px-4">
-    <!-- Breadcrumbs -->
-    <div class="mb-6 flex items-center text-sm font-medium text-slate">
-        <a href="index.php" class="hover:text-primary transition-colors">Home</a>
-        <i class="fas fa-chevron-right mx-2 text-[10px]"></i>
-        <a href="profile.php" class="hover:text-primary transition-colors">My Profile</a>
-        <i class="fas fa-chevron-right mx-2 text-[10px]"></i>
-        <span class="text-navy">My Orders</span>
-    </div>
-
-    <div class="text-center mb-8">
-        <h2 class="text-3xl md:text-4xl font-extrabold text-navy uppercase tracking-wider mb-2">
-            Order <span class="text-primary">History</span>
-        </h2>
-        <div class="w-16 h-1 bg-primary mx-auto rounded-full"></div>
-        <p class="text-slate mt-4">Track, manage and review your recent purchases</p>
-    </div>
-
-    <div class="row">
-        <!-- Sidebar Navigation -->
-        <div class="col-lg-3 mb-6 lg:mb-0">
-            <div class="bg-white rounded-[2rem] shadow-xl border border-gray-100 overflow-hidden sticky top-24">
-                <div class="p-6 border-b border-gray-100 bg-navy text-white text-center">
-                    <div class="w-20 h-20 bg-gray-600 rounded-full mx-auto mb-3 flex items-center justify-center text-3xl overflow-hidden border-2 border-white shadow-md">
-                        <?php if(!empty($_SESSION['image'])): ?>
-                            <img src="../image/profile/<?php echo htmlspecialchars($_SESSION['image']); ?>" class="w-full h-full object-cover">
-                        <?php else: ?>
-                            <i class="fas fa-user text-gray-300"></i>
-                        <?php endif; ?>
-                    </div>
-                    <h5 class="font-bold text-lg m-0"><?php echo htmlspecialchars(substr($_SESSION['firstname'], 0, 15)); ?></h5>
-                    <p class="text-xs text-gray-400 mt-1 uppercase tracking-widest"><?php echo ucfirst($_SESSION['type']); ?></p>
-                </div>
-                <div class="p-4">
-                    <ul class="space-y-2 m-0 p-0 list-none font-medium">
-                        <li>
-                            <a href="profile.php" class="flex items-center text-slate hover:text-primary hover:bg-blue-50 px-4 py-3 rounded-xl transition-colors">
-                                <i class="fas fa-user-circle w-6"></i> My Profile
-                            </a>
-                        </li>
-                        <li>
-                            <a href="my-orders.php" class="flex items-center text-primary bg-blue-50 px-4 py-3 rounded-xl transition-colors">
-                                <i class="fas fa-shopping-bag w-6"></i> Order History
-                            </a>
-                        </li>
-                        <li>
-                            <a href="notifications.php" class="flex items-center text-slate hover:text-primary hover:bg-blue-50 px-4 py-3 rounded-xl transition-colors">
-                                <i class="fas fa-heart w-6"></i> Wishlist
-                            </a>
-                        </li>
-                        <li class="pt-2 mt-2 border-t border-gray-100">
-                            <a href="../Backend/logout.php" class="flex items-center text-danger hover:bg-red-50 px-4 py-3 rounded-xl transition-colors">
-                                <i class="fas fa-sign-out-alt w-6"></i> Logout
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
+<div class="bg-gray-50 min-h-screen py-10 mt-20">
+    <div class="container mx-auto px-4 max-w-6xl">
+        
+        <div class="flex items-center text-sm text-gray-500 mb-6">
+            <a href="index.php" class="hover:text-[#0066FF] transition-colors"><i class="fas fa-home me-2"></i>Home</a>
+            <i class="fas fa-chevron-right text-xs mx-3 text-gray-300"></i>
+            <span class="text-navy font-bold">My Orders</span>
         </div>
 
-        <!-- Orders Content -->
-        <div class="col-lg-9">
-            <?php if (empty($orders)): ?>
-                <div class="bg-white rounded-[2rem] p-12 shadow-xl border border-gray-100 text-center">
-                    <div class="w-32 h-32 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-300">
-                        <i class="fas fa-box-open fa-3x"></i>
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Sidebar -->
+            <div class="w-full lg:w-[260px] flex-shrink-0">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
+                    <div class="p-6 text-center border-b border-gray-50 flex flex-col items-center">
+                        <?php if (!empty($user['profile_image']) && file_exists("../assets/uploads/profiles/" . $user['profile_image'])): ?>
+                            <img src="../assets/uploads/profiles/<?php echo $user['profile_image']; ?>" class="w-24 h-24 rounded-full object-cover ring-4 ring-white shadow-xl mb-4">
+                        <?php else: ?>
+                            <div class="w-24 h-24 rounded-full bg-black text-white flex items-center justify-center text-3xl font-black ring-4 ring-white shadow-xl mb-4">
+                                <?php echo strtoupper(substr($user['first_name'], 0, 1)); ?>
+                            </div>
+                        <?php endif; ?>
+                        <h3 class="font-black text-navy text-lg uppercase tracking-wide"><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></h3>
+                        <p class="text-sm text-gray-500">@<?php echo htmlspecialchars($user['username']); ?></p>
                     </div>
-                    <h3 class="text-2xl font-bold text-navy mb-3">No Orders Yet</h3>
-                    <p class="text-slate mb-8 max-w-md mx-auto">Looks like you haven't made your first purchase yet. Start shopping our premium performance gear!</p>
-                    <a href="products.php" class="inline-block bg-primary hover:bg-primary-hover text-white px-8 py-4 rounded-xl font-bold uppercase tracking-wide transition-all shadow-md">
-                        Browse Products
-                    </a>
+                    
+                    <div class="p-3 flex flex-col gap-1">
+                        <a href="profile.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                            <i class="far fa-user-circle w-6 text-lg"></i> My Profile
+                        </a>
+                        <a href="address-book.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                            <i class="far fa-address-book w-6 text-lg"></i> Address Book
+                        </a>
+                        <a href="my-orders.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm bg-blue-50 text-[#0066FF] transition-colors">
+                            <i class="fas fa-shopping-bag w-6 text-lg"></i> My Orders
+                        </a>
+                        <a href="wishlist.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                            <i class="far fa-heart w-6 text-lg"></i> Wishlist
+                        </a>
+                        <a href="reviews.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                            <i class="far fa-star w-6 text-lg"></i> My Reviews
+                        </a>
+                        <a href="returns.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                            <i class="fas fa-undo-alt w-6 text-lg"></i> My Returns
+                        </a>
+                        <a href="coupons.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                            <i class="fas fa-ticket-alt w-6 text-lg"></i> My Coupons
+                        </a>
+                        <a href="recently-viewed.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors border-b border-gray-100 pb-4 mb-1">
+                            <i class="far fa-eye w-6 text-lg"></i> Recently Viewed
+                        </a>
+                        <?php if($user['user_type'] == 'seller'): ?>
+                        <a href="seller-dashboard.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors mt-2 border-t border-gray-100 pt-3">
+                            <i class="fas fa-store w-6 text-lg"></i> Seller Dashboard
+                        </a>
+                        <?php else: ?>
+                        <a href="sell-on-oxxa.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors mt-2 border-t border-gray-100 pt-3">
+                            <i class="fas fa-store w-6 text-lg"></i> Sell on OXXA
+                        </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
-            <?php else: ?>
-                <div class="space-y-8">
-                    <?php foreach ($orders as $order): 
-                        $statusStep = getStatusStep($order['status']);
-                        $isCancelled = ($statusStep === -1);
-                    ?>
-                        <div class="bg-white rounded-[2rem] shadow-xl border border-gray-100 overflow-hidden">
-                            <!-- Order Header -->
-                            <div class="bg-navy p-6 flex flex-wrap justify-between items-center gap-4">
-                                <div>
-                                    <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Order Number</p>
-                                    <h5 class="text-white font-bold text-lg font-mono">#<?php echo htmlspecialchars($order['orderid']); ?></h5>
-                                </div>
-                                <div class="text-left md:text-right">
-                                    <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Date Placed</p>
-                                    <h5 class="text-white font-medium text-sm"><?php echo date('M d, Y • h:i A', strtotime($order['orderdate'])); ?></h5>
-                                </div>
-                                <div class="text-left md:text-right">
-                                    <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Total Amount</p>
-                                    <h5 class="text-primary font-bold text-lg">Rs. <?php echo number_format($order['total_amount'], 2); ?></h5>
-                                </div>
-                                <div>
-                                    <button class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-white/20" type="button" data-bs-toggle="collapse" data-bs-target="#order-<?php echo $order['orderid']; ?>">
-                                        View Details <i class="fas fa-chevron-down ms-1 text-xs"></i>
-                                    </button>
-                                </div>
-                            </div>
+            </div>
 
-                            <div class="p-6 md:p-8">
-                                <!-- Visual Tracking UI -->
-                                <div class="mb-8 relative">
-                                    <?php if ($isCancelled): ?>
-                                        <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl font-medium flex items-center justify-center">
-                                            <i class="fas fa-times-circle text-red-500 text-xl me-3"></i> 
-                                            This order was cancelled.
-                                        </div>
-                                    <?php else: ?>
-                                        <!-- Progress Bar Background -->
-                                        <div class="absolute top-5 left-8 right-8 h-1 bg-gray-200 -z-10 rounded-full"></div>
-                                        
-                                        <!-- Active Progress Bar -->
-                                        <div class="absolute top-5 left-8 h-1 bg-primary -z-10 rounded-full transition-all duration-1000" style="width: <?php echo ($statusStep - 1) * 33.33; ?>%"></div>
-                                        
-                                        <div class="flex justify-between items-center text-center px-4 relative z-0">
-                                            <!-- Step 1: Pending -->
-                                            <div class="flex flex-col items-center">
-                                                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-sm transition-colors mb-3 border-4 border-white
-                                                    <?php echo $statusStep >= 1 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-400'; ?>">
-                                                    <i class="fas fa-clipboard-list"></i>
-                                                </div>
-                                                <span class="text-xs font-bold uppercase tracking-wider <?php echo $statusStep >= 1 ? 'text-navy' : 'text-gray-400'; ?>">Pending</span>
-                                            </div>
-
-                                            <!-- Step 2: Processing -->
-                                            <div class="flex flex-col items-center">
-                                                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-sm transition-colors mb-3 border-4 border-white
-                                                    <?php echo $statusStep >= 2 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-400'; ?>">
-                                                    <i class="fas fa-box"></i>
-                                                </div>
-                                                <span class="text-xs font-bold uppercase tracking-wider <?php echo $statusStep >= 2 ? 'text-navy' : 'text-gray-400'; ?>">Processing</span>
-                                            </div>
-
-                                            <!-- Step 3: Shipped -->
-                                            <div class="flex flex-col items-center">
-                                                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-sm transition-colors mb-3 border-4 border-white
-                                                    <?php echo $statusStep >= 3 ? 'bg-primary text-white' : 'bg-gray-200 text-gray-400'; ?>">
-                                                    <i class="fas fa-truck-fast"></i>
-                                                </div>
-                                                <span class="text-xs font-bold uppercase tracking-wider <?php echo $statusStep >= 3 ? 'text-navy' : 'text-gray-400'; ?>">Shipped</span>
-                                            </div>
-
-                                            <!-- Step 4: Delivered -->
-                                            <div class="flex flex-col items-center">
-                                                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-sm transition-colors mb-3 border-4 border-white
-                                                    <?php echo $statusStep >= 4 ? 'bg-lime text-navy' : 'bg-gray-200 text-gray-400'; ?>">
-                                                    <i class="fas fa-check"></i>
-                                                </div>
-                                                <span class="text-xs font-bold uppercase tracking-wider <?php echo $statusStep >= 4 ? 'text-navy' : 'text-gray-400'; ?>">Delivered</span>
-                                            </div>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            
-                            <!-- Collapsible Order Details -->
-                            <div class="collapse border-t border-gray-100" id="order-<?php echo $order['orderid']; ?>">
-                                <div class="p-6 bg-gray-50">
-                                    <h6 class="font-bold text-navy uppercase tracking-wide mb-4 text-sm flex items-center">
-                                        <i class="fas fa-shopping-basket text-primary me-2"></i> Order Items (<?php echo $order['total_items']; ?>)
-                                    </h6>
+            <!-- Right Main Content -->
+            <div class="flex-1">
+                <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden p-8">
+                    <h2 class="text-2xl font-black text-navy uppercase tracking-wide mb-6">My Orders</h2>
+                    
+                    <!-- Filters -->
+                    <div class="flex flex-wrap gap-2 mb-8 border-b border-gray-100 pb-4">
+                        <a href="?filter=all" class="px-5 py-2 rounded-full text-sm font-bold uppercase transition-colors <?php echo $filter == 'all' ? 'bg-navy text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'; ?>">All Orders</a>
+                        <a href="?filter=pending" class="px-5 py-2 rounded-full text-sm font-bold uppercase transition-colors <?php echo $filter == 'pending' ? 'bg-orange-50 text-orange-500 border border-orange-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'; ?>">Pending</a>
+                        <a href="?filter=confirmed" class="px-5 py-2 rounded-full text-sm font-bold uppercase transition-colors <?php echo $filter == 'confirmed' ? 'bg-blue-50 text-[#0066FF] border border-blue-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'; ?>">Confirmed</a>
+                        <a href="?filter=delivered" class="px-5 py-2 rounded-full text-sm font-bold uppercase transition-colors <?php echo $filter == 'delivered' ? 'bg-lime/20 text-lime border border-lime/30' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'; ?>">Delivered</a>
+                        <a href="?filter=cancelled" class="px-5 py-2 rounded-full text-sm font-bold uppercase transition-colors <?php echo $filter == 'cancelled' ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'; ?>">Cancelled</a>
+                    </div>
+                    
+                    <?php if (count($orders) > 0): ?>
+                        <div class="space-y-4">
+                            <?php foreach ($orders as $order): ?>
+                                <?php
+                                    $itemsStmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ? LIMIT 1");
+                                    $itemsStmt->execute([$order['id']]);
+                                    $firstItem = $itemsStmt->fetch(PDO::FETCH_ASSOC);
                                     
-                                    <div class="space-y-4">
-                                        <?php
-                                        // Fetch items for this specific order
-                                        $items_query = "
-                                            <truncated in file content>
-                                            SELECT o.*, p.pname, p.image, p.brand 
-                                            FROM ordertable o
-                                            JOIN production p ON o.pid = p.pid
-                                            WHERE o.orderid = ?
-                                        ";
-                                        $items_stmt = $conn->prepare($items_query);
-                                        $items_stmt->bind_param("s", $order['orderid']);
-                                        $items_stmt->execute();
-                                        $items_result = $items_stmt->get_result();
-                                        
-                                        while ($item = $items_result->fetch_assoc()):
-                                        ?>
-                                            <div class="flex items-center gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                                                <div class="shrink-0 w-16 h-16 bg-gray-50 rounded-lg p-1 border border-gray-100 flex items-center justify-center overflow-hidden">
-                                                    <?php if (!empty($item['image'])): ?>
-                                                        <img src="../image/<?php echo htmlspecialchars($item['image']); ?>" class="w-full h-full object-contain">
-                                                    <?php else: ?>
-                                                        <i class="fas fa-image text-gray-300"></i>
-                                                    <?php endif; ?>
+                                    $countStmt = $pdo->prepare("SELECT SUM(quantity) FROM order_items WHERE order_id = ?");
+                                    $countStmt->execute([$order['id']]);
+                                    $totalItems = $countStmt->fetchColumn() ?: 0;
+
+                                    $status = $order['status'];
+                                    $statusClass = '';
+                                    switch($status) {
+                                        case 'pending': $statusClass = 'bg-orange-50 text-orange-500 border-orange-100'; break;
+                                        case 'confirmed': $statusClass = 'bg-blue-50 text-[#0066FF] border-blue-100'; break;
+                                        case 'shipped': $statusClass = 'bg-purple-50 text-purple-600 border-purple-100'; break;
+                                        case 'delivered': $statusClass = 'bg-lime/20 text-lime border-lime/30'; break;
+                                        case 'cancelled': $statusClass = 'bg-red-50 text-red-500 border-red-100'; break;
+                                        default: $statusClass = 'bg-gray-50 text-gray-500 border-gray-100';
+                                    }
+                                ?>
+                                <div class="border border-gray-100 rounded-xl p-5 hover:border-blue-100 transition-colors bg-gray-50/30">
+                                    <div class="flex flex-col md:flex-row justify-between gap-4">
+                                        <div class="flex items-center gap-4">
+                                            <?php if($firstItem && !empty($firstItem['product_image'])): ?>
+                                                <img src="../<?php echo htmlspecialchars($firstItem['product_image']); ?>" class="w-20 h-20 rounded-lg object-cover bg-white border border-gray-200">
+                                            <?php else: ?>
+                                                <div class="w-20 h-20 rounded-lg bg-white border border-gray-200 flex items-center justify-center"><i class="fas fa-box text-gray-300 text-xl"></i></div>
+                                            <?php endif; ?>
+                                            <div>
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    <span class="font-black text-navy">Order #<?php echo htmlspecialchars($order['order_code']); ?></span>
+                                                    <span class="px-2 py-0.5 text-[10px] font-black uppercase rounded-md border <?php echo $statusClass; ?>"><?php echo htmlspecialchars($status); ?></span>
                                                 </div>
-                                                <div class="flex-grow min-w-0">
-                                                    <h6 class="font-bold text-navy text-sm mb-1 truncate"><?php echo htmlspecialchars($item['pname']); ?></h6>
-                                                    <p class="text-xs text-slate mb-1">
-                                                        <span class="uppercase tracking-wider"><?php echo htmlspecialchars($item['brand']); ?></span>
-                                                        <?php if (!empty($item['size']) && $item['size'] != 'Standard'): ?>
-                                                            <span class="mx-1">•</span> <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px]"><?php echo htmlspecialchars($item['size']); ?></span>
-                                                        <?php endif; ?>
-                                                    </p>
-                                                    <div class="flex justify-between items-center mt-2">
-                                                        <span class="text-xs font-medium text-slate">Qty: <?php echo $item['qty']; ?></span>
-                                                        <span class="font-bold text-navy">Rs. <?php echo number_format($item['price'], 2); ?></span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        <?php endwhile; ?>
-                                    </div>
-                                    
-                                    <div class="mt-6 pt-6 border-t border-gray-200 flex justify-between items-center">
-                                        <div class="text-sm">
-                                            <span class="text-slate uppercase tracking-widest text-[10px] block mb-1">Payment Method</span>
-                                            <span class="font-bold text-navy flex items-center">
-                                                <?php if($order['payment_method'] === 'COD'): ?>
-                                                    <i class="fas fa-money-bill-wave text-primary me-2"></i> Cash on Delivery
-                                                <?php else: ?>
-                                                    <i class="fas fa-credit-card text-primary me-2"></i> Online Payment
+                                                <?php if($firstItem): ?>
+                                                    <p class="text-sm text-gray-600 font-medium line-clamp-1 mb-1"><?php echo htmlspecialchars($firstItem['product_name']); ?></p>
+                                                    <p class="text-xs text-gray-400"><?php echo $totalItems > 1 ? '+' . ($totalItems - 1) . ' more items' : 'Qty: ' . $firstItem['quantity']; ?></p>
                                                 <?php endif; ?>
-                                            </span>
+                                            </div>
                                         </div>
-                                        <?php if ($statusStep === 4): ?>
-                                            <button class="bg-navy hover:bg-primary text-white px-5 py-2 rounded-lg font-medium transition-colors text-sm shadow-sm" onclick="showToast('Invoice downloading...', 'info')">
-                                                <i class="fas fa-file-invoice me-1"></i> Invoice
-                                            </button>
-                                        <?php endif; ?>
+                                        <div class="flex flex-row md:flex-col justify-between items-end gap-2 border-t md:border-t-0 md:border-l border-gray-100 pt-3 md:pt-0 md:pl-4 mt-2 md:mt-0">
+                                            <div class="text-right">
+                                                <p class="text-xs text-gray-400 font-bold uppercase mb-1">Total Amount</p>
+                                                <p class="font-black text-lg text-[#0066FF]">Rs. <?php echo number_format($order['total_amount'], 2); ?></p>
+                                            </div>
+                                            <a href="order-details.php?id=<?php echo $order['id']; ?>" class="text-xs font-bold bg-white border border-gray-200 text-navy px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors uppercase tracking-wide">
+                                                View Details
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
-                    <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="text-center py-12">
+                            <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-search text-gray-300 text-3xl"></i>
+                            </div>
+                            <h4 class="text-lg font-bold text-navy mb-2">No orders found</h4>
+                            <p class="text-gray-500 mb-6">We couldn't find any orders matching this filter.</p>
+                            <?php if($filter != 'all'): ?>
+                                <a href="?filter=all" class="inline-block px-6 py-2 bg-gray-100 text-navy font-bold rounded-full text-sm uppercase tracking-wide hover:bg-gray-200 transition-colors">Clear Filters</a>
+                            <?php else: ?>
+                                <a href="products.php" class="inline-block px-8 py-3 bg-[#0066FF] text-white font-bold rounded-full uppercase tracking-wide hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30">Start Shopping</a>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
-            <?php endif; ?>
+            </div>
         </div>
     </div>
 </div>
 
-<style>
-    /* Collapse transitions */
-    .collapse {
-        transition: height 0.3s ease-in-out;
-    }
-</style>
-
-<?php include('../include/footer.php'); ?>
+<?php include("../include/footer.php"); ?>

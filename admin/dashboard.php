@@ -9,28 +9,28 @@ if(!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
 }
 
 // Get statistics
-$total_users_query = "SELECT COUNT(*) as total FROM users WHERE type != 'admin'";
+$total_users_query = "SELECT COUNT(*) as total FROM users WHERE user_type != 'admin'";
 $total_users_result = mysqli_query($conn, $total_users_query);
 $total_users = mysqli_fetch_assoc($total_users_result)['total'];
 
-$total_buyers_query = "SELECT COUNT(*) as total FROM users WHERE type = 'buyer'";
+$total_buyers_query = "SELECT COUNT(*) as total FROM users WHERE user_type = 'customer'";
 $total_buyers_result = mysqli_query($conn, $total_buyers_query);
 $total_buyers = mysqli_fetch_assoc($total_buyers_result)['total'];
 
-$total_sellers_query = "SELECT COUNT(*) as total FROM users WHERE type = 'seller'";
+$total_sellers_query = "SELECT COUNT(*) as total FROM users WHERE user_type = 'seller'";
 $total_sellers_result = mysqli_query($conn, $total_sellers_query);
 $total_sellers = mysqli_fetch_assoc($total_sellers_result)['total'];
 
-$total_products_query = "SELECT COUNT(*) as total FROM production";
+$total_products_query = "SELECT COUNT(*) as total FROM products";
 $total_products_result = mysqli_query($conn, $total_products_query);
 $total_products = mysqli_fetch_assoc($total_products_result)['total'];
 
-$active_products_query = "SELECT COUNT(*) as total FROM production WHERE approve = 1";
+$active_products_query = "SELECT COUNT(*) as total FROM products WHERE is_approved = 1";
 $active_products_result = mysqli_query($conn, $active_products_query);
 $active_products = mysqli_fetch_assoc($active_products_result)['total'];
 
-// Get pending business registrations
-$pending_business_query = "SELECT COUNT(*) as total FROM businessregistration WHERE approve = 0";
+// Get pending business verifications
+$pending_business_query = "SELECT COUNT(*) as total FROM seller_profiles WHERE is_approved = 0";
 $pending_business_result = mysqli_query($conn, $pending_business_query);
 $pending_business = mysqli_fetch_assoc($pending_business_result)['total'];
 ?>
@@ -112,7 +112,7 @@ $pending_business = mysqli_fetch_assoc($pending_business_result)['total'];
             <div class="text-center text-white mb-4">
                 <i class="fas fa-shield-alt fa-2x mb-2"></i>
                 <h5>Admin Panel</h5>
-                <small><?php echo $_SESSION['firstname'] . ' ' . $_SESSION['lastname']; ?></small>
+                <small><?php echo ($_SESSION['first_name'] ?? $_SESSION['firstname'] ?? '') . ' ' . ($_SESSION['last_name'] ?? $_SESSION['lastname'] ?? ''); ?></small>
             </div>
             
             <ul class="nav flex-column">
@@ -162,7 +162,7 @@ $pending_business = mysqli_fetch_assoc($pending_business_result)['total'];
             <div class="row mb-4">
                 <div class="col-12">
                     <h2 class="fw-bold text-dark">Dashboard Overview</h2>
-                    <p class="text-muted">Welcome back, <?php echo $_SESSION['firstname']; ?>! Here's what's happening with your platform.</p>
+                    <p class="text-muted">Welcome back, <?php echo $_SESSION['first_name'] ?? $_SESSION['firstname'] ?? 'Admin'; ?>! Here's what's happening with your platform.</p>
                 </div>
             </div>
 
@@ -233,13 +233,13 @@ $pending_business = mysqli_fetch_assoc($pending_business_result)['total'];
                         </div>
                         <div class="card-body">
                             <?php
-                            $pending_query = "SELECT u.*, br.bname, br.btype FROM users u 
-                                            JOIN businessregistration br ON u.user_id = br.user_id 
-                                            WHERE br.approve = 0 
-                                            ORDER BY br.id DESC LIMIT 5";
+                            $pending_query = "SELECT u.*, sp.business_name, sp.business_type FROM users u 
+                                            JOIN seller_profiles sp ON u.id = sp.user_id 
+                                            WHERE sp.is_approved = 0 
+                                            ORDER BY sp.id DESC LIMIT 5";
                             $pending_result = mysqli_query($conn, $pending_query);
                             
-                            if(mysqli_num_rows($pending_result) > 0):
+                            if($pending_result && mysqli_num_rows($pending_result) > 0):
                             ?>
                                 <div class="table-responsive">
                                     <table class="table table-hover">
@@ -253,8 +253,8 @@ $pending_business = mysqli_fetch_assoc($pending_business_result)['total'];
                                         <tbody>
                                             <?php while($row = mysqli_fetch_assoc($pending_result)): ?>
                                             <tr>
-                                                <td><?php echo $row['firstname'] . ' ' . $row['lastname']; ?></td>
-                                                <td><?php echo $row['bname']; ?></td>
+                                                <td><?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></td>
+                                                <td><?php echo htmlspecialchars($row['business_name']); ?></td>
                                                 <td>
                                                     <a href="business-registrations.php" class="btn btn-sm btn-primary">Review</a>
                                                 </td>
@@ -277,12 +277,12 @@ $pending_business = mysqli_fetch_assoc($pending_business_result)['total'];
                         </div>
                         <div class="card-body">
                             <?php
-                            $recent_products_query = "SELECT p.*, u.firstname, u.lastname FROM production p 
-                                                    JOIN users u ON p.user_id = u.user_id 
-                                                    ORDER BY p.Add_date DESC LIMIT 5";
+                            $recent_products_query = "SELECT p.*, u.first_name, u.last_name FROM products p 
+                                                    JOIN users u ON p.seller_id = u.id 
+                                                    ORDER BY p.created_at DESC LIMIT 5";
                             $recent_products_result = mysqli_query($conn, $recent_products_query);
                             
-                            if(mysqli_num_rows($recent_products_result) > 0):
+                            if($recent_products_result && mysqli_num_rows($recent_products_result) > 0):
                             ?>
                                 <div class="table-responsive">
                                     <table class="table table-hover">
@@ -296,11 +296,11 @@ $pending_business = mysqli_fetch_assoc($pending_business_result)['total'];
                                         <tbody>
                                             <?php while($row = mysqli_fetch_assoc($recent_products_result)): ?>
                                             <tr>
-                                                <td><?php echo $row['pname']; ?></td>
-                                                <td><?php echo $row['firstname'] . ' ' . $row['lastname']; ?></td>
+                                                <td><?php echo htmlspecialchars($row['name']); ?></td>
+                                                <td><?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></td>
                                                 <td>
-                                                    <span class="badge bg-<?php echo $row['approve'] == 1 ? 'success' : 'warning'; ?>">
-                                                        <?php echo $row['approve'] == 1 ? 'Active' : 'Pending'; ?>
+                                                    <span class="badge bg-<?php echo $row['is_approved'] == 1 ? 'success' : 'warning'; ?>">
+                                                        <?php echo $row['is_approved'] == 1 ? 'Active' : 'Pending'; ?>
                                                     </span>
                                                 </td>
                                             </tr>
