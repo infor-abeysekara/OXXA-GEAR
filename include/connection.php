@@ -1,7 +1,7 @@
 <?php
 // Database configuration
 $host = 'localhost';
-$dbname = 'nutrition.lk';
+$dbname = 'oxxa_gear_database';
 $username = 'root';
 $password = '';
 
