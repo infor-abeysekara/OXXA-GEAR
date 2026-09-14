@@ -8,6 +8,7 @@ if (!isset($_SESSION['userid']) || $_SESSION['type'] != 'seller') {
     header('Location: login.php');
     exit();
 }
+session_write_close(); // Free session lock for parallel AJAX requests
 
 $stmt = $pdo->prepare("SELECT * FROM seller_profiles WHERE user_id = ?");
 $stmt->execute([$_SESSION['userid']]);
@@ -21,6 +22,10 @@ if (!$business || $business['is_approved'] == 0) {
 // Fetch categories
 $catStmt = $pdo->query("SELECT * FROM categories ORDER BY name ASC");
 $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch active brands
+$brandStmt = $pdo->query("SELECT id, name FROM brands WHERE is_active = 1 ORDER BY name ASC");
+$brands = $brandStmt->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
 
@@ -58,7 +63,12 @@ $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
                     
                     <div class="col-span-1">
                         <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">Brand</label>
-                        <input type="text" name="brand" class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all">
+                        <select name="brand_id" class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all appearance-none">
+                            <option value="">No Brand</option>
+                            <?php foreach($brands as $b): ?>
+                                <option value="<?= $b['id'] ?>"><?= htmlspecialchars($b['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     
                     <div class="col-span-1">

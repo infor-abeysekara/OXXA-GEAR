@@ -2,25 +2,75 @@
 // Prevent multiple inclusions
 if (!function_exists('uploadImage')) {
 
-    // Image upload function
+    // Image upload and compression function
     function uploadImage($file, $uploadDir, $prefix = '')
     {
-        $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-        $fileType = $file['type'];
+        $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+        $fileType = mime_content_type($file['tmp_name']);
 
         if (!in_array($fileType, $allowedTypes)) {
-            return false;
+            return 'type_error';
         }
 
-        if ($file['size'] > 5 * 1024 * 1024) { // 5MB limit
-            return false;
+        // We'll allow up to 10MB upload but compress it down
+        if ($file['size'] > 10 * 1024 * 1024) { 
+            return 'size_error';
         }
 
-        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $fileName = $prefix . uniqid() . '.' . $extension;
         $targetPath = $uploadDir . $fileName;
 
-        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        // If PDF, just move it without compression
+        if ($extension === 'pdf' || $fileType === 'application/pdf') {
+            if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+                return $fileName;
+            }
+            return false;
+        }
+
+        // For images, compress and resize
+        list($width, $height) = getimagesize($file['tmp_name']);
+        
+        $maxWidth = 800;
+        if ($width > $maxWidth) {
+            $newWidth = $maxWidth;
+            $newHeight = floor($height * ($maxWidth / $width));
+        } else {
+            $newWidth = $width;
+            $newHeight = $height;
+        }
+
+        $image_p = imagecreatetruecolor($newWidth, $newHeight);
+        
+        // Handle transparency for PNG
+        if ($extension == 'png') {
+            imagealphablending($image_p, false);
+            imagesavealpha($image_p, true);
+            $transparent = imagecolorallocatealpha($image_p, 255, 255, 255, 127);
+            imagefilledrectangle($image_p, 0, 0, $newWidth, $newHeight, $transparent);
+            $image = imagecreatefrompng($file['tmp_name']);
+        } else {
+            $image = imagecreatefromjpeg($file['tmp_name']);
+        }
+
+        imagecopyresampled($image_p, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+
+        // Save image (Quality 70 for JPEG usually hits ~100-200KB for 800px)
+        if ($extension == 'png') {
+            $success = imagepng($image_p, $targetPath, 8); // Compression level 0-9
+        } else {
+            $success = imagejpeg($image_p, $targetPath, 70); // Quality 0-100
+        }
+
+        imagedestroy($image_p);
+        imagedestroy($image);
+
+        if ($success) {
             return $fileName;
         }
 
@@ -193,7 +243,7 @@ if (!function_exists('uploadImage')) {
     // Check if user has approved business registration
     function hasApprovedBusiness($conn, $user_id)
     {
-        $query = "SELECT approve FROM businessregistration WHERE user_id = ? ORDER BY id DESC LIMIT 1";
+        $query = "SELECT is_approved FROM seller_profiles WHERE user_id = ? ORDER BY id DESC LIMIT 1";
         $stmt = $conn->prepare($query);
         $stmt->bind_param("s", $user_id);
         $stmt->execute();
@@ -201,7 +251,7 @@ if (!function_exists('uploadImage')) {
 
         if ($result->num_rows > 0) {
             $row = $result->fetch_assoc();
-            return $row['approve'] == 1;
+            return $row['is_approved'] == 1;
         }
         return false;
     }
@@ -209,7 +259,7 @@ if (!function_exists('uploadImage')) {
     // Get business registration details
     function getBusinessRegistration($conn, $user_id)
     {
-        $query = "SELECT * FROM businessregistration WHERE user_id = ? ORDER BY id DESC LIMIT 1";
+        $query = "SELECT * FROM seller_profiles WHERE user_id = ? ORDER BY id DESC LIMIT 1";
         $stmt = $conn->prepare($query);
         $stmt->bind_param("s", $user_id);
         $stmt->execute();

@@ -51,6 +51,7 @@ CREATE TABLE `categories` (
   `name` VARCHAR(100) NOT NULL,
   `slug` VARCHAR(100) NOT NULL,
   `image` VARCHAR(255) DEFAULT NULL,
+  `commission_rate` DECIMAL(5,2) DEFAULT NULL COMMENT 'Override global commission rate',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_slug` (`slug`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -248,5 +249,16 @@ CREATE TABLE `notifications` (
   KEY `idx_notif_user` (`user_id`),
   CONSTRAINT `fk_notif_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 14. SYSTEM SETTINGS - NEW TABLE
+DROP TABLE IF EXISTS `system_settings`;
+CREATE TABLE `system_settings` (
+  `setting_key` VARCHAR(50) NOT NULL,
+  `setting_value` TEXT NOT NULL,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `system_settings` (`setting_key`, `setting_value`) VALUES ('default_commission_rate', '10.00');
 
 SET FOREIGN_KEY_CHECKS=1;

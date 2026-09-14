@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
     
     $seller_id = $_SESSION['userid'];
     $name = trim($_POST['name']);
-    $brand = trim($_POST['brand']);
+    $brand_id = !empty($_POST['brand_id']) ? (int)$_POST['brand_id'] : null;
     $category_id = (int)$_POST['category_id'];
     $description = trim($_POST['description']);
     $cost_price = (float)$_POST['cost_price'];
@@ -39,8 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
         $pdo->beginTransaction();
 
         // 1. Insert Product
-        $insertProd = $pdo->prepare("INSERT INTO products (product_code, seller_id, name, slug, brand, category_id, description, cost_price, base_price, total_qty, is_approved, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'active')");
-        $insertProd->execute([$product_code, $seller_id, $name, $slug, $brand, $category_id, $description, $cost_price, $selling_price, $total_qty]);
+        $insertProd = $pdo->prepare("INSERT INTO products (product_code, seller_id, name, slug, brand_id, category_id, description, cost_price, base_price, total_qty, is_approved, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'active')");
+        $insertProd->execute([$product_code, $seller_id, $name, $slug, $brand_id, $category_id, $description, $cost_price, $selling_price, $total_qty]);
         
         $product_id = $pdo->lastInsertId();
 

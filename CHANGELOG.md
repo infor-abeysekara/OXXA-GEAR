@@ -2,6 +2,26 @@
 
 All notable changes to the Lumnix Sports (formerly Nutrition.lk) platform will be documented in this file.
 
+## [2026-09-13] - Business Registration & Address Book Overhaul
+
+### Added
+- **Address Book System**: Developed a complete Address Book feature (`site/address-book.php`) enabling users to manage multiple delivery and billing addresses. Implemented `Backend/address-backend.php` to handle CRUD operations and default address auto-assignment.
+- **Auto-Populating Fields**: Designed the "Add New Address" modal to automatically fetch and insert the user's Full Name and Phone Number from their profile, improving UX while remaining editable.
+
+### Changed
+- **Unified Authentication**: Removed the isolated admin login portal and consolidated all user sign-ins into `site/login.php`. Admin accounts are now automatically routed to the admin dashboard based on their user type.
+- **Session Key Standardization**: Standardized legacy `firstname`/`lastname` session keys to `first_name`/`last_name` globally across the admin panel to resolve undefined array key warnings.
+- **Business Registration Schema Expansion**: Safely altered the `seller_profiles` database table, expanding it from 7 columns to 30+ columns to securely store comprehensive seller data.
+- **Business Registration UI Revamp**: Completely rebuilt `site/business-registration.php` into a detailed 7-section form (Business Info, Owner Info, Address, Documents, Bank Details, Selling Info, Declaration). Added Javascript logic to dynamically display filenames upon selection for file inputs.
+- **Business Registration Backend Rewrite**: Built `Backend/process-business-registration.php` to handle complex payload insertions, unique Business Registration Number verification, and secure uploads of up to 5 documents with format and size constraints.
+
+### Fixed
+- **Admin User Filter Crash**: Fixed a fatal SQL syntax error in `admin/manage-users.php` where appending a `user_type` filter on an empty search caused the query to fail.
+- **Profile Image Display**: Fixed the profile image source pathing in `site/profile.php` and the account sidebars to correctly fetch images from `assets/uploads/profiles/`.
+- **Admin Document 404s**: Fixed broken links in `admin/business-registrations.php` where clicking "View Certificate" or viewing the Business Logo pointed to incorrect legacy folders, resulting in 404 errors.
+- **Admin Modal Warning**: Removed the redundant "PENDING approval" warning banner from the admin panel's business registration view modal to declutter the UI.
+
+
 ## [2026-09-12] - Performance Premium UI/UX Upgrade
 
 ### Added

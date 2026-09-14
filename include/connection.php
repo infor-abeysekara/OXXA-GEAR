@@ -1,6 +1,6 @@
 <?php
 // Database configuration
-$host = 'localhost';
+$host = '127.0.0.1';
 $dbname = 'oxxa_gear_database';
 $username = 'root';
 $password = '';

@@ -7,6 +7,7 @@ if (!isset($_SESSION['userid'])) {
     header("Location: index.php?open=login");
     exit();
 }
+session_write_close(); // Free session lock for parallel AJAX requests
 
 // Get user data
 include_once("../include/connection.php");
@@ -51,8 +52,8 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
                     <!-- Profile Header in Sidebar -->
                     <div class="p-6 text-center border-b border-gray-50 flex flex-col items-center">
-                        <?php if (!empty($user['profile_image']) && file_exists("../" . $user['profile_image'])): ?>
-                            <img src="../<?php echo $user['profile_image']; ?>" class="w-24 h-24 rounded-full object-cover ring-4 ring-white shadow-xl mb-4">
+                        <?php if (!empty($user['profile_image']) && file_exists(__DIR__ . '/../assets/uploads/profiles/' . $user['profile_image'])): ?>
+                            <img src="../assets/uploads/profiles/<?php echo $user['profile_image']; ?>" class="w-24 h-24 rounded-full object-cover ring-4 ring-white shadow-xl mb-4">
                         <?php else: ?>
                             <div class="w-24 h-24 rounded-full bg-black text-white flex items-center justify-center text-3xl font-black ring-4 ring-white shadow-xl mb-4">
                                 <?php echo strtoupper(substr($user['first_name'], 0, 1)); ?>
@@ -147,8 +148,8 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
                             <div class="mb-10 text-center relative">
                                 <div class="inline-block relative">
                                     <div class="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-50 flex items-center justify-center group relative cursor-pointer" onclick="document.getElementById('image').click()">
-                                        <?php if (!empty($user['profile_image']) && file_exists("../" . $user['profile_image'])): ?>
-                                            <img id="imagePreview" src="../<?php echo $user['profile_image']; ?>" class="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-110">
+                                        <?php if (!empty($user['profile_image']) && file_exists(__DIR__ . '/../assets/uploads/profiles/' . $user['profile_image'])): ?>
+                                            <img id="imagePreview" src="../assets/uploads/profiles/<?php echo $user['profile_image']; ?>" class="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-110">
                                             <div class="no-image-icon hidden align-items-center justify-content-center w-full h-full absolute top-0 left-0 bg-gray-200"><i class="fas fa-user text-gray-400 text-5xl"></i></div>
                                         <?php else: ?>
                                             <div id="imagePreview" class="w-full h-full bg-gray-100 flex items-center justify-center">
@@ -245,14 +246,6 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
                                         </div>
                                     </div>
                                 </div>
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Account Role</label>
-                                    <div class="relative">
-                                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400"><i class="fas fa-user-tag"></i></span>
-                                        <input type="text" class="w-full bg-gray-100 border border-gray-200 text-gray-500 font-bold rounded-xl py-3 pl-11 pr-4 cursor-not-allowed" value="<?php echo ucfirst($user['user_type']); ?>" readonly>
-                                    </div>
-                                    <p class="text-xs text-slate mt-2"><i class="fas fa-info-circle text-[#0066FF] me-1"></i> Account type cannot be changed after registration.</p>
-                                </div>
                             </div>
 
                             <!-- Security -->
@@ -295,8 +288,8 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
                             </div>
 
                             <div class="pt-4 flex flex-col md:flex-row gap-4">
-                                <button type="submit" name="update_profile" class="w-full md:w-auto bg-[#0066FF] hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-wide transition-all shadow-md hover:shadow-lg flex items-center justify-center flex-grow">
-                                    <i class="fas fa-save me-2"></i> Save Changes
+                                <button type="submit" name="update_profile" id="profileSubmitBtn" class="w-full md:w-auto bg-[#0066FF] hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-wide transition-all shadow-md hover:shadow-lg flex items-center justify-center flex-grow">
+                                    <i class="fas fa-save me-2" id="profileSubmitIcon"></i> <span id="profileSubmitText">Save Changes</span>
                                 </button>
                                 <a href="profile.php" class="w-full md:w-auto bg-gray-100 hover:bg-gray-200 text-navy px-8 py-3 rounded-xl font-bold uppercase tracking-wide transition-colors flex items-center justify-center text-center">
                                     Cancel
@@ -560,6 +553,85 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const updateForm = document.getElementById('updateForm');
+    if (updateForm) {
+        updateForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('profileSubmitBtn');
+            const submitIcon = document.getElementById('profileSubmitIcon');
+            const submitText = document.getElementById('profileSubmitText');
+            
+            // UI Loading state
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            submitIcon.className = 'fas fa-circle-notch fa-spin me-2';
+            submitText.textContent = 'Processing...';
+            
+            const formData = new FormData(this);
+            // Add the submit button name since JS fetch doesn't include it
+            formData.append('update_profile', '1');
+            
+            fetch('../Backend/update-backend.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Reset UI state
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                submitIcon.className = 'fas fa-save me-2';
+                submitText.textContent = 'Save Changes';
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: data.message,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                    
+                    // Clear password fields
+                    document.getElementById('current_password').value = '';
+                    document.getElementById('new_password').value = '';
+                    document.getElementById('confirm_password').value = '';
+                    
+                    // Optionally update the top nav or other components here
+                    // If image was changed, preview is already showing the local file.
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message,
+                        confirmButtonColor: '#0066FF'
+                    });
+                }
+            })
+            .catch(error => {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                submitIcon.className = 'fas fa-save me-2';
+                submitText.textContent = 'Save Changes';
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'An unexpected error occurred. Please try again later.',
+                    confirmButtonColor: '#0066FF'
+                });
+            });
+        });
+    }
+});
+</script>
 
 <?php
 include("../include/footer.php");

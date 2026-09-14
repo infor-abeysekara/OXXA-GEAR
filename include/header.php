@@ -147,27 +147,27 @@ if (isset($_SESSION['userid'])) {
 
         <!-- Navigation Links (Center) -->
         <nav id="desktopNav" class="hidden lg:flex flex-1 justify-center items-center space-x-4 xl:space-x-8 z-10 transition-all duration-[350ms] ease-in-out opacity-100">
-          <a href="<?php echo $base_path; ?>site/products.php?category=Sports+Wear" class="relative group">
+          <a href="<?php echo $base_path; ?>site/shop.php?category=sports-wear" class="relative group">
             <span class="text-[13px] font-space font-bold uppercase tracking-[0.5px] text-black group-hover:text-primary transition-colors whitespace-nowrap">Sports Wear</span>
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
           </a>
-          <a href="<?php echo $base_path; ?>site/products.php?category=Footwear" class="relative group">
+          <a href="<?php echo $base_path; ?>site/shop.php?category=footwear" class="relative group">
             <span class="text-[13px] font-space font-bold uppercase tracking-[0.5px] text-black group-hover:text-primary transition-colors whitespace-nowrap">Footwear</span>
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
           </a>
-          <a href="<?php echo $base_path; ?>site/products.php?category=Fitness+Gym" class="relative group">
+          <a href="<?php echo $base_path; ?>site/shop.php?category=fitness-gym" class="relative group">
             <span class="text-[13px] font-space font-bold uppercase tracking-[0.5px] text-black group-hover:text-primary transition-colors whitespace-nowrap">Fitness & Gym</span>
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
           </a>
-          <a href="<?php echo $base_path; ?>site/products.php?category=Nutrition" class="relative group">
+          <a href="<?php echo $base_path; ?>site/shop.php?category=nutrition" class="relative group">
             <span class="text-[13px] font-space font-bold uppercase tracking-[0.5px] text-black group-hover:text-primary transition-colors whitespace-nowrap">Nutrition</span>
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
           </a>
-          <a href="<?php echo $base_path; ?>site/products.php?category=Accessories" class="relative group">
+          <a href="<?php echo $base_path; ?>site/shop.php?category=accessories" class="relative group">
             <span class="text-[13px] font-space font-bold uppercase tracking-[0.5px] text-black group-hover:text-primary transition-colors whitespace-nowrap">Accessories</span>
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
           </a>
-          <a href="<?php echo $base_path; ?>site/products.php?category=Equipment" class="relative group">
+          <a href="<?php echo $base_path; ?>site/shop.php?category=equipment" class="relative group">
             <span class="text-[13px] font-space font-bold uppercase tracking-[0.5px] text-black group-hover:text-primary transition-colors whitespace-nowrap">Equipment</span>
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
           </a>
@@ -176,7 +176,7 @@ if (isset($_SESSION['userid'])) {
         
         <!-- Absolute Center Search Bar (Hidden by default) -->
         <div id="expandedSearchBar" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0 opacity-0 pointer-events-none transition-all duration-[350ms] ease-in-out z-20 flex justify-center items-center">
-            <form action="<?php echo $base_path; ?>site/products.php" method="GET" class="w-full relative">
+            <form action="<?php echo $base_path; ?>site/shop.php" method="GET" class="w-full relative">
                 <input type="text" id="desktopSearchInput" name="search" placeholder="Search for sports gear..." 
                        class="w-full bg-[#F5F5F5] text-black text-sm font-medium focus:outline-none transition-all duration-300"
                        style="height: 44px; border-radius: 9999px; border: 1.5px solid #0066FF; box-shadow: 0 0 0 4px rgba(0,102,255,0.1); padding: 0 40px 0 24px;">
@@ -352,33 +352,33 @@ if (isset($_SESSION['userid'])) {
           ?>
           
           <!-- Sports Wear -->
-          <a href="<?php echo $base_path; ?>site/products.php?category=Sports+Wear" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'Sports Wear') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+          <a href="<?php echo $base_path; ?>site/shop.php?category=sports-wear" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'sports-wear') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
               <i class="fas fa-tshirt text-xl mb-1"></i>
-              <?php if($current_cat == 'Sports Wear'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
+              <?php if($current_cat == 'sports-wear'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
           </a>
           
           <!-- Footwear -->
-          <a href="<?php echo $base_path; ?>site/products.php?category=Footwear" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'Footwear') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+          <a href="<?php echo $base_path; ?>site/shop.php?category=footwear" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'footwear') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
               <i class="fas fa-shoe-prints text-xl mb-1"></i>
-              <?php if($current_cat == 'Footwear'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
+              <?php if($current_cat == 'footwear'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
           </a>
           
           <!-- Fitness & Gym -->
-          <a href="<?php echo $base_path; ?>site/products.php?category=Fitness+Gym" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'Fitness Gym') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+          <a href="<?php echo $base_path; ?>site/shop.php?category=fitness-gym" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'fitness-gym') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
               <i class="fas fa-dumbbell text-xl mb-1"></i>
-              <?php if($current_cat == 'Fitness Gym'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
+              <?php if($current_cat == 'fitness-gym'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
           </a>
           
           <!-- Nutritions -->
-          <a href="<?php echo $base_path; ?>site/products.php?category=Nutritions" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'Nutritions') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+          <a href="<?php echo $base_path; ?>site/shop.php?category=nutrition" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'nutrition') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
               <i class="fas fa-prescription-bottle-alt text-xl mb-1"></i>
-              <?php if($current_cat == 'Nutritions'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
+              <?php if($current_cat == 'nutrition'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
           </a>
           
           <!-- Accessories & Gear -->
-          <a href="<?php echo $base_path; ?>site/products.php?category=Accessories" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'Accessories') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+          <a href="<?php echo $base_path; ?>site/shop.php?category=accessories" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'accessories') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
               <i class="fas fa-shopping-bag text-xl mb-1"></i>
-              <?php if($current_cat == 'Accessories'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
+              <?php if($current_cat == 'accessories'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
           </a>
       </div>
   </div>

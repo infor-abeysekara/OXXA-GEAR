@@ -5,7 +5,7 @@ include('../include/functions.php');
 
 // Check if user is logged in
 if (!isset($_SESSION['userid'])) {
-    header("Location: ../site/index.php?open=login");
+    echo json_encode(['success' => false, 'message' => 'Not authenticated.']);
     exit();
 }
 
@@ -25,27 +25,27 @@ if (isset($_POST['update_profile'])) {
 
     // Validation
     if (empty($firstname)) {
-        header('Location: ../site/profile.php?edit=profile&error=firstname');
+        echo json_encode(['success' => false, 'message' => 'First name is required.']);
         exit();
     }
     
     if (empty($lastname)) {
-        header('Location: ../site/profile.php?edit=profile&error=lastname');
+        echo json_encode(['success' => false, 'message' => 'Last name is required.']);
         exit();
     }
     
     if (empty($username)) {
-        header('Location: ../site/profile.php?edit=profile&error=username');
+        echo json_encode(['success' => false, 'message' => 'Username is required.']);
         exit();
     }
     
     if (empty($email)) {
-        header('Location: ../site/profile.php?edit=profile&error=email');
+        echo json_encode(['success' => false, 'message' => 'Email is required.']);
         exit();
     }
     
     if (empty($current_password)) {
-        header('Location: ../site/profile.php?edit=profile&error=current_password');
+        echo json_encode(['success' => false, 'message' => 'Current password is required.']);
         exit();
     }
 
@@ -64,7 +64,7 @@ if (isset($_POST['update_profile'])) {
         }
         
         if (!$password_ok) {
-            header('Location: ../site/profile.php?edit=profile&error=wrong_password');
+            echo json_encode(['success' => false, 'message' => 'Current password is incorrect.']);
             exit();
         }
 
@@ -72,12 +72,12 @@ if (isset($_POST['update_profile'])) {
         $passwordToUpdate = $user['password']; // Keep current password by default
         if (!empty($new_password)) {
             if ($new_password !== $confirm_password) {
-                header('Location: ../site/profile.php?edit=profile&error=password_mismatch');
+                echo json_encode(['success' => false, 'message' => 'New passwords do not match.']);
                 exit();
             }
             
             if (strlen($new_password) < 6) {
-                header('Location: ../site/profile.php?edit=profile&error=password_length');
+                echo json_encode(['success' => false, 'message' => 'New password must be at least 6 characters long.']);
                 exit();
             }
             
@@ -91,7 +91,7 @@ if (isset($_POST['update_profile'])) {
         if ($checkStmt->rowCount() > 0) {
             $existing = $checkStmt->fetch();
             if ($existing['id'] !== $userid) {
-                header('Location: ../site/profile.php?edit=profile&error=username_exists');
+                echo json_encode(['success' => false, 'message' => 'Username or Email already exists.']);
                 exit();
             }
         }
@@ -100,39 +100,23 @@ if (isset($_POST['update_profile'])) {
         $imagePath = $_SESSION['profile_image'] ?? ''; // Keep current image path by default
         if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
             $uploadDir = '../assets/uploads/profiles/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
             
-            $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-            $fileType = mime_content_type($_FILES['image']['tmp_name']);
+            $uploadedFileName = uploadImage($_FILES['image'], $uploadDir, 'user_');
             
-            if (!in_array($fileType, $allowedTypes)) {
-                header('Location: ../site/profile.php?edit=profile&error=image_format');
+            if ($uploadedFileName === 'type_error') {
+                echo json_encode(['success' => false, 'message' => 'Invalid image format. Use JPG, JPEG, or PNG.']);
                 exit();
-            }
-            
-            if ($_FILES['image']['size'] > 5 * 1024 * 1024) { // 5MB limit
-                header('Location: ../site/profile.php?edit=profile&error=image_large');
+            } elseif ($uploadedFileName === 'size_error') {
+                echo json_encode(['success' => false, 'message' => 'Image size too large. Maximum 10MB allowed.']);
                 exit();
-            }
-            
-            $imageExt = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-            if (empty($imageExt)) {
-                if ($fileType == 'image/jpeg') $imageExt = 'jpg';
-                else if ($fileType == 'image/png') $imageExt = 'png';
-            }
-            
-            $newImageName = 'user_' . uniqid() . '.' . $imageExt;
-            
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $uploadDir . $newImageName)) {
+            } elseif ($uploadedFileName) {
                 // Delete old image if it exists
                 if (!empty($imagePath) && file_exists('../assets/uploads/profiles/' . $imagePath)) {
                     unlink('../assets/uploads/profiles/' . $imagePath);
                 }
-                $imagePath = $newImageName;
+                $imagePath = $uploadedFileName;
             } else {
-                header('Location: ../site/profile.php?edit=profile&error=upload_failed');
+                echo json_encode(['success' => false, 'message' => 'Failed to upload image.']);
                 exit();
             }
         }
@@ -152,15 +136,20 @@ if (isset($_POST['update_profile'])) {
             $_SESSION['preferred_sports'] = $preferred_sports;
             $_SESSION['profile_image'] = $imagePath;
             
-            header('Location: ../site/profile.php?edit=profile&success=updated');
+            echo json_encode(['success' => true, 'message' => 'Profile updated successfully!']);
+            exit();
         } else {
-            header('Location: ../site/profile.php?edit=profile&error=database');
+            echo json_encode(['success' => false, 'message' => 'Database error occurred.']);
+            exit();
         }
         
     } catch (PDOException $e) {
-        header('Location: ../site/profile.php?edit=profile&error=database');
+        error_log("Profile Update Error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error occurred.']);
+        exit();
     }
 } else {
-    header('Location: ../site/profile.php');
+    echo json_encode(['success' => false, 'message' => 'Invalid request.']);
+    exit();
 }
 ?>
