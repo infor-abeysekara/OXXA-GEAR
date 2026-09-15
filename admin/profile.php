@@ -37,11 +37,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             $allowed_exts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
             
             if (in_array($file_ext, $allowed_exts)) {
-                $new_filename = 'admin_' . $admin_id . '_' . time() . '.' . $file_ext;
-                if (move_uploaded_file($_FILES['profile_image']['tmp_name'], $upload_dir . $new_filename)) {
-                    $profile_image = $new_filename;
+                if ($_FILES['profile_image']['size'] > 1 * 1024 * 1024) {
+                    $error_msg = "Image size too large. Maximum 1MB allowed.";
                 } else {
-                    $error_msg = "Failed to upload image.";
+                    $new_filename = 'admin_' . $admin_id . '_' . time() . '.' . $file_ext;
+                    if (move_uploaded_file($_FILES['profile_image']['tmp_name'], $upload_dir . $new_filename)) {
+                        $profile_image = $new_filename;
+                    } else {
+                        $error_msg = "Failed to upload image.";
+                    }
                 }
             } else {
                 $error_msg = "Invalid image format. Allowed: JPG, PNG, GIF, WEBP.";
@@ -222,5 +226,6 @@ $admin = $stmt->fetch();
             }
         });
     </script>
+    <?php include("../include/footer.php"); ?>
 </body>
 </html>

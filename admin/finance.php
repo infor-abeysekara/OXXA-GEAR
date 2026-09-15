@@ -694,5 +694,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['mark_paid'])) {
             document.body.removeChild(downloadLink);
         }
     </script>
+    <?php include("../include/footer.php"); ?>
 </body>
 </html>

@@ -2,6 +2,22 @@
 
 All notable changes to the Lumnix Sports (formerly Nutrition.lk) platform will be documented in this file.
 
+## [2026-09-16] - Bug Fixes & Product Features
+
+### Added
+- **Dynamic Variants System in Admin Panel**: Upgraded the variants view logic in `admin/manage-products.php` to dynamically combine and display relevant variant dimensions (e.g. Size, Color, Flavor) into a single "Details" string instead of hardcoded empty "Variant 1" and "Variant 2" columns.
+
+### Changed
+- **Price Filter Range Expansion**: Increased the maximum limit of the shop page price range slider up to 1,000,000 (1000K).
+- **Product Filter Simplification**: Removed the redundant "Hidden from buyers" and "Visible to buyers" filter toggles to streamline the shop user interface.
+- **Product Images Validations**: Updated the image upload rules for sellers to mandate a minimum of 4 product images and a maximum of 10.
+
+### Fixed
+- **Auth Error Modal Notifications**: Fixed an issue where login error messages (e.g. "Invalid username/email or password") from `Backend/login-backend.php` were swallowed. The errors now correctly display within a red alert block directly on the `site/components/auth-modals.php` pop-up.
+- **Admin Panel Undefined Arrays**: Resolved an "Undefined array key brand" error in `admin/manage-products.php` by properly fetching and safely falling back `brand` data.
+- **Admin Panel PHP Fatal Types**: Resolved an undefined variable `$sizes_result` issue that caused a `mysqli_fetch_assoc()` fatal error by migrating the deprecated sizes iteration logic over to use the new `product_variants` database architecture logic.
+- **Admin Panel Image Links**: Repaired broken product image paths in the admin product list by securely mapping the paths to the `assets/uploads/products/` directory.
+
 ## [2026-09-13] - Business Registration & Address Book Overhaul
 
 ### Added

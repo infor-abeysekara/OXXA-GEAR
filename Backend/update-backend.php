@@ -3,6 +3,11 @@ session_start();
 include('../include/connection.php');
 include('../include/functions.php');
 
+// Prevent multiple inclusions
+if (!function_exists('uploadImage')) {
+    // defined in functions.php
+}
+
 // Check if user is logged in
 if (!isset($_SESSION['userid'])) {
     echo json_encode(['success' => false, 'message' => 'Not authenticated.']);
@@ -101,13 +106,13 @@ if (isset($_POST['update_profile'])) {
         if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
             $uploadDir = '../assets/uploads/profiles/';
             
-            $uploadedFileName = uploadImage($_FILES['image'], $uploadDir, 'user_');
+            $uploadedFileName = uploadImage($_FILES['image'], $uploadDir, 'user_', 1);
             
             if ($uploadedFileName === 'type_error') {
                 echo json_encode(['success' => false, 'message' => 'Invalid image format. Use JPG, JPEG, or PNG.']);
                 exit();
             } elseif ($uploadedFileName === 'size_error') {
-                echo json_encode(['success' => false, 'message' => 'Image size too large. Maximum 10MB allowed.']);
+                echo json_encode(['success' => false, 'message' => 'Image size too large. Maximum 1MB allowed.']);
                 exit();
             } elseif ($uploadedFileName) {
                 // Delete old image if it exists

@@ -56,10 +56,12 @@ if(isset($_POST['action']) && isset($_POST['product_id'])) {
 }
 
 // Get all products
-$products_query = "SELECT p.*, u.first_name, u.last_name, 
+$products_query = "SELECT p.*, u.first_name, u.last_name, u.email, sp.business_name, sp.personal_phone as phone_number, b.name as brand,
                   (SELECT pi.image_path FROM product_images pi WHERE pi.product_id = p.id LIMIT 1) as product_image
                   FROM products p 
                   JOIN users u ON p.seller_id = u.id 
+                  LEFT JOIN seller_profiles sp ON u.id = sp.user_id
+                  LEFT JOIN brands b ON p.brand_id = b.id
                   ORDER BY p.created_at DESC";
 $products_result = mysqli_query($conn, $products_query);
 ?>
@@ -143,7 +145,7 @@ $products_result = mysqli_query($conn, $products_query);
                                     <tr>
                                         <td>
                                             <?php if(!empty($row['product_image'])): ?>
-                                                <img src="../<?php echo $row['product_image']; ?>" alt="Product" class="product-image">
+                                                <img src="../assets/uploads/products/<?php echo $row['product_image']; ?>" alt="Product" class="product-image">
                                             <?php else: ?>
                                                 <div class="bg-secondary d-flex align-items-center justify-content-center product-image">
                                                     <i class="fas fa-box text-white"></i>
@@ -153,7 +155,7 @@ $products_result = mysqli_query($conn, $products_query);
                                         <td>
                                             <div>
                                                 <strong><?php echo htmlspecialchars($row['name']); ?></strong><br>
-                                                <small class="text-muted">Brand: <?php echo htmlspecialchars($row['brand']); ?></small><br>
+                                                <small class="text-muted">Brand: <?php echo htmlspecialchars($row['brand'] ?? 'Unknown'); ?></small><br>
                                                 <small class="text-muted">ID: <?php echo $row['id']; ?></small>
                                             </div>
                                         </td>
@@ -198,7 +200,7 @@ $products_result = mysqli_query($conn, $products_query);
 
                                     <!-- View Modal -->
                                     <div class="modal fade" id="viewModal<?php echo $row['id']; ?>" tabindex="-1">
-                                        <div class="modal-dialog modal-lg">
+                                        <div class="modal-dialog modal-lg modal-dialog-scrollable">
                                             <div class="modal-content">
                                                 <div class="modal-header">
                                                     <h5 class="modal-title">Product Details</h5>
@@ -206,26 +208,38 @@ $products_result = mysqli_query($conn, $products_query);
                                                 </div>
                                                 <div class="modal-body">
                                                     <div class="row">
-                                                        <div class="col-md-4">
-                                                            <?php if(!empty($row['product_image'])): ?>
-                                                                <img src="../<?php echo $row['product_image']; ?>" alt="Product" class="img-fluid rounded">
+                                                        <div class="col-md-12 mb-4">
+                                                            <?php
+                                                            $images_query = "SELECT image_path FROM product_images WHERE product_id = '{$row['id']}' ORDER BY is_primary DESC, sort_order ASC";
+                                                            $images_result = mysqli_query($conn, $images_query);
+                                                            if($images_result && mysqli_num_rows($images_result) > 0):
+                                                            ?>
+                                                                <div class="d-flex overflow-auto gap-3 pb-2" style="white-space: nowrap;">
+                                                                    <?php while($img = mysqli_fetch_assoc($images_result)): ?>
+                                                                        <img src="../assets/uploads/products/<?php echo htmlspecialchars($img['image_path']); ?>" alt="Product" class="rounded border shadow-sm" style="height: 150px; width: 150px; object-fit: cover; flex-shrink: 0;">
+                                                                    <?php endwhile; ?>
+                                                                </div>
                                                             <?php else: ?>
-                                                                <div class="bg-secondary d-flex align-items-center justify-content-center rounded" style="height: 200px;">
+                                                                <div class="bg-secondary d-flex align-items-center justify-content-center rounded" style="height: 150px; width: 150px;">
                                                                     <i class="fas fa-box fa-3x text-white"></i>
                                                                 </div>
                                                             <?php endif; ?>
                                                         </div>
-                                                        <div class="col-md-8">
+                                                        <div class="col-md-6">
                                                             <h6>Product Information</h6>
-                                                            <p><strong>Name:</strong> <?php echo htmlspecialchars($row['name']); ?></p>
-                                                            <p><strong>Brand:</strong> <?php echo htmlspecialchars($row['brand']); ?></p>
-                                                            <p><strong>Category:</strong> <?php echo $row['category_id']; ?></p>
-                                                            <p><strong>Price:</strong> Rs. <?php echo number_format($row['base_price'], 2); ?></p>
-                                                            <p><strong>Quantity:</strong> <?php echo $row['total_qty']; ?></p>
-                                                            <p><strong>Added Date:</strong> <?php echo date('M d, Y', strtotime($row['created_at'])); ?></p>
-                                                            
+                                                            <p class="mb-1"><strong>Name:</strong> <?php echo htmlspecialchars($row['name']); ?></p>
+                                                            <p class="mb-1"><strong>Brand:</strong> <?php echo htmlspecialchars($row['brand'] ?? 'Unknown'); ?></p>
+                                                            <p class="mb-1"><strong>Category:</strong> <?php echo $row['category_id']; ?></p>
+                                                            <p class="mb-1"><strong>Price:</strong> Rs. <?php echo number_format($row['base_price'], 2); ?></p>
+                                                            <p class="mb-1"><strong>Quantity:</strong> <?php echo $row['total_qty']; ?></p>
+                                                            <p class="mb-1"><strong>Added Date:</strong> <?php echo date('M d, Y', strtotime($row['created_at'])); ?></p>
+                                                        </div>
+                                                        <div class="col-md-6">
                                                             <h6>Seller Information</h6>
-                                                            <p><strong>Seller:</strong> <?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></p>
+                                                            <p class="mb-1"><strong>Seller Name:</strong> <?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?></p>
+                                                            <p class="mb-1"><strong>Email:</strong> <?php echo htmlspecialchars($row['email'] ?? 'N/A'); ?></p>
+                                                            <p class="mb-1"><strong>Business Name:</strong> <?php echo htmlspecialchars($row['business_name'] ?? 'N/A'); ?></p>
+                                                            <p class="mb-1"><strong>Phone Number:</strong> <?php echo htmlspecialchars($row['phone_number'] ?? 'N/A'); ?></p>
                                                         </div>
                                                     </div>
                                                     <div class="row mt-3">
@@ -243,22 +257,30 @@ $products_result = mysqli_query($conn, $products_query);
                                                     ?>
                                                     <div class="row mt-3">
                                                         <div class="col-12">
-                                                            <h6>Available Sizes</h6>
+                                                            <h6>Available Variants</h6>
                                                             <div class="table-responsive">
                                                                 <table class="table table-sm">
                                                                     <thead>
                                                                         <tr>
-                                                                            <th>Size</th>
-                                                                            <th>Price</th>
+                                                                            <th>Details</th>
                                                                             <th>Quantity</th>
+                                                                            <th>SKU</th>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody>
-                                                                        <?php while($size = mysqli_fetch_assoc($sizes_result)): ?>
+                                                                        <?php while($variant = mysqli_fetch_assoc($variants_result)): 
+                                                                            $details = [];
+                                                                            if (!empty($variant['size'])) $details[] = "Size: " . $variant['size'];
+                                                                            if (!empty($variant['color'])) $details[] = "Color: " . $variant['color'];
+                                                                            if (!empty($variant['flavor'])) $details[] = "Flavor: " . $variant['flavor'];
+                                                                            if (!empty($variant['weight'])) $details[] = "Weight: " . $variant['weight'];
+                                                                            if (!empty($variant['fit_type'])) $details[] = "Fit: " . $variant['fit_type'];
+                                                                            $details_str = !empty($details) ? implode(', ', $details) : '-';
+                                                                        ?>
                                                                         <tr>
-                                                                            <td><?php echo $size['size']; ?></td>
-                                                                            <td>Rs. <?php echo number_format($size['price'], 2); ?></td>
-                                                                            <td><?php echo $size['qty']; ?></td>
+                                                                            <td><?php echo htmlspecialchars($details_str); ?></td>
+                                                                            <td><?php echo $variant['qty']; ?></td>
+                                                                            <td><?php echo htmlspecialchars($variant['sku']); ?></td>
                                                                         </tr>
                                                                         <?php endwhile; ?>
                                                                     </tbody>

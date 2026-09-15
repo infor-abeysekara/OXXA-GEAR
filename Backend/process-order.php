@@ -44,7 +44,7 @@ try {
         // Fetch Cart Items from NEW structure
         $cartStmt = $pdo->prepare("
             SELECT c.product_id, c.variant_id, c.quantity,
-                   p.name, p.base_price,
+                   p.name, p.base_price, p.cost_price,
                    v.size, v.price as variant_price,
                    (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image_path
             FROM cart c
@@ -92,12 +92,27 @@ try {
             $orderStmt->execute([$orderCode, $user_id, $addressId, $subtotal, $deliveryFee, $couponCode, $couponDiscount, $totalAmount, $paymentMethod]);
             $orderId = $pdo->lastInsertId();
 
+            // Calculate order-level discount ratio for proportional item distribution
+            $discountRatio = $subtotal > 0 ? ($couponDiscount / $subtotal) : 0;
+
             // 3. Insert into order_items (Lines) and update stock
             foreach ($cartItems as $item) {
+                // Calculate item level profit and fees
+                $effective_unit_price = $item['unit_price'] * (1 - $discountRatio);
+                $cost_price = floatval($item['cost_price']);
+                
+                $profit = $effective_unit_price - $cost_price;
+                if ($profit < 0) {
+                    $profit = 0;
+                }
+                
+                $oxxa_fee = $profit * 0.10;
+                $seller_earning = $effective_unit_price - $oxxa_fee;
+                
                 // Insert line item
                 $itemStmt = $pdo->prepare("
-                    INSERT INTO order_items (order_id, product_id, variant_id, product_name, product_image, size, quantity, unit_price, total_price)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO order_items (order_id, product_id, variant_id, product_name, product_image, size, quantity, unit_price, total_price, cost_price, selling_price, profit, oxxa_fee, seller_earning, settlement_status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')
                 ");
                 $itemStmt->execute([
                     $orderId, 
@@ -108,7 +123,12 @@ try {
                     $item['size'] ?: 'Standard', 
                     $item['quantity'], 
                     $item['unit_price'], 
-                    $item['total_price']
+                    $item['total_price'],
+                    $cost_price,
+                    $effective_unit_price,
+                    $profit,
+                    $oxxa_fee,
+                    $seller_earning
                 ]);
 
                 // Update product stock

@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // TAB 1: BRANDS MANAGEMENT
     if ($action === 'add_brand') {
         $active_tab = 'brands';
+        $brand_id = isset($_POST['brand_id']) ? (int)$_POST['brand_id'] : 0;
         $name = trim($_POST['name']);
         $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name)));
         $categories = $_POST['categories'] ?? []; // Array of category IDs
@@ -74,20 +75,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         if (empty($error_message)) {
-            $stmt = $conn->prepare("INSERT INTO brands (name, slug, logo_image, is_active) VALUES (?, ?, ?, ?)");
-            $stmt->bind_param("sssi", $name, $slug, $logo_image, $is_active);
-            if ($stmt->execute()) {
-                $brand_id = $conn->insert_id;
-                if (!empty($categories)) {
-                    $catStmt = $conn->prepare("INSERT INTO brand_category (brand_id, category_id) VALUES (?, ?)");
-                    foreach ($categories as $cat_id) {
-                        $catStmt->bind_param("ii", $brand_id, $cat_id);
-                        $catStmt->execute();
-                    }
+            if ($brand_id > 0) {
+                // Update
+                if ($logo_image) {
+                    $stmt = $conn->prepare("UPDATE brands SET name=?, slug=?, logo_image=?, is_active=? WHERE id=?");
+                    $stmt->bind_param("sssii", $name, $slug, $logo_image, $is_active, $brand_id);
+                } else {
+                    $stmt = $conn->prepare("UPDATE brands SET name=?, slug=?, is_active=? WHERE id=?");
+                    $stmt->bind_param("ssii", $name, $slug, $is_active, $brand_id);
                 }
-                $success_message = "Brand added successfully!";
+                if ($stmt->execute()) {
+                    // Update categories
+                    $conn->query("DELETE FROM brand_category WHERE brand_id = $brand_id");
+                    if (!empty($categories)) {
+                        $catStmt = $conn->prepare("INSERT INTO brand_category (brand_id, category_id) VALUES (?, ?)");
+                        foreach ($categories as $cat_id) {
+                            $catStmt->bind_param("ii", $brand_id, $cat_id);
+                            $catStmt->execute();
+                        }
+                    }
+                    $success_message = "Brand updated successfully!";
+                } else {
+                    $error_message = "Failed to update brand.";
+                }
             } else {
-                $error_message = "Failed to add brand. Maybe slug already exists.";
+                // Insert
+                $stmt = $conn->prepare("INSERT INTO brands (name, slug, logo_image, is_active) VALUES (?, ?, ?, ?)");
+                $stmt->bind_param("sssi", $name, $slug, $logo_image, $is_active);
+                if ($stmt->execute()) {
+                    $brand_id = $conn->insert_id;
+                    if (!empty($categories)) {
+                        $catStmt = $conn->prepare("INSERT INTO brand_category (brand_id, category_id) VALUES (?, ?)");
+                        foreach ($categories as $cat_id) {
+                            $catStmt->bind_param("ii", $brand_id, $cat_id);
+                            $catStmt->execute();
+                        }
+                    }
+                    $success_message = "Brand added successfully!";
+                } else {
+                    $error_message = "Failed to add brand. Maybe slug already exists.";
+                }
             }
         }
     } elseif ($action === 'delete_brand') {
@@ -153,7 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $src_y = ($height - $crop_h) / 2;
                 }
                 
-                imagecopyresampled($image_p, $image, 0, 0, $src_x, $src_y, $target_w, $target_h, $crop_w, $crop_h);
+                imagecopyresampled($image_p, $image, 0, 0, (int)$src_x, (int)$src_y, $target_w, $target_h, (int)$crop_w, (int)$crop_h);
                 
                 // Optimize to stay under ~300KB
                 if ($fileType == 'image/png') imagepng($image_p, $targetPath, 8); // 0-9 compression
@@ -189,7 +216,8 @@ $brandsQuery = "
     SELECT b.*, 
            (SELECT COUNT(*) FROM brand_category bc WHERE bc.brand_id = b.id) as cat_count,
            (SELECT COUNT(*) FROM products p WHERE p.brand_id = b.id) as product_count,
-           GROUP_CONCAT(c.name SEPARATOR ', ') as linked_categories
+           GROUP_CONCAT(c.name SEPARATOR ', ') as linked_categories,
+           GROUP_CONCAT(c.id SEPARATOR ',') as linked_category_ids
     FROM brands b
     LEFT JOIN brand_category bc ON b.id = bc.brand_id
     LEFT JOIN categories c ON bc.category_id = c.id
@@ -290,21 +318,22 @@ $brandsRes = $conn->query($brandsQuery);
                     <div class="row">
                         <!-- Add Brand Form -->
                         <div class="col-lg-4 mb-4">
-                            <div class="card">
-                                <div class="card-header"><h5 class="mb-0 fw-bold">Add New Brand</h5></div>
+                            <div class="card" id="brandFormCard">
+                                <div class="card-header"><h5 class="mb-0 fw-bold" id="brandFormTitle">Add New Brand</h5></div>
                                 <div class="card-body">
-                                    <form action="" method="POST" enctype="multipart/form-data">
+                                    <form action="" method="POST" enctype="multipart/form-data" id="brandForm">
                                         <input type="hidden" name="action" value="add_brand">
+                                        <input type="hidden" name="brand_id" id="brand_id_input" value="">
                                         
                                         <div class="mb-3">
                                             <label class="form-label fw-bold">Brand Name</label>
-                                            <input type="text" name="name" class="form-control" required>
+                                            <input type="text" name="name" id="brand_name_input" class="form-control" required>
                                         </div>
                                         
                                         <div class="mb-3">
                                             <label class="form-label fw-bold">Brand Logo (100x100)</label>
                                             <input type="file" name="logo_image" class="form-control" accept="image/*">
-                                            <small class="text-muted">Will be resized to square.</small>
+                                            <small class="text-muted">Will be resized to square. Leave empty to keep existing on update.</small>
                                         </div>
                                         
                                         <div class="mb-4">
@@ -312,7 +341,7 @@ $brandsRes = $conn->query($brandsQuery);
                                             <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
                                                 <?php foreach($all_categories as $cat): ?>
                                                     <div class="form-check mb-2">
-                                                        <input class="form-check-input" type="checkbox" name="categories[]" value="<?php echo $cat['id']; ?>" id="cat_<?php echo $cat['id']; ?>">
+                                                        <input class="form-check-input cat-checkbox" type="checkbox" name="categories[]" value="<?php echo $cat['id']; ?>" id="cat_<?php echo $cat['id']; ?>">
                                                         <label class="form-check-label" for="cat_<?php echo $cat['id']; ?>">
                                                             <?php echo htmlspecialchars($cat['name']); ?>
                                                         </label>
@@ -322,11 +351,14 @@ $brandsRes = $conn->query($brandsQuery);
                                         </div>
                                         
                                         <div class="mb-4 form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" name="is_active" id="is_active" checked>
-                                            <label class="form-check-label fw-bold" for="is_active">Active Brand</label>
+                                            <input class="form-check-input" type="checkbox" name="is_active" id="brand_active_input" checked>
+                                            <label class="form-check-label fw-bold" for="brand_active_input">Active Brand</label>
                                         </div>
                                         
-                                        <button type="submit" class="btn btn-primary w-100 fw-bold">Save Brand</button>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-primary flex-fill fw-bold" id="brandFormBtn">Save Brand</button>
+                                            <button type="button" class="btn btn-light border fw-bold d-none" id="brandFormCancelBtn" onclick="resetBrandForm()">Cancel</button>
+                                        </div>
                                     </form>
                                 </div>
                             </div>
@@ -386,6 +418,7 @@ $brandsRes = $conn->query($brandsQuery);
                                                                 <?php endif; ?>
                                                             </td>
                                                             <td class="text-end pe-4">
+                                                                <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick='editBrand(<?= json_encode($b) ?>)'><i class="fas fa-edit"></i></button>
                                                                 <form action="" method="POST" onsubmit="return confirm('Delete this brand?');" class="d-inline">
                                                                     <input type="hidden" name="action" value="delete_brand">
                                                                     <input type="hidden" name="brand_id" value="<?php echo $b['id']; ?>">
@@ -485,5 +518,45 @@ $brandsRes = $conn->query($brandsQuery);
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function editBrand(data) {
+            document.getElementById('brandFormTitle').innerText = 'Edit Brand: ' + data.name;
+            document.getElementById('brand_id_input').value = data.id;
+            document.getElementById('brand_name_input').value = data.name;
+            document.getElementById('brand_active_input').checked = data.is_active == 1;
+            
+            document.getElementById('brandFormBtn').innerText = 'Update Brand';
+            document.getElementById('brandFormCancelBtn').classList.remove('d-none');
+            
+            // Uncheck all first
+            document.querySelectorAll('.cat-checkbox').forEach(cb => cb.checked = false);
+            
+            // Check relevant categories
+            if(data.linked_category_ids) {
+                const catIds = data.linked_category_ids.split(',');
+                catIds.forEach(id => {
+                    const cb = document.getElementById('cat_' + id);
+                    if(cb) cb.checked = true;
+                });
+            }
+            
+            // Scroll to top to see form
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        function resetBrandForm() {
+            document.getElementById('brandFormTitle').innerText = 'Add New Brand';
+            document.getElementById('brand_id_input').value = '';
+            document.getElementById('brand_name_input').value = '';
+            document.getElementById('brand_active_input').checked = true;
+            
+            document.getElementById('brandFormBtn').innerText = 'Save Brand';
+            document.getElementById('brandFormCancelBtn').classList.add('d-none');
+            
+            document.querySelectorAll('.cat-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('brandForm').reset();
+        }
+    </script>
+    <?php include("../include/footer.php"); ?>
 </body>
 </html>

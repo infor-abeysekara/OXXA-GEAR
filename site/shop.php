@@ -78,7 +78,9 @@ $query = "SELECT p.*,
                  COALESCE((SELECT MIN(ps.price) FROM product_variants ps WHERE ps.product_id = p.id AND ps.qty > 0 AND ps.price > 0), p.base_price) as lowest_price,
                  (SELECT SUM(ps.qty) FROM product_variants ps WHERE ps.product_id = p.id) as var_qty,
                  (SELECT image_path FROM product_images pi WHERE pi.product_id = p.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as image,
-                 (SELECT name FROM brands b WHERE b.id = p.brand_id) as brand_name
+                 (SELECT name FROM brands b WHERE b.id = p.brand_id) as brand_name,
+                 (SELECT business_name FROM seller_profiles sp WHERE sp.user_id = p.seller_id) as seller_name,
+                 (SELECT logo_path FROM seller_profiles sp WHERE sp.user_id = p.seller_id) as seller_logo
           FROM products p 
           $whereClause
           GROUP BY p.id
@@ -154,38 +156,15 @@ function buildFilterUrl($updates) {
                 <input type="hidden" name="sort" id="ajaxSort" value="<?php echo htmlspecialchars($sort); ?>">
                 <input type="hidden" name="page" id="ajaxPage" value="<?php echo $page; ?>">
 
-                <!-- Brands -->
-                <?php if(!empty($all_brands)): ?>
-                <div class="mb-8">
-                    <h4 class="font-black text-navy uppercase text-sm mb-4 tracking-wide">Brands</h4>
-                    <div class="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-2">
-                        <?php foreach($all_brands as $b): ?>
-                            <label class="flex items-center gap-3 cursor-pointer group">
-                                <div class="relative flex items-center justify-center">
-                                    <input type="checkbox" name="brand[]" value="<?php echo htmlspecialchars($b['id']); ?>" data-name="<?php echo htmlspecialchars($b['name']); ?>" <?php echo in_array($b['id'], $brands) ? 'checked' : ''; ?> class="ajax-filter-input peer appearance-none w-5 h-5 border-2 border-gray-300 rounded focus:outline-none focus:ring-0 checked:bg-[#0066FF] checked:border-[#0066FF] transition-all cursor-pointer">
-                                    <i class="fas fa-check absolute text-white text-[10px] opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
-                                </div>
-                                <?php if($b['logo_image']): ?>
-                                    <img src="../assets/uploads/brands/<?php echo htmlspecialchars($b['logo_image']); ?>" class="w-6 h-6 rounded object-cover" alt="">
-                                <?php else: ?>
-                                    <div class="w-6 h-6 bg-gray-100 rounded flex items-center justify-center text-[10px] text-gray-400"><i class="fas fa-tag"></i></div>
-                                <?php endif; ?>
-                                <span class="text-sm font-bold text-gray-600 group-hover:text-navy transition-colors flex-1"><?php echo htmlspecialchars($b['name']); ?></span>
-                            </label>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-                <?php endif; ?>
 
-                <hr class="border-gray-100 mb-8">
 
                 <!-- Price Range Slider -->
                 <div class="mb-8">
                     <h4 class="font-black text-navy uppercase text-sm mb-6 tracking-wide">Price Range</h4>
                     
-                    <div id="priceSlider" class="mb-6 mx-2"></div>
+                    <div id="priceSlider" class="mb-10 mx-2 mt-8"></div>
                     
-                    <div class="flex items-center gap-2 mb-6">
+                    <div class="flex items-center gap-2 mb-4">
                         <div class="relative flex-1">
                             <span class="absolute inset-y-0 left-0 pl-2 flex items-center text-xs text-gray-400 font-bold">Rs.</span>
                             <input type="number" id="inputMinPrice" name="min_price" value="<?php echo $min_price > 0 ? $min_price : 0; ?>" class="w-full pl-8 pr-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-navy focus:outline-none focus:border-[#0066FF] transition-colors">
@@ -193,18 +172,40 @@ function buildFilterUrl($updates) {
                         <span class="text-gray-400">-</span>
                         <div class="relative flex-1">
                             <span class="absolute inset-y-0 left-0 pl-2 flex items-center text-xs text-gray-400 font-bold">Rs.</span>
-                            <input type="number" id="inputMaxPrice" name="max_price" value="<?php echo $max_price > 0 ? $max_price : 50000; ?>" class="w-full pl-8 pr-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-navy focus:outline-none focus:border-[#0066FF] transition-colors">
+                            <input type="number" id="inputMaxPrice" name="max_price" value="<?php echo $max_price > 0 ? $max_price : 1000000; ?>" class="w-full pl-8 pr-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-navy focus:outline-none focus:border-[#0066FF] transition-colors">
                         </div>
                     </div>
 
-                    <!-- Quick Price Chips -->
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" class="price-chip px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-100 hover:border-gray-300 transition-colors" data-min="0" data-max="5000">Under 5,000</button>
-                        <button type="button" class="price-chip px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-100 hover:border-gray-300 transition-colors" data-min="5000" data-max="10000">5k - 10k</button>
-                        <button type="button" class="price-chip px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-100 hover:border-gray-300 transition-colors" data-min="10000" data-max="20000">10k - 20k</button>
-                        <button type="button" class="price-chip px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-100 hover:border-gray-300 transition-colors" data-min="20000" data-max="50000">Over 20k</button>
+                    <button type="button" id="applyPriceBtn" class="w-full mb-6 py-2 bg-[#0066FF] hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm hover:shadow-md flex justify-center items-center gap-2">
+                        <i class="fas fa-filter"></i> Apply Filter
+                    </button>
+
+                </div>
+
+                <hr class="border-gray-100 mb-8">
+
+                <!-- Brands -->
+                <?php if(!empty($all_brands)): ?>
+                <div class="mb-8">
+                    <h4 class="font-black text-navy uppercase text-sm mb-4 tracking-wide">Brands</h4>
+                    <div class="space-y-3 pr-2">
+                        <?php foreach($all_brands as $b): ?>
+                            <label class="flex items-center gap-3 cursor-pointer group">
+                                <div class="relative flex items-center justify-center">
+                                    <input type="checkbox" name="brand[]" value="<?php echo htmlspecialchars($b['id']); ?>" data-name="<?php echo htmlspecialchars($b['name']); ?>" <?php echo in_array($b['id'], $brands) ? 'checked' : ''; ?> class="ajax-filter-input peer appearance-none w-5 h-5 border-2 border-gray-300 rounded focus:outline-none focus:ring-0 checked:bg-[#0066FF] checked:border-[#0066FF] transition-all cursor-pointer">
+                                    <i class="fas fa-check absolute text-white text-[10px] opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
+                                </div>
+                                <?php if($b['logo_image']): ?>
+                                    <img src="../assets/uploads/brands/<?php echo htmlspecialchars($b['logo_image']); ?>" class="w-8 h-8 rounded object-cover" alt="">
+                                <?php else: ?>
+                                    <div class="w-8 h-8 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400"><i class="fas fa-tag"></i></div>
+                                <?php endif; ?>
+                                <span class="text-sm font-bold text-gray-600 group-hover:text-navy transition-colors flex-1"><?php echo htmlspecialchars($b['name']); ?></span>
+                            </label>
+                        <?php endforeach; ?>
                     </div>
                 </div>
+                <?php endif; ?>
 
             </form>
         </div>
@@ -261,9 +262,9 @@ function buildFilterUrl($updates) {
                             </button>
 
                             <!-- Image -->
-                            <a href="product.php?id=<?php echo $p['id']; ?>" class="block relative aspect-square bg-gray-50 overflow-hidden">
+                            <a href="product-details.php?id=<?php echo $p['id']; ?>" class="block relative aspect-square bg-gray-50 overflow-hidden">
                                 <?php if(!empty($p['image'])): ?>
-                                    <img src="../image/<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['name']); ?>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                    <img src="../assets/uploads/products/<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['name']); ?>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                                 <?php else: ?>
                                     <div class="w-full h-full flex items-center justify-center"><i class="fas fa-image text-gray-300 text-4xl"></i></div>
                                 <?php endif; ?>
@@ -271,11 +272,24 @@ function buildFilterUrl($updates) {
 
                             <!-- Content -->
                             <div class="p-4 flex flex-col flex-grow">
-                                <?php if(!empty($p['brand'])): ?>
-                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1 line-clamp-1"><?php echo htmlspecialchars($p['brand']); ?></span>
+                                <?php if(!empty($p['brand_name'])): ?>
+                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1 line-clamp-1"><?php echo htmlspecialchars($p['brand_name']); ?></span>
                                 <?php endif; ?>
                                 
-                                <a href="product.php?id=<?php echo $p['id']; ?>" class="text-navy font-bold text-sm mb-2 line-clamp-2 hover:text-[#0066FF] transition-colors leading-tight">
+                                <?php if(!empty($p['seller_name'])): ?>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <?php if(!empty($p['seller_logo']) && file_exists('../assets/uploads/' . $p['seller_logo'])): ?>
+                                        <img src="../assets/uploads/<?php echo htmlspecialchars($p['seller_logo']); ?>" class="w-5 h-5 rounded-full object-cover">
+                                    <?php else: ?>
+                                        <div class="w-5 h-5 rounded-full bg-blue-100 text-[#0066FF] flex items-center justify-center text-[8px] font-bold">
+                                            <?php echo strtoupper(substr($p['seller_name'], 0, 1)); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    <span class="text-xs text-gray-500 font-medium line-clamp-1"><?php echo htmlspecialchars($p['seller_name']); ?></span>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <a href="product-details.php?id=<?php echo $p['id']; ?>" class="text-navy font-bold text-sm mb-2 line-clamp-2 hover:text-[#0066FF] transition-colors leading-tight">
                                     <?php echo htmlspecialchars($p['name']); ?>
                                 </a>
                                 
@@ -363,58 +377,62 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize Slider
     noUiSlider.create(slider, {
-        start: [<?php echo $min_price ?: 0; ?>, <?php echo $max_price ?: 50000; ?>],
+        start: [<?php echo $min_price ?: 0; ?>, <?php echo $max_price ?: 1000000; ?>],
         connect: true,
         step: 500,
+        tooltips: [true, true],
         range: {
             'min': 0,
-            'max': 50000
+            'max': 1000000
         },
         format: {
-            to: function (value) { return Math.round(value); },
-            from: function (value) { return Number(value); }
+            to: function (value) { 
+                return value >= 1000 ? (Math.round(value)/1000).toFixed(value % 1000 === 0 ? 0 : 1) + 'k' : Math.round(value); 
+            },
+            from: function (value) { 
+                let strVal = String(value);
+                if(strVal.includes('k')) {
+                    return Number(strVal.replace('k', '')) * 1000;
+                }
+                return Number(strVal);
+            }
         }
     });
 
-    slider.noUiSlider.on('update', function (values, handle) {
+    slider.noUiSlider.on('update', function (values, handle, unencoded) {
         if (handle) {
-            inputMax.value = values[handle];
+            inputMax.value = unencoded[handle];
         } else {
-            inputMin.value = values[handle];
+            inputMin.value = unencoded[handle];
         }
-    });
-
-    slider.noUiSlider.on('change', function () {
-        document.getElementById('ajaxPage').value = 1;
-        fetchProducts();
     });
 
     inputMin.addEventListener('change', function () {
         slider.noUiSlider.set([this.value, null]);
-        document.getElementById('ajaxPage').value = 1;
-        fetchProducts();
     });
 
     inputMax.addEventListener('change', function () {
         slider.noUiSlider.set([null, this.value]);
+    });
+
+    document.getElementById('applyPriceBtn').addEventListener('click', function() {
         document.getElementById('ajaxPage').value = 1;
         fetchProducts();
     });
 
-    // Price Chips
-    document.querySelectorAll('.price-chip').forEach(chip => {
-        chip.addEventListener('click', function() {
-            let min = this.getAttribute('data-min');
-            let max = this.getAttribute('data-max');
-            slider.noUiSlider.set([min, max]);
+
+    // Brand Checkboxes
+    document.querySelectorAll('.ajax-filter-input').forEach(input => {
+        input.addEventListener('change', function() {
             document.getElementById('ajaxPage').value = 1;
             fetchProducts();
         });
     });
 
-    // Brand Checkboxes
-    document.querySelectorAll('.ajax-filter-input').forEach(input => {
-        input.addEventListener('change', function() {
+    // Category Radios
+    document.querySelectorAll('.ajax-category-radio').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.getElementById('ajaxCategory').value = this.value;
             document.getElementById('ajaxPage').value = 1;
             fetchProducts();
         });
@@ -479,7 +497,7 @@ function updateActiveTags() {
     // Price
     const min = document.getElementById('inputMinPrice').value;
     const max = document.getElementById('inputMaxPrice').value;
-    if (min > 0 || max < 50000) {
+    if (min > 0 || max < 1000000) {
         hasFilters = true;
         container.innerHTML += `
             <span class="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 border border-gray-200 rounded-full text-xs font-bold">
@@ -501,7 +519,7 @@ function removeBrandFilter(val) {
 
 function removePriceFilter() {
     const slider = document.getElementById('priceSlider');
-    slider.noUiSlider.set([0, 50000]);
+    slider.noUiSlider.set([0, 1000000]);
     document.getElementById('ajaxPage').value = 1;
     fetchProducts();
 }
@@ -509,7 +527,7 @@ function removePriceFilter() {
 function clearAllFilters() {
     document.querySelectorAll('input[name="brand[]"]').forEach(cb => cb.checked = false);
     const slider = document.getElementById('priceSlider');
-    slider.noUiSlider.set([0, 50000]);
+    slider.noUiSlider.set([0, 1000000]);
     document.getElementById('ajaxSearch').value = '';
     // Optionally clear category too, or keep it. We usually keep category context in clear all.
     document.getElementById('ajaxPage').value = 1;
@@ -518,6 +536,7 @@ function clearAllFilters() {
 
 // Call update tags on initial load
 document.addEventListener('DOMContentLoaded', updateActiveTags);
+</script>
 
 <style>
 /* Custom Scrollbar for brands list */
@@ -534,6 +553,55 @@ document.addEventListener('DOMContentLoaded', updateActiveTags);
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #9ca3af; 
+}
+
+/* noUiSlider Custom Styling */
+.noUi-connect {
+    background: #0066FF !important;
+}
+.noUi-handle {
+    border: 3px solid #0066FF !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+    width: 20px !important;
+    height: 20px !important;
+    right: -10px !important;
+    top: -6px !important;
+    cursor: grab;
+}
+.noUi-handle:active {
+    cursor: grabbing;
+}
+.noUi-handle::before, .noUi-handle::after {
+    display: none !important;
+}
+.noUi-target {
+    background: #e5e7eb !important;
+    border: none !important;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.1) !important;
+    height: 8px !important;
+}
+.noUi-tooltip {
+    font-size: 11px;
+    font-weight: 800;
+    color: #4b5563;
+    border: none;
+    background: #fff;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    border-radius: 6px;
+    padding: 4px 8px;
+    bottom: 120% !important;
+}
+.noUi-tooltip::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 4px 4px 0;
+    border-style: solid;
+    border-color: #fff transparent transparent transparent;
 }
 </style>
 

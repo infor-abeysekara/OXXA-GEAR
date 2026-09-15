@@ -168,7 +168,7 @@ $buyers_result = $buyers_stmt->get_result();
             <!-- Search Container -->
             <div class="search-container">
                 <form method="GET" class="row g-3">
-                    <div class="col-md-6">
+                    <div class="col-md-10">
                         <label for="search" class="form-label fw-semibold">Search Users</label>
                         <div class="input-group">
                             <span class="input-group-text">
@@ -178,14 +178,6 @@ $buyers_result = $buyers_stmt->get_result();
                                    placeholder="Search by name, username, or email..." 
                                    value="<?php echo htmlspecialchars($search); ?>">
                         </div>
-                    </div>
-                    <div class="col-md-4">
-                        <label for="type" class="form-label fw-semibold">Filter by Type</label>
-                        <select class="form-select" id="type" name="type">
-                            <option value="">All Users</option>
-                            <option value="seller" <?php echo $user_type === 'seller' ? 'selected' : ''; ?>>Sellers Only</option>
-                            <option value="customer" <?php echo $user_type === 'customer' ? 'selected' : ''; ?>>Buyers Only</option>
-                        </select>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label">&nbsp;</label>
@@ -197,19 +189,14 @@ $buyers_result = $buyers_stmt->get_result();
                     </div>
                 </form>
                 
-                <?php if (!empty($search) || !empty($user_type)): ?>
+                <?php if (!empty($search)): ?>
                     <div class="mt-3">
                         <a href="manage-users.php" class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-times me-2"></i>Clear Filters
                         </a>
                         <span class="text-muted ms-3">
                             Showing results for: 
-                            <?php if (!empty($search)): ?>
-                                <strong>"<?php echo htmlspecialchars($search); ?>"</strong>
-                            <?php endif; ?>
-                            <?php if (!empty($user_type)): ?>
-                                <strong><?php echo ucfirst($user_type); ?>s</strong>
-                            <?php endif; ?>
+                            <strong>"<?php echo htmlspecialchars($search); ?>"</strong>
                         </span>
                     </div>
                 <?php endif; ?>
@@ -434,5 +421,6 @@ $buyers_result = $buyers_stmt->get_result();
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <?php include("../include/footer.php"); ?>
 </body>
 </html>

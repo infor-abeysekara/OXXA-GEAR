@@ -316,5 +316,6 @@ $coupons_result = mysqli_query($conn, $coupons_query);
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <?php include("../include/footer.php"); ?>
 </body>
 </html>

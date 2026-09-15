@@ -3,19 +3,20 @@ session_start();
 include('../include/connection.php');
 include('../include/functions.php');
 
-if (isset($_POST['register'])) {
+header('Content-Type: application/json');
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
-    // Ensure session error array is fresh
-    $_SESSION['reg_errors'] = [];
+    $errors = [];
     
     // Get form data
-    $firstname = trim($_POST['firstname']);
-    $lastname = trim($_POST['lastname']);
-    $username = trim($_POST['username']);
-    $email = trim($_POST['email']);
-    $phone = trim($_POST['phone']);
-    $password = $_POST['password'];
-    $confirm = $_POST['confirm'];
+    $firstname = trim($_POST['firstname'] ?? '');
+    $lastname = trim($_POST['lastname'] ?? '');
+    $username = trim($_POST['username'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $confirm = $_POST['confirm'] ?? '';
     $user_type = isset($_POST['user_type']) ? $_POST['user_type'] : '';
     
     // Regex Patterns
@@ -25,63 +26,66 @@ if (isset($_POST['register'])) {
     
     // Validation
     if (!preg_match($nameRegex, $firstname)) {
-        $_SESSION['reg_errors'][] = "First name must be 2-50 letters only.";
+        $errors[] = "First name must be 2-50 letters only.";
     }
     
     if (!preg_match($nameRegex, $lastname)) {
-        $_SESSION['reg_errors'][] = "Last name must be 2-50 letters only.";
+        $errors[] = "Last name must be 2-50 letters only.";
     }
     
     if (!preg_match($usernameRegex, $username)) {
-        $_SESSION['reg_errors'][] = "Username must be 3-20 characters, letters, numbers, and underscores only.";
+        $errors[] = "Username must be 3-20 characters, letters, numbers, and underscores only.";
     }
     
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $_SESSION['reg_errors'][] = "Invalid email format.";
+        $errors[] = "Invalid email format.";
     }
     
     if (!preg_match($phoneRegex, $phone)) {
-        $_SESSION['reg_errors'][] = "Invalid Sri Lankan phone number.";
+        $errors[] = "Invalid Sri Lankan phone number.";
     } else {
         // Format phone to 947XXXXXXXX
         $phone = preg_replace('/^(?:\+94|0)?/', '94', $phone);
     }
     
     if ($password !== $confirm) {
-        $_SESSION['reg_errors'][] = "Passwords do not match.";
+        $errors[] = "Passwords do not match.";
     }
     
     if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/', $password)) {
-        $_SESSION['reg_errors'][] = "Password must be at least 8 characters with upper, lower, number, and special character.";
+        $errors[] = "Password must be at least 8 characters with upper, lower, number, and special character.";
     }
     
     if (!in_array($user_type, ['customer', 'seller'])) {
-        $_SESSION['reg_errors'][] = "Invalid account type selected.";
+        $errors[] = "Invalid account type selected.";
     }
     
-    if (!isset($_POST['terms'])) {
-        $_SESSION['reg_errors'][] = "You must agree to the Terms of Service.";
+    if (empty($_POST['terms'])) {
+        $errors[] = "You must agree to the Terms of Service.";
     }
 
-    if (!empty($_SESSION['reg_errors'])) {
-        header('Location: ../site/index.php?open=register');
+    if (!empty($errors)) {
+        echo json_encode(['success' => false, 'errors' => $errors]);
         exit();
     }
 
     try {
-        // Check if username or email already exists using PDO
-        $checkStmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
-        $checkStmt->execute([$username, $email]);
+        // Check if username, email, or phone already exists using PDO
+        $checkStmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ? OR phone = ?");
+        $checkStmt->execute([$username, $email, $phone]);
         
         if ($checkStmt->rowCount() > 0) {
             $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
             if ($existing['username'] === $username) {
-                $_SESSION['reg_errors'][] = "Username is already taken.";
+                $errors[] = "Username is already taken.";
             }
             if ($existing['email'] === $email) {
-                $_SESSION['reg_errors'][] = "Email is already registered.";
+                $errors[] = "Email is already registered.";
             }
-            header('Location: ../site/index.php?open=register');
+            if ($existing['phone'] === $phone) {
+                $errors[] = "Phone number is already registered.";
+            }
+            echo json_encode(['success' => false, 'errors' => $errors]);
             exit();
         }
 
@@ -97,14 +101,14 @@ if (isset($_POST['register'])) {
             $fileType = mime_content_type($_FILES['profile_photo']['tmp_name']);
             
             if (!in_array($fileType, $allowedTypes)) {
-                $_SESSION['reg_errors'][] = "Only JPG, PNG, and WEBP images are allowed.";
-                header('Location: ../site/index.php?open=register');
+                $errors[] = "Only JPG, PNG, and WEBP images are allowed.";
+                echo json_encode(['success' => false, 'errors' => $errors]);
                 exit();
             }
             
             if ($_FILES['profile_photo']['size'] > 2 * 1024 * 1024) { // 2MB limit
-                $_SESSION['reg_errors'][] = "Profile photo must be less than 2MB.";
-                header('Location: ../site/index.php?open=register');
+                $errors[] = "Profile photo must be less than 2MB.";
+                echo json_encode(['success' => false, 'errors' => $errors]);
                 exit();
             }
             
@@ -119,8 +123,8 @@ if (isset($_POST['register'])) {
             $imagePath = $uploadDir . $imageName;
             
             if (!move_uploaded_file($_FILES['profile_photo']['tmp_name'], $imagePath)) {
-                $_SESSION['reg_errors'][] = "Failed to upload profile photo.";
-                header('Location: ../site/index.php?open=register');
+                $errors[] = "Failed to upload profile photo.";
+                echo json_encode(['success' => false, 'errors' => $errors]);
                 exit();
             }
         }
@@ -132,7 +136,7 @@ if (isset($_POST['register'])) {
         $hashedPassword = md5($password);
         
         // Insert user into database using PDO
-        $insertStmt = $pdo->prepare("INSERT INTO users (user_code, first_name, last_name, username, email, phone, password, profile_image, user_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $insertStmt = $pdo->prepare("INSERT INTO users (user_code, first_name, last_name, username, email, phone, password, profile_image, user_type, is_approved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)");
         
         if ($insertStmt->execute([$user_code, $firstname, $lastname, $username, $email, $phone, $hashedPassword, $imageName, $user_type])) {
             
@@ -149,23 +153,23 @@ if (isset($_POST['register'])) {
             $_SESSION['type'] = $user_type;
             
             if ($user_type == 'seller') {
-                header('Location: ../site/business-registration.php');
+                $redirect = '../site/business-registration.php';
             } else {
-                header('Location: ../site/index.php?success=registered');
+                $redirect = '../site/index.php?success=registered';
             }
+            
+            echo json_encode(['success' => true, 'redirect' => $redirect]);
             exit();
         } else {
-            $_SESSION['reg_errors'][] = "Database error occurred during registration.";
-            header('Location: ../site/index.php?open=register');
+            echo json_encode(['success' => false, 'errors' => ["Database error occurred during registration."]]);
             exit();
         }
     } catch (PDOException $e) {
-        $_SESSION['reg_errors'][] = "Database error occurred: " . $e->getMessage();
-        header('Location: ../site/index.php?open=register');
+        echo json_encode(['success' => false, 'errors' => ["Database error occurred: " . $e->getMessage()]]);
         exit();
     }
 } else {
-    header('Location: ../site/index.php');
+    echo json_encode(['success' => false, 'errors' => ["Invalid request."]]);
     exit();
 }
 ?>

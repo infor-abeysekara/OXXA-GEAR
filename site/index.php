@@ -78,15 +78,15 @@ include(__DIR__ . '/../include/header.php');
             display: flex;
             gap: 1.5rem;
             width: max-content;
-            animation: scroll 35s linear infinite;
+            animation: scroll 60s linear infinite;
             padding-left: 1.5rem;
         }
         .marquee-track:hover {
             animation-play-state: paused;
         }
         .brand-card {
-            width: 160px;
-            height: 90px;
+            width: 200px;
+            height: 110px;
             background-color: #ffffff;
             border: 1px solid #EEEEEE;
             border-radius: 12px;
@@ -102,8 +102,8 @@ include(__DIR__ . '/../include/header.php');
             box-shadow: 0 4px 12px rgba(0, 102, 255, 0.1);
         }
         .brand-card img {
-            height: 50px;
-            max-width: 130px;
+            height: 70px;
+            max-width: 170px;
             object-fit: contain;
             mix-blend-mode: multiply;
             filter: grayscale(100%) opacity(50%);
@@ -124,43 +124,41 @@ include(__DIR__ . '/../include/header.php');
         /* Mobile Specific */
         @media (max-width: 768px) {
             .brand-card {
-                width: 120px;
-                height: 70px;
+                width: 140px;
+                height: 80px;
             }
             .brand-card img {
-                height: 40px;
-                max-width: 100px;
+                height: 50px;
+                max-width: 110px;
             }
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
         }
         </style>
 
         <div class="marquee-container container mx-auto">
             <div class="marquee-track">
-                <!-- Set 1 -->
-                <a href="products.php?brand=under-armour" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/Under-Armour-Logo-2005-present.png" alt="Under Armour"></a>
-                <a href="products.php?brand=puma" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/Puma-Logo.png" alt="Puma"></a>
-                <a href="products.php?brand=asics" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/Asics-Logo.png" alt="Asics"></a>
-                <a href="products.php?brand=new-balance" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/New-Balance-Logo-1972-2006.png" alt="New Balance"></a>
-                <a href="products.php?brand=reebok" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/Reebok-Logo.png" alt="Reebok"></a>
-                <a href="products.php?brand=lululemon" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/Lululemon-Symbol.png" alt="Lululemon" class="scale-up-1"></a>
-                <a href="products.php?brand=gymshark" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/Gymshark-Old-Logo.png" alt="Gymshark" class="scale-up-1"></a>
-                <a href="products.php?brand=on-running" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/on-running-logo-png_seeklogo-510256.png" alt="ON Running"></a>
-                <a href="products.php?brand=optimum-nutrition" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/optimum-nutrition-logo-png_seeklogo-195136.png" alt="Optimum Nutrition"></a>
-                <a href="products.php?brand=muscletech" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/logo_circle_menu_banner_ph_muscle_tech.jpg" alt="MuscleTech" class="scale-up-2"></a>
-                <a href="products.php?brand=gnc" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/GNC-Logo.jpg" alt="GNC" class="scale-up-1"></a>
+                <?php
+                // Fetch active brands for carousel
+                $carouselBrandStmt = $pdo->query("SELECT id, name, logo_image FROM brands WHERE is_active = 1 ORDER BY name ASC");
+                $carouselBrands = $carouselBrandStmt->fetchAll(PDO::FETCH_ASSOC);
                 
-                <!-- Set 2 (Duplicated for seamless loop) -->
-                <a href="products.php?brand=under-armour" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/Under-Armour-Logo-2005-present.png" alt="Under Armour"></a>
-                <a href="products.php?brand=puma" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/Puma-Logo.png" alt="Puma"></a>
-                <a href="products.php?brand=asics" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/Asics-Logo.png" alt="Asics"></a>
-                <a href="products.php?brand=new-balance" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/New-Balance-Logo-1972-2006.png" alt="New Balance"></a>
-                <a href="products.php?brand=reebok" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/Reebok-Logo.png" alt="Reebok"></a>
-                <a href="products.php?brand=lululemon" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/Lululemon-Symbol.png" alt="Lululemon" class="scale-up-1"></a>
-                <a href="products.php?brand=gymshark" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/Gymshark-Old-Logo.png" alt="Gymshark" class="scale-up-1"></a>
-                <a href="products.php?brand=on-running" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/on-running-logo-png_seeklogo-510256.png" alt="ON Running"></a>
-                <a href="products.php?brand=optimum-nutrition" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/optimum-nutrition-logo-png_seeklogo-195136.png" alt="Optimum Nutrition"></a>
-                <a href="products.php?brand=muscletech" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/logo_circle_menu_banner_ph_muscle_tech.jpg" alt="MuscleTech" class="scale-up-2"></a>
-                <a href="products.php?brand=gnc" class="brand-card"><img src="<?php echo $base_path; ?>image/shop_by_brands/GNC-Logo.jpg" alt="GNC" class="scale-up-1"></a>
+                // Display sets for seamless loop
+                for ($i = 0; $i < 2; $i++) {
+                    foreach ($carouselBrands as $b) {
+                        $imageSrc = !empty($b['logo_image']) ? $base_path . 'assets/uploads/brands/' . htmlspecialchars($b['logo_image']) : 'https://via.placeholder.com/130x50?text=' . urlencode($b['name']);
+                        echo '<a href="shop.php?brand[]=' . $b['id'] . '" class="brand-card" title="' . htmlspecialchars($b['name']) . '">';
+                        echo '<img src="' . $imageSrc . '" alt="' . htmlspecialchars($b['name']) . '">';
+                        echo '</a>';
+                    }
+                }
+                ?>
             </div>
         </div>
     </section>
@@ -175,65 +173,24 @@ include(__DIR__ . '/../include/header.php');
     </div>
     
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <!-- Sports Wear -->
-        <a href="products.php?category=Sports+Wear" class="group relative rounded-2xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all">
-            <img src="https://images.unsplash.com/photo-1518611012118-696072aa579a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Sports Wear" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute inset-0 flex flex-col items-center justify-end p-4 pb-6">
-                <h3 class="text-white font-space font-bold text-lg md:text-xl uppercase tracking-widest mb-2 translate-y-4 group-hover:translate-y-0 transition-transform">Sports Wear</h3>
-                <span class="text-primary text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">SHOP NOW &rarr;</span>
-            </div>
-        </a>
+        <?php
+        $catStmt = $pdo->query("SELECT * FROM categories ORDER BY FIELD(name, 'Sports Wear', 'Footwear', 'Fitness & Gym', 'Nutrition', 'Accessories', 'Equipment')");
+        $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
         
-        <!-- Footwear -->
-        <a href="products.php?category=Footwear" class="group relative rounded-2xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all">
-            <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Footwear" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute inset-0 flex flex-col items-center justify-end p-4 pb-6">
-                <h3 class="text-white font-space font-bold text-lg md:text-xl uppercase tracking-widest mb-2 translate-y-4 group-hover:translate-y-0 transition-transform">Footwear</h3>
-                <span class="text-primary text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">SHOP NOW &rarr;</span>
-            </div>
-        </a>
-        
-        <!-- Fitness & Gym -->
-        <a href="products.php?category=Fitness+Gym" class="group relative rounded-2xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all">
-            <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Fitness & Gym" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute inset-0 flex flex-col items-center justify-end p-4 pb-6 text-center">
-                <h3 class="text-white font-space font-bold text-lg md:text-xl uppercase tracking-widest mb-2 translate-y-4 group-hover:translate-y-0 transition-transform">Fitness & Gym</h3>
-                <span class="text-primary text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">SHOP NOW &rarr;</span>
-            </div>
-        </a>
-        
-        <!-- Nutrition -->
-        <a href="products.php?category=Nutrition" class="group relative rounded-2xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all">
-            <img src="https://images.unsplash.com/photo-1517649763962-0c623066013b?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Nutrition" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute inset-0 flex flex-col items-center justify-end p-4 pb-6">
-                <h3 class="text-white font-space font-bold text-lg md:text-xl uppercase tracking-widest mb-2 translate-y-4 group-hover:translate-y-0 transition-transform">Nutrition</h3>
-                <span class="text-primary text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">SHOP NOW &rarr;</span>
-            </div>
-        </a>
-        
-        <!-- Accessories -->
-        <a href="products.php?category=Accessories" class="group relative rounded-2xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all">
-            <img src="https://images.unsplash.com/photo-1576678927484-cc907957088c?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Accessories" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute inset-0 flex flex-col items-center justify-end p-4 pb-6">
-                <h3 class="text-white font-space font-bold text-lg md:text-xl uppercase tracking-widest mb-2 translate-y-4 group-hover:translate-y-0 transition-transform">Accessories</h3>
-                <span class="text-primary text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">SHOP NOW &rarr;</span>
-            </div>
-        </a>
-        
-        <!-- Equipment -->
-        <a href="products.php?category=Equipment" class="group relative rounded-2xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all">
-            <img src="https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Equipment" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div class="absolute inset-0 flex flex-col items-center justify-end p-4 pb-6">
-                <h3 class="text-white font-space font-bold text-lg md:text-xl uppercase tracking-widest mb-2 translate-y-4 group-hover:translate-y-0 transition-transform">Equipment</h3>
-                <span class="text-primary text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">SHOP NOW &rarr;</span>
-            </div>
-        </a>
+        foreach ($categories as $cat) {
+            $catImage = !empty($cat['image']) ? $base_path . 'assets/uploads/categories/' . htmlspecialchars($cat['image']) : 'https://via.placeholder.com/400x500?text=' . urlencode($cat['name']);
+            ?>
+            <a href="shop.php?category=<?php echo htmlspecialchars($cat['slug']); ?>" class="group relative rounded-2xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all">
+                <img src="<?php echo $catImage; ?>" alt="<?php echo htmlspecialchars($cat['name']); ?>" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div class="absolute inset-0 flex flex-col items-center justify-end p-4 pb-6 text-center">
+                    <h3 class="text-white font-space font-bold text-lg md:text-xl uppercase tracking-widest mb-2 translate-y-4 group-hover:translate-y-0 transition-transform"><?php echo htmlspecialchars($cat['name']); ?></h3>
+                    <span class="text-primary text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">SHOP NOW &rarr;</span>
+                </div>
+            </a>
+            <?php
+        }
+        ?>
     </div>
 </section>
 
@@ -250,66 +207,46 @@ include(__DIR__ . '/../include/header.php');
             <div class="w-16 h-1 bg-primary mx-auto rounded-full"></div>
         </div>
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            <!-- Product Card 1 -->
-            <div class="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.1)] transition-all duration-300 relative flex flex-col overflow-hidden">
-                <button class="absolute top-3 right-3 z-10 w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-gray-400 hover:text-danger hover:bg-white shadow-sm transition-all" onclick="showToast('Added to Wishlist ✓', 'success')">
-                    <i class="far fa-heart"></i>
-                </button>
-                <a href="product-details.php" class="block relative aspect-square overflow-hidden bg-offwhite">
-                    <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Nike Training Shoe" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-0">
-                    <img src="https://images.unsplash.com/photo-1608231387042-66d1773070a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Nike Training Shoe Alt" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100">
-                    <div class="absolute inset-x-0 top-3 left-3 flex gap-1">
-                        <span class="bg-primary text-white text-[10px] font-bold px-2 py-1 rounded-sm uppercase tracking-wider">Sale</span>
-                    </div>
-                </a>
-                <div class="p-5 flex-grow flex flex-col relative">
-                    <div class="text-[10px] text-slate font-bold uppercase tracking-widest mb-1">Footwear</div>
-                    <a href="product-details.php"><h3 class="text-navy font-bold text-lg mb-1 leading-tight hover:text-primary transition-colors">Nike Pro Training Shoe</h3></a>
-                    
-                    <div class="flex items-center mb-4">
-                        <div class="text-yellow-400 text-xs flex gap-0.5"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i></div>
-                        <span class="text-slate text-xs ml-2">(24)</span>
-                    </div>
-                    
-                    <div class="mt-auto flex items-end justify-between group-hover:opacity-0 transition-opacity duration-300">
-                        <div>
-                            <span class="text-slate text-xs line-through block mb-0.5">Rs. 21,000</span>
-                            <span class="text-navy font-extrabold text-lg">Rs. 18,500</span>
-                        </div>
-                        <button class="w-10 h-10 rounded-full bg-offwhite text-navy flex items-center justify-center transition-colors">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="absolute bottom-4 left-4 right-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                        <button onclick="addToCartAnimation(this)" class="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3 rounded-xl uppercase tracking-widest text-xs shadow-lg shadow-primary/30 transition-all active:scale-95">
-                            Add to Cart
-                        </button>
-                    </div>
-                </div>
-            </div>
+        <div class="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-6 pb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <?php
+            $trendingQuery = "SELECT p.*, 
+                COALESCE((SELECT SUM(oi.quantity) FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE oi.product_id = p.id AND o.status != 'cancelled'), 0) as total_sold,
+                COALESCE((SELECT MIN(ps.price) FROM product_variants ps WHERE ps.product_id = p.id AND ps.qty > 0 AND ps.price > 0), p.base_price) as lowest_price,
+                (SELECT image_path FROM product_images pi WHERE pi.product_id = p.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as image,
+                (SELECT name FROM categories c WHERE c.id = p.category_id) as category_name,
+                (SELECT business_name FROM seller_profiles sp WHERE sp.user_id = p.seller_id) as seller_name,
+                (SELECT logo_path FROM seller_profiles sp WHERE sp.user_id = p.seller_id) as seller_logo
+            FROM products p 
+            WHERE p.is_approved = 1 AND p.status = 'active'
+            ORDER BY total_sold DESC 
+            LIMIT 10";
+            
+            $trendingStmt = $pdo->query($trendingQuery);
+            $trendingProducts = $trendingStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            <!-- Product Card 2 -->
-            <div class="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.1)] transition-all duration-300 relative flex flex-col overflow-hidden">
+            if(!empty($trendingProducts)):
+                foreach($trendingProducts as $p):
+                    $img = !empty($p['image']) ? $base_path . 'assets/uploads/products/' . htmlspecialchars($p['image']) : 'https://via.placeholder.com/400x400?text=No+Image';
+            ?>
+            <!-- Product Card -->
+            <div class="group min-w-[280px] w-[280px] snap-start bg-white rounded-2xl border border-gray-100 shadow-sm hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.1)] transition-all duration-300 relative flex flex-col overflow-hidden">
                 <button class="absolute top-3 right-3 z-10 w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-gray-400 hover:text-danger hover:bg-white shadow-sm transition-all" onclick="showToast('Added to Wishlist ✓', 'success')">
                     <i class="far fa-heart"></i>
                 </button>
-                <a href="product-details.php" class="block relative aspect-square overflow-hidden bg-offwhite">
-                    <img src="https://images.unsplash.com/photo-1556817411-31ae72fa3ea8?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Compression T-Shirt" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-0">
-                    <img src="https://images.unsplash.com/photo-1581655353564-df123a1eb820?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Compression T-Shirt Alt" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100">
+                <a href="product-details.php?id=<?php echo $p['id']; ?>" class="block relative aspect-square overflow-hidden bg-offwhite">
+                    <img src="<?php echo $img; ?>" alt="<?php echo htmlspecialchars($p['name']); ?>" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-90">
                 </a>
                 <div class="p-5 flex-grow flex flex-col relative">
-                    <div class="text-[10px] text-slate font-bold uppercase tracking-widest mb-1">Sports Wear</div>
-                    <a href="product-details.php"><h3 class="text-navy font-bold text-lg mb-1 leading-tight hover:text-primary transition-colors">Elite Compression T-Shirt</h3></a>
+                    <div class="text-[10px] text-slate font-bold uppercase tracking-widest mb-1"><?php echo htmlspecialchars($p['category_name'] ?? 'General'); ?></div>
+                    <a href="product-details.php?id=<?php echo $p['id']; ?>"><h3 class="text-navy font-bold text-lg mb-1 leading-tight hover:text-primary transition-colors line-clamp-2"><?php echo htmlspecialchars($p['name']); ?></h3></a>
                     <div class="flex items-center mb-4">
                         <div class="text-yellow-400 text-xs flex gap-0.5"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-                        <span class="text-slate text-xs ml-2">(42)</span>
+                        <span class="text-slate text-xs ml-2">(<?php echo rand(10, 200); ?>)</span>
                     </div>
                     
                     <div class="mt-auto flex items-end justify-between group-hover:opacity-0 transition-opacity duration-300">
                         <div>
-                            <span class="text-navy font-extrabold text-lg">Rs. 4,500</span>
+                            <span class="text-navy font-extrabold text-lg">Rs. <?php echo number_format($p['lowest_price'], 2); ?></span>
                         </div>
                         <button class="w-10 h-10 rounded-full bg-offwhite text-navy flex items-center justify-center transition-colors">
                             <i class="fas fa-plus"></i>
@@ -317,80 +254,18 @@ include(__DIR__ . '/../include/header.php');
                     </div>
                     
                     <div class="absolute bottom-4 left-4 right-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                        <button onclick="addToCartAnimation(this)" class="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3 rounded-xl uppercase tracking-widest text-xs shadow-lg shadow-primary/30 transition-all active:scale-95">
-                            Add to Cart
-                        </button>
+                        <a href="product-details.php?id=<?php echo $p['id']; ?>" class="block w-full bg-primary hover:bg-primary-hover text-white text-center font-bold py-3 rounded-xl uppercase tracking-widest text-xs shadow-lg shadow-primary/30 transition-all active:scale-95">
+                            View Details
+                        </a>
                     </div>
                 </div>
             </div>
-
-            <!-- Product Card 3 -->
-            <div class="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.1)] transition-all duration-300 relative flex flex-col overflow-hidden">
-                <button class="absolute top-3 right-3 z-10 w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-gray-400 hover:text-danger hover:bg-white shadow-sm transition-all" onclick="showToast('Added to Wishlist ✓', 'success')">
-                    <i class="far fa-heart"></i>
-                </button>
-                <a href="product-details.php" class="block relative aspect-square overflow-hidden bg-offwhite">
-                    <img src="https://images.unsplash.com/photo-1593477004927-89c6dda7c4c9?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Whey Protein" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-0">
-                    <img src="https://images.unsplash.com/photo-1579722820308-d74e571900a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Whey Protein Alt" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100">
-                </a>
-                <div class="p-5 flex-grow flex flex-col relative">
-                    <div class="text-[10px] text-slate font-bold uppercase tracking-widest mb-1">Nutrition</div>
-                    <a href="product-details.php"><h3 class="text-navy font-bold text-lg mb-1 leading-tight hover:text-primary transition-colors">Gold Standard Whey Protein</h3></a>
-                    <div class="flex items-center mb-4">
-                        <div class="text-yellow-400 text-xs flex gap-0.5"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i></div>
-                        <span class="text-slate text-xs ml-2">(128)</span>
-                    </div>
-                    
-                    <div class="mt-auto flex items-end justify-between group-hover:opacity-0 transition-opacity duration-300">
-                        <div>
-                            <span class="text-navy font-extrabold text-lg">Rs. 12,500</span>
-                        </div>
-                        <button class="w-10 h-10 rounded-full bg-offwhite text-navy flex items-center justify-center transition-colors">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="absolute bottom-4 left-4 right-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                        <button onclick="addToCartAnimation(this)" class="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3 rounded-xl uppercase tracking-widest text-xs shadow-lg shadow-primary/30 transition-all active:scale-95">
-                            Add to Cart
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Product Card 4 -->
-            <div class="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.1)] transition-all duration-300 relative flex flex-col overflow-hidden">
-                <button class="absolute top-3 right-3 z-10 w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-gray-400 hover:text-danger hover:bg-white shadow-sm transition-all" onclick="showToast('Added to Wishlist ✓', 'success')">
-                    <i class="far fa-heart"></i>
-                </button>
-                <a href="product-details.php" class="block relative aspect-square overflow-hidden bg-offwhite">
-                    <img src="https://images.unsplash.com/photo-1584735175315-9d582307137e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Gym Bag" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-0">
-                    <img src="https://images.unsplash.com/photo-1553062407-98eeb64c6a62?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Gym Bag Alt" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100">
-                </a>
-                <div class="p-5 flex-grow flex flex-col relative">
-                    <div class="text-[10px] text-slate font-bold uppercase tracking-widest mb-1">Accessories</div>
-                    <a href="product-details.php"><h3 class="text-navy font-bold text-lg mb-1 leading-tight hover:text-primary transition-colors">Pro Duffel Gym Bag</h3></a>
-                    <div class="flex items-center mb-4">
-                        <div class="text-yellow-400 text-xs flex gap-0.5"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="far fa-star"></i></div>
-                        <span class="text-slate text-xs ml-2">(18)</span>
-                    </div>
-                    
-                    <div class="mt-auto flex items-end justify-between group-hover:opacity-0 transition-opacity duration-300">
-                        <div>
-                            <span class="text-navy font-extrabold text-lg">Rs. 5,800</span>
-                        </div>
-                        <button class="w-10 h-10 rounded-full bg-offwhite text-navy flex items-center justify-center transition-colors">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="absolute bottom-4 left-4 right-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                        <button onclick="addToCartAnimation(this)" class="w-full bg-primary hover:bg-primary-hover text-white font-bold py-3 rounded-xl uppercase tracking-widest text-xs shadow-lg shadow-primary/30 transition-all active:scale-95">
-                            Add to Cart
-                        </button>
-                    </div>
-                </div>
-            </div>
+            <?php 
+                endforeach;
+            else:
+            ?>
+                <p class="text-gray-500 w-full text-center py-8">No trending products available yet.</p>
+            <?php endif; ?>
         </div>
     </section>
 

@@ -98,20 +98,114 @@ document.addEventListener('DOMContentLoaded', () => {
         validateForm();
     };
 
+    let emailTimeout = null;
+
     const validateEmail = () => {
         const val = email.value.trim();
-        if (!val) { resetInputStyle('Email'); validState.email = false; }
-        else if (!emailRegex.test(val)) { showError('Email', 'Invalid email format'); validState.email = false; }
-        else { clearError('Email'); validState.email = true; }
-        validateForm();
+        const icon = document.getElementById('emailIcon');
+        
+        clearTimeout(emailTimeout);
+
+        if (!val) { 
+            resetInputStyle('Email'); 
+            if(icon) icon.classList.add('hidden');
+            validState.email = false;
+            validateForm();
+            return;
+        }
+
+        if (!emailRegex.test(val)) { 
+            showError('Email', 'Invalid email format'); 
+            if(icon) icon.classList.add('hidden');
+            validState.email = false;
+            validateForm();
+            return;
+        }
+
+        // Show spinner
+        if(icon) {
+            icon.classList.remove('hidden', 'fa-check', 'text-green-500', 'fa-times', 'text-red-500');
+            icon.classList.add('fa-spinner', 'fa-spin', 'text-[#0066FF]');
+        }
+        
+        emailTimeout = setTimeout(async () => {
+            try {
+                const basePath = window.location.pathname.includes('/site/') ? '../' : '';
+                const response = await fetch(`${basePath}Backend/check-email.php?e=${encodeURIComponent(val)}`);
+                const data = await response.json();
+                
+                if(icon) icon.classList.remove('fa-spinner', 'fa-spin', 'text-[#0066FF]');
+                
+                if (data.available) {
+                    clearError('Email');
+                    if(icon) icon.classList.add('fa-check', 'text-green-500');
+                    validState.email = true;
+                } else {
+                    showError('Email', 'Email is already registered');
+                    if(icon) icon.classList.add('fa-times', 'text-red-500');
+                    validState.email = false;
+                }
+            } catch (error) {
+                console.error("Email check failed", error);
+                validState.email = false;
+            }
+            validateForm();
+        }, 500);
     };
+
+    let phoneTimeout = null;
 
     const validatePhone = () => {
         const val = phone.value.trim();
-        if (!val) { resetInputStyle('Phone'); validState.phone = false; }
-        else if (!phoneRegex.test(val)) { showError('Phone', 'Invalid Sri Lankan phone number'); validState.phone = false; }
-        else { clearError('Phone'); validState.phone = true; }
-        validateForm();
+        const icon = document.getElementById('phoneIcon');
+        
+        clearTimeout(phoneTimeout);
+
+        if (!val) { 
+            resetInputStyle('Phone'); 
+            if(icon) icon.classList.add('hidden');
+            validState.phone = false;
+            validateForm();
+            return;
+        }
+        
+        if (!phoneRegex.test(val)) { 
+            showError('Phone', 'Invalid Sri Lankan phone number'); 
+            if(icon) icon.classList.add('hidden');
+            validState.phone = false;
+            validateForm();
+            return;
+        }
+        
+        // Show spinner
+        if(icon) {
+            icon.classList.remove('hidden', 'fa-check', 'text-green-500', 'fa-times', 'text-red-500');
+            icon.classList.add('fa-spinner', 'fa-spin', 'text-[#0066FF]');
+        }
+        
+        phoneTimeout = setTimeout(async () => {
+            try {
+                const basePath = window.location.pathname.includes('/site/') ? '../' : '';
+                const response = await fetch(`${basePath}Backend/check-phone.php?p=${encodeURIComponent(val)}`);
+                const data = await response.json();
+                
+                if(icon) icon.classList.remove('fa-spinner', 'fa-spin', 'text-[#0066FF]');
+                
+                if (data.available) {
+                    clearError('Phone');
+                    if(icon) icon.classList.add('fa-check', 'text-green-500');
+                    validState.phone = true;
+                } else {
+                    showError('Phone', 'Phone number is already registered');
+                    if(icon) icon.classList.add('fa-times', 'text-red-500');
+                    validState.phone = false;
+                }
+            } catch (error) {
+                console.error("Phone check failed", error);
+                validState.phone = false;
+            }
+            validateForm();
+        }, 500);
     };
 
     const validatePassword = () => {
@@ -277,6 +371,85 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initial State Check
     validateForm();
+    
+    // Form AJAX Submission
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        if (submitBtn.disabled) return;
+        
+        // Show loading state
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating Account...';
+        
+        // Clear previous generic errors
+        let errorContainer = document.getElementById('regGenericErrors');
+        if (errorContainer) {
+            errorContainer.classList.add('hidden');
+            errorContainer.querySelector('ul').innerHTML = '';
+        }
+        
+        try {
+            const formData = new FormData(form);
+            const basePath = window.location.pathname.includes('/site/') ? '../' : '';
+            
+            const response = await fetch(`${basePath}Backend/register-backend.php`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // Redirect on success
+                window.location.href = data.redirect;
+            } else {
+                // Show errors
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                
+                if (data.errors && data.errors.length > 0) {
+                    let errHtml = '';
+                    data.errors.forEach(err => {
+                        errHtml += `<li class="text-xs text-red-700 font-medium">${err}</li>`;
+                    });
+                    
+                    if (!errorContainer) {
+                        // Create error container dynamically
+                        const errDiv = document.createElement('div');
+                        errDiv.id = 'regGenericErrors';
+                        errDiv.className = 'mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg';
+                        errDiv.innerHTML = `
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-exclamation-circle text-red-500"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-bold text-red-800 uppercase tracking-wider mb-1">Registration Failed</h3>
+                                    <ul class="list-disc pl-5 space-y-1">${errHtml}</ul>
+                                </div>
+                            </div>
+                        `;
+                        form.parentNode.insertBefore(errDiv, form);
+                        errorContainer = errDiv;
+                    } else {
+                        errorContainer.querySelector('ul').innerHTML = errHtml;
+                        errorContainer.classList.remove('hidden');
+                    }
+                    
+                    // Scroll to top of modal
+                    const modalBody = form.closest('.overflow-y-auto');
+                    if (modalBody) modalBody.scrollTop = 0;
+                }
+            }
+        } catch (err) {
+            console.error("Submission failed", err);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            alert('An unexpected error occurred. Please check your connection and try again.');
+        }
+    });
 });
 
 // Function used by the file input directly via onchange in HTML

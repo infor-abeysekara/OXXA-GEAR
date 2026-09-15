@@ -3,7 +3,7 @@
 if (!function_exists('uploadImage')) {
 
     // Image upload and compression function
-    function uploadImage($file, $uploadDir, $prefix = '')
+    function uploadImage($file, $uploadDir, $prefix = '', $maxSizeMB = 10)
     {
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
         $fileType = mime_content_type($file['tmp_name']);
@@ -12,8 +12,8 @@ if (!function_exists('uploadImage')) {
             return 'type_error';
         }
 
-        // We'll allow up to 10MB upload but compress it down
-        if ($file['size'] > 10 * 1024 * 1024) { 
+        // We'll allow up to the specified size (default 10MB)
+        if ($file['size'] > $maxSizeMB * 1024 * 1024) { 
             return 'size_error';
         }
 

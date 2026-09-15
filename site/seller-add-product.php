@@ -27,7 +27,24 @@ $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
 $brandStmt = $pdo->query("SELECT id, name FROM brands WHERE is_active = 1 ORDER BY name ASC");
 $brands = $brandStmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Fetch Master Variants for dynamic UI
+$masterStmt = $pdo->query("SELECT * FROM master_variants ORDER BY category_id, variant_type, display_order");
+$masterRows = $masterStmt->fetchAll(PDO::FETCH_ASSOC);
+$masterVariants = [];
+foreach ($masterRows as $row) {
+    $catId = $row['category_id'];
+    $type = $row['variant_type'];
+    if (!isset($masterVariants[$catId])) $masterVariants[$catId] = [];
+    if (!isset($masterVariants[$catId][$type])) $masterVariants[$catId][$type] = [];
+    $masterVariants[$catId][$type][] = [
+        'value' => $row['variant_value'],
+        'meta' => $row['meta_data'] ? json_decode($row['meta_data'], true) : null
+    ];
+}
 ?>
+<script>
+    const categoryVariants = <?= json_encode($masterVariants) ?>;
+</script>
 
 <div class="bg-gray-50 min-h-screen py-8">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -49,7 +66,7 @@ $brands = $brandStmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         <?php endif; ?>
 
-        <form action="../Backend/seller-product-backend.php" method="POST" enctype="multipart/form-data" class="space-y-6">
+        <form id="addProductForm" action="../Backend/seller-product-backend.php" method="POST" enctype="multipart/form-data" class="space-y-6">
             
             <!-- Basic Details -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
@@ -99,7 +116,6 @@ $brands = $brandStmt->fetchAll(PDO::FETCH_ASSOC);
                         <div>
                             <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">
                                 Cost Price (Rs.) * 
-                                <span class="text-xs font-normal text-slate float-right mt-0.5"><i class="fas fa-eye-slash me-1"></i> Hidden from buyers</span>
                             </label>
                             <div class="relative">
                                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">Rs.</span>
@@ -110,7 +126,6 @@ $brands = $brandStmt->fetchAll(PDO::FETCH_ASSOC);
                         <div>
                             <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">
                                 Selling Price (Rs.) *
-                                <span class="text-xs font-normal text-slate float-right mt-0.5"><i class="fas fa-eye me-1"></i> Visible to buyers</span>
                             </label>
                             <div class="relative">
                                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">Rs.</span>
@@ -150,42 +165,71 @@ $brands = $brandStmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
             </div>
 
-            <!-- Images & Variants -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                        <!-- Images & Variants -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-8">
                 <h2 class="text-lg font-black text-navy uppercase tracking-wide mb-6 pb-2 border-b border-gray-100"><i class="fas fa-images text-purple-500 me-2"></i> Media & Inventory</h2>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- Images -->
-                    <div>
-                        <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">Product Images *</label>
-                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#0066FF] transition-colors relative">
-                            <input type="file" name="images[]" multiple accept=".jpg,.jpeg,.png,.webp" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
-                            <p class="text-sm text-slate">Select up to 4 images (First is primary)</p>
-                            <p class="text-xs text-gray-400 mt-1">JPG, PNG (Max 2MB each)</p>
-                        </div>
+                <!-- 1. Product Images -->
+                <div class="mb-10">
+                    <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">Product Images * <span class="text-xs text-gray-400 font-normal normal-case ml-2">(Min 4, Max 10 images, 2MB each. First image is primary)</span></label>
+                    <div id="imageDropzone" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#0066FF] transition-colors relative cursor-pointer bg-gray-50/50">
+                        <input type="file" name="images[]" id="imageInput" multiple accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer hidden">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
+                        <p class="text-sm text-slate font-bold">Click to select files or drag & drop</p>
                     </div>
-                    
-                    <!-- Variants (Sizes & Qty) -->
-                    <div>
-                        <div class="flex justify-between items-center mb-2">
-                            <label class="block text-sm font-bold text-navy uppercase tracking-wide">Sizes & Inventory</label>
-                            <button type="button" id="addVariantBtn" class="text-xs font-bold text-[#0066FF] hover:underline uppercase"><i class="fas fa-plus me-1"></i> Add Size</button>
-                        </div>
-                        
-                        <div id="variantsContainer" class="space-y-3">
-                            <div class="flex gap-3 variant-row">
-                                <input type="text" name="sizes[]" placeholder="Size (e.g. M, L, 42)" required class="w-1/2 bg-gray-50 border border-gray-200 text-navy rounded-lg py-2 px-3 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all text-sm">
-                                <input type="number" name="qtys[]" placeholder="Qty" min="0" required class="w-1/3 bg-gray-50 border border-gray-200 text-navy rounded-lg py-2 px-3 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all text-sm">
-                                <button type="button" class="w-1/6 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-100 transition-colors remove-variant" disabled>
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
+                    <!-- Image Previews Container -->
+                    <div id="imagePreviewContainer" class="flex flex-wrap gap-4 mt-4 hidden">
+                        <!-- Dynamic Thumbnails Go Here -->
                     </div>
                 </div>
-            </div>
 
+                <hr class="border-gray-100 mb-8">
+
+                <!-- 2. Dynamic Variants UI -->
+                <div id="dynamicVariantUI" class="mb-8">
+                    <!-- Rendered by JS -->
+                    <div class="p-6 text-center text-gray-400 text-sm font-medium border-2 border-dashed border-gray-200 rounded-xl">
+                        Select a Category above to load Variant options.
+                    </div>
+                </div>
+
+                <!-- 3. Variant Table -->
+                <div>
+                    <div class="flex justify-between items-end mb-3">
+                        <label class="block text-sm font-bold text-navy uppercase tracking-wide">Variant Table & Inventory</label>
+                        <button type="button" id="generateVariantsBtn" class="bg-navy hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase transition-colors hidden">
+                            <i class="fas fa-magic me-1"></i> Generate Table
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto border border-gray-200 rounded-xl">
+                        <table class="w-full text-left border-collapse" id="variantTable">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200" id="variantTableHeader">
+                                    <th class="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Variant 1</th>
+                                    <th class="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Variant 2</th>
+                                    <th class="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider w-24">Qty</th>
+                                    <th class="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider">SKU</th>
+                                    <th class="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider w-12 text-center"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="variantTableBody" class="divide-y divide-gray-100">
+                                <tr>
+                                    <td colspan="5" class="p-6 text-center text-gray-400 text-sm font-medium" id="tableEmptyState">
+                                        Select a Category first.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-4 flex justify-between items-center">
+                        <button type="button" id="addManualRowBtn" class="text-sm font-bold text-[#0066FF] hover:underline hidden"><i class="fas fa-plus me-1"></i> Add Manual Row</button>
+                        <div class="text-sm font-bold text-navy bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">Total Qty: <span id="totalQtyCounter" class="text-[#0066FF] text-lg ms-1">0</span></div>
+                    </div>
+                </div>
+
+            </div>
             <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-5 flex items-start">
                 <i class="fas fa-info-circle text-yellow-600 mt-0.5 me-3"></i>
                 <p class="text-sm text-yellow-800">
@@ -218,6 +262,21 @@ function updateFinancials() {
     let cost = parseFloat(costInput.value) || 0;
     let sell = parseFloat(sellInput.value) || 0;
     
+    const submitBtn = document.querySelector('button[name="add_product"]');
+    
+    // Check if selling is higher than cost
+    if (sell > 0 && cost > 0 && sell < cost) {
+        vSell.textContent = 'Error';
+        vSell.classList.add('text-red-500');
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        return;
+    } else {
+        vSell.classList.remove('text-red-500');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+    
     let profit = sell - cost;
     if(profit < 0) profit = 0; // Prevent negative profit calculations in UI
     
@@ -234,46 +293,420 @@ function updateFinancials() {
 costInput.addEventListener('input', updateFinancials);
 sellInput.addEventListener('input', updateFinancials);
 
-// Dynamic Variants Logic
-const variantsContainer = document.getElementById('variantsContainer');
-const addVariantBtn = document.getElementById('addVariantBtn');
 
-addVariantBtn.addEventListener('click', () => {
-    const row = document.createElement('div');
-    row.className = 'flex gap-3 variant-row';
-    row.innerHTML = `
-        <input type="text" name="sizes[]" placeholder="Size" required class="w-1/2 bg-gray-50 border border-gray-200 text-navy rounded-lg py-2 px-3 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all text-sm">
-        <input type="number" name="qtys[]" placeholder="Qty" min="0" required class="w-1/3 bg-gray-50 border border-gray-200 text-navy rounded-lg py-2 px-3 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all text-sm">
-        <button type="button" class="w-1/6 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-100 transition-colors remove-variant">
-            <i class="fas fa-trash"></i>
-        </button>
-    `;
-    variantsContainer.appendChild(row);
-    updateRemoveButtons();
-});
 
-variantsContainer.addEventListener('click', (e) => {
-    if (e.target.closest('.remove-variant')) {
-        const row = e.target.closest('.variant-row');
-        if (variantsContainer.children.length > 1) {
-            row.remove();
-            updateRemoveButtons();
+    // --- ADVANCED INVENTORY LOGIC ---
+    
+    // 1. Image Upload Logic
+    const imageInput = document.getElementById('imageInput');
+    const imageDropzone = document.getElementById('imageDropzone');
+    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+    let selectedFiles = [];
+    const MAX_FILES = 10;
+    const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+
+    imageDropzone.addEventListener('click', () => imageInput.click());
+
+    imageDropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        imageDropzone.classList.add('border-[#0066FF]', 'bg-blue-50/50');
+    });
+
+    imageDropzone.addEventListener('dragleave', () => {
+        imageDropzone.classList.remove('border-[#0066FF]', 'bg-blue-50/50');
+    });
+
+    imageDropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        imageDropzone.classList.remove('border-[#0066FF]', 'bg-blue-50/50');
+        handleFiles(e.dataTransfer.files);
+    });
+
+    imageInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+
+    function handleFiles(files) {
+        for (let i = 0; i < files.length; i++) {
+            if (selectedFiles.length >= MAX_FILES) {
+                Swal.fire({ icon: 'warning', title: 'Limit Reached', text: `Maximum ${MAX_FILES} images allowed.` });
+                break;
+            }
+            const file = files[i];
+            if (file.size > MAX_SIZE) {
+                Swal.fire({ icon: 'error', title: 'File Too Large', text: `File ${file.name} is larger than 2MB.` });
+                continue;
+            }
+            if (file.type.startsWith('image/')) {
+                selectedFiles.push(file);
+            }
         }
+        updatePreviews();
+        updateFileInput();
     }
-});
 
-function updateRemoveButtons() {
-    const btns = document.querySelectorAll('.remove-variant');
-    if (btns.length === 1) {
-        btns[0].disabled = true;
-        btns[0].classList.add('opacity-50', 'cursor-not-allowed');
-    } else {
-        btns.forEach(btn => {
-            btn.disabled = false;
-            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+    function updatePreviews() {
+        imagePreviewContainer.innerHTML = '';
+        if (selectedFiles.length > 0) {
+            imagePreviewContainer.classList.remove('hidden');
+        } else {
+            imagePreviewContainer.classList.add('hidden');
+        }
+
+        selectedFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const div = document.createElement('div');
+                div.className = 'relative w-24 h-24 rounded-lg border border-gray-200 overflow-hidden group cursor-move shadow-sm bg-white shrink-0';
+                div.draggable = true;
+                
+                div.innerHTML = `
+                    <img src="${e.target.result}" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <button type="button" class="text-white hover:text-red-400 p-1" onclick="removeImage(${index})"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                
+                if (index === 0) {
+                    div.innerHTML += `<div class="absolute top-0 left-0 right-0 bg-[#0066FF] text-white text-[9px] font-bold text-center uppercase py-0.5 tracking-wider">Primary</div>`;
+                }
+
+                // Drag Events for reordering
+                div.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', index);
+                });
+                div.addEventListener('dragover', (e) => e.preventDefault());
+                div.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    const toIndex = index;
+                    if (fromIndex !== toIndex) {
+                        const temp = selectedFiles[fromIndex];
+                        selectedFiles.splice(fromIndex, 1);
+                        selectedFiles.splice(toIndex, 0, temp);
+                        updatePreviews();
+                        updateFileInput();
+                    }
+                });
+
+                imagePreviewContainer.appendChild(div);
+            };
+            reader.readAsDataURL(file);
         });
     }
-}
+
+    function removeImage(index) {
+        selectedFiles.splice(index, 1);
+        updatePreviews();
+        updateFileInput();
+    }
+
+    function updateFileInput() {
+        const dt = new DataTransfer();
+        selectedFiles.forEach(file => dt.items.add(file));
+        imageInput.files = dt.files;
+    }
+
+    const addProductForm = document.getElementById('addProductForm');
+    if (addProductForm) {
+        addProductForm.addEventListener('submit', function(e) {
+            if (selectedFiles.length < 4) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Not Enough Images',
+                    text: 'You must upload at least 4 images to showcase your product properly.'
+                });
+            }
+        });
+    }
+
+    // 2. Dynamic Categories Logic
+    const standardColors = [
+        {name: 'Black', hex: '#000000'}, {name: 'White', hex: '#FFFFFF'}, {name: 'Red', hex: '#EF4444'},
+        {name: 'Blue', hex: '#3B82F6'}, {name: 'Green', hex: '#10B981'}, {name: 'Yellow', hex: '#F59E0B'},
+        {name: 'Orange', hex: '#F97316'}, {name: 'Purple', hex: '#8B5CF6'}, {name: 'Pink', hex: '#EC4899'},
+        {name: 'Gray', hex: '#6B7280'}, {name: 'Brown', hex: '#92400E'}, {name: 'Navy', hex: '#1E3A8A'}
+    ];
+
+    let activeSet1 = new Set(); // Stores text values
+    let activeSet2 = new Set(); // Stores text or objects {name, hex}
+    let activeSet3 = new Set(); // Text values
+
+    const categorySelect = document.querySelector('select[name="category_id"]');
+    const dynamicUI = document.getElementById('dynamicVariantUI');
+    const tableHeader = document.getElementById('variantTableHeader');
+    const tableBody = document.getElementById('variantTableBody');
+    const genBtn = document.getElementById('generateVariantsBtn');
+    const addManualBtn = document.getElementById('addManualRowBtn');
+    const productNameInput = document.querySelector('input[name="name"]');
+
+    let currentConfig = null; 
+
+    categorySelect.addEventListener('change', (e) => {
+        const catId = e.target.value;
+        if (!catId) {
+            dynamicUI.innerHTML = `<div class="p-6 text-center text-gray-400 text-sm font-medium border-2 border-dashed border-gray-200 rounded-xl">Select a Category above to load Variant options.</div>`;
+            tableBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-gray-400 text-sm font-medium">Select a Category first.</td></tr>`;
+            genBtn.classList.add('hidden');
+            addManualBtn.classList.add('hidden');
+            return;
+        }
+
+        renderCategoryUI(catId);
+    });
+
+    function getCatConfig(catId) {
+        const catName = categorySelect.options[categorySelect.selectedIndex].text.toUpperCase();
+        if (catName.includes('SPORTS WEAR')) return { type: 'sports', col1: 'Size', col2: 'Color', dbCol1: 'variant_size[]', dbCol2: 'variant_color[]', hasFit: true };
+        if (catName.includes('FOOTWEAR')) return { type: 'footwear', col1: 'Size', col2: 'Color', dbCol1: 'variant_size[]', dbCol2: 'variant_color[]', hasFit: false };
+        if (catName.includes('FITNESS')) return { type: 'fitness', col1: 'Size', col2: 'Color', dbCol1: 'variant_size[]', dbCol2: 'variant_color[]', hasFit: false };
+        if (catName.includes('ACCESSORIES')) return { type: 'accessories', col1: 'Size', col2: 'Color', dbCol1: 'variant_size[]', dbCol2: 'variant_color[]', hasFit: false };
+        if (catName.includes('EQUIPMENT')) return { type: 'equipment', col1: 'Variant', col2: null, dbCol1: 'variant_size[]', dbCol2: null, hasFit: false };
+        if (catName.includes('NUTRITION')) return { type: 'nutrition', col1: 'Flavor', col2: 'Weight', dbCol1: 'variant_flavor[]', dbCol2: 'variant_weight[]', hasFit: false };
+        return { type: 'default', col1: 'Variant 1', col2: 'Variant 2', dbCol1: 'variant_size[]', dbCol2: 'variant_color[]', hasFit: false };
+    }
+
+    function renderCategoryUI(catId) {
+        activeSet1.clear();
+        activeSet2.clear();
+        activeSet3.clear();
+        tableBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-gray-400 text-sm font-medium">Click "Generate Table" to create inventory rows.</td></tr>`;
+        genBtn.classList.remove('hidden');
+        addManualBtn.classList.remove('hidden');
+
+        currentConfig = getCatConfig(catId);
+        const data = categoryVariants[catId] || {};
+
+        let html = '<div class="grid grid-cols-1 lg:grid-cols-2 gap-10">';
+        
+        // Render Column 1
+        if (currentConfig.col1) {
+            html += `<div><label class="block text-sm font-bold text-navy uppercase tracking-wide mb-3">${currentConfig.col1}</label>`;
+            
+            if (currentConfig.type === 'footwear') {
+                html += `<div class="flex gap-2 mb-3">
+                    <select class="text-xs font-bold bg-blue-50 text-[#0066FF] border-none rounded-lg py-1 px-3 cursor-pointer outline-none focus:ring-2 focus:ring-blue-300">
+                        <option value="US">US System</option>
+                    </select>
+                </div>`;
+            }
+
+            const dbTypeKey = currentConfig.col1; 
+            let chips = data[dbTypeKey] || [];
+            
+            html += `<div class="flex flex-wrap gap-2 mb-3">`;
+            chips.forEach(c => {
+                let metaText = '';
+                if (c.meta && currentConfig.type === 'footwear') {
+                    metaText = `UK ${c.meta.UK} / EU ${c.meta.EU}`;
+                }
+                html += `
+                    <div class="border border-gray-200 rounded-lg px-4 py-2 cursor-pointer hover:border-[#0066FF] transition-colors bg-white var-chip set1-chip text-center" data-val="${c.value}">
+                        <span class="block text-sm font-bold text-navy">${c.value}</span>
+                        ${metaText ? `<span class="block text-[10px] text-gray-400">${metaText}</span>` : ''}
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            
+            if (currentConfig.hasFit) {
+                html += `<label class="block text-sm font-bold text-navy uppercase tracking-wide mb-2 mt-4">Fit Type</label>
+                <div class="flex flex-wrap gap-2">`;
+                (data['Fit Type'] || []).forEach(f => {
+                    html += `<div class="border border-gray-200 rounded-lg px-3 py-1 cursor-pointer hover:border-[#0066FF] transition-colors bg-white var-chip set3-chip text-xs font-bold text-navy" data-val="${f.value}">${f.value}</div>`;
+                });
+                html += `</div>`;
+            }
+            html += `</div>`;
+        }
+
+        // Render Column 2
+        if (currentConfig.col2) {
+            html += `<div><label class="block text-sm font-bold text-navy uppercase tracking-wide mb-3">${currentConfig.col2}</label>`;
+            
+            if (currentConfig.col2 === 'Color') {
+                html += `<div class="flex flex-wrap gap-2.5 mb-4">`;
+                standardColors.forEach(c => {
+                    html += `<div class="w-8 h-8 rounded-full cursor-pointer transition-all flex items-center justify-center color-chip" data-val="${c.name}" data-hex="${c.hex}" style="background-color: ${c.hex}; ${c.hex==='#FFFFFF'?'border:1px solid #e5e7eb;':''}"></div>`;
+                });
+                html += `</div>`;
+            } else {
+                const dbTypeKey = currentConfig.col2; 
+                let chips = data[dbTypeKey] || [];
+                html += `<div class="flex flex-wrap gap-2 mb-3">`;
+                chips.forEach(c => {
+                    html += `<div class="border border-gray-200 rounded-lg px-4 py-2 cursor-pointer hover:border-[#0066FF] transition-colors bg-white var-chip set2-chip" data-val="${c.value}">${c.value}</div>`;
+                });
+                html += `</div>`;
+            }
+            html += `</div>`;
+        }
+
+        html += '</div>';
+        dynamicUI.innerHTML = html;
+
+        // Build Table Headers
+        let th = '';
+        if (currentConfig.col1) th += `<th class="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider">${currentConfig.col1}</th>`;
+        if (currentConfig.col2) th += `<th class="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider">${currentConfig.col2}</th>`;
+        if (currentConfig.hasFit) th += `<th class="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Fit Type</th>`;
+        th += `<th class="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider w-24">Qty</th>
+               <th class="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider">SKU</th>
+               <th class="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider w-12 text-center"></th>`;
+        tableHeader.innerHTML = th;
+
+        bindChipEvents();
+    }
+
+    function bindChipEvents() {
+        document.querySelectorAll('.var-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                const val = this.dataset.val;
+                let activeSet = this.classList.contains('set1-chip') ? activeSet1 : (this.classList.contains('set2-chip') ? activeSet2 : activeSet3);
+                
+                if (activeSet.has(val)) {
+                    activeSet.delete(val);
+                    this.classList.remove('bg-blue-50', 'border-[#0066FF]', 'text-[#0066FF]');
+                    this.classList.add('bg-white', 'text-navy');
+                } else {
+                    activeSet.add(val);
+                    this.classList.add('bg-blue-50', 'border-[#0066FF]', 'text-[#0066FF]');
+                    this.classList.remove('bg-white', 'text-navy');
+                }
+            });
+        });
+
+        document.querySelectorAll('.color-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                const val = this.dataset.val;
+                const hex = this.dataset.hex;
+                let exists = false;
+                let objRef = null;
+                activeSet2.forEach(c => { if(c.name === val) { exists = true; objRef = c; }});
+
+                if (exists) {
+                    activeSet2.delete(objRef);
+                    this.classList.remove('ring-2', 'ring-offset-2', 'ring-[#0066FF]');
+                    this.innerHTML = '';
+                } else {
+                    activeSet2.add({name: val, hex: hex});
+                    this.classList.add('ring-2', 'ring-offset-2', 'ring-[#0066FF]');
+                    const checkColor = hex.toUpperCase() === '#FFFFFF' ? '#000' : '#FFF';
+                    this.innerHTML = `<i class="fas fa-check text-[10px]" style="color: ${checkColor}"></i>`;
+                }
+            });
+        });
+    }
+
+    function generateSKU(v1, v2, v3) {
+        let base = (productNameInput && productNameInput.value) ? productNameInput.value.substring(0, 4).toUpperCase() : 'PRD';
+        if (!base) base = 'PRD';
+        
+        let p1 = v1 ? v1.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase() : '';
+        let p2 = '';
+        if (v2) {
+            if (typeof v2 === 'object') p2 = v2.name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
+            else p2 = v2.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase();
+        }
+        let p3 = v3 ? v3.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase() : '';
+
+        let sku = base;
+        if(p1) sku += '-' + p1;
+        if(p2) sku += '-' + p2;
+        if(p3) sku += '-' + p3;
+        return sku;
+    }
+
+    function createVariantRow(v1, v2, v3) {
+        const tr = document.createElement('tr');
+        const sku = generateSKU(v1, v2, v3);
+        let html = '';
+        
+        if (currentConfig.col1) {
+            html += `<td class="p-3 border-b border-gray-100">
+                <input type="text" name="${currentConfig.dbCol1}" value="${v1||''}" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none">
+            </td>`;
+        }
+
+        if (currentConfig.col2) {
+            if (currentConfig.col2 === 'Color') {
+                const colorName = v2 ? v2.name : '';
+                const colorHex = v2 ? v2.hex : 'transparent';
+                html += `<td class="p-3 border-b border-gray-100">
+                    <div class="flex items-center gap-2">
+                        ${v2 ? `<span class="w-4 h-4 rounded-full border border-gray-200 block shrink-0" style="background-color: ${colorHex};"></span>` : ''}
+                        <input type="text" name="${currentConfig.dbCol2}" value="${colorName}" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none">
+                    </div>
+                </td>`;
+            } else {
+                html += `<td class="p-3 border-b border-gray-100">
+                    <input type="text" name="${currentConfig.dbCol2}" value="${v2||''}" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none">
+                </td>`;
+            }
+        }
+
+        if (currentConfig.hasFit) {
+            html += `<td class="p-3 border-b border-gray-100">
+                <input type="text" name="variant_fit[]" value="${v3||''}" class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none">
+            </td>`;
+        }
+
+        html += `<td class="p-3 border-b border-gray-100">
+                <input type="number" name="variant_qty[]" value="0" min="0" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none variant-qty-input" oninput="updateTotalQty()">
+            </td>
+            <td class="p-3 border-b border-gray-100">
+                <input type="text" name="variant_sku[]" value="${sku}" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none uppercase">
+            </td>
+            <td class="p-3 border-b border-gray-100 text-center">
+                <button type="button" class="text-red-400 hover:text-red-600 p-1" onclick="this.closest('tr').remove(); updateTotalQty();"><i class="fas fa-trash"></i></button>
+            </td>`;
+        
+        tr.innerHTML = html;
+        return tr;
+    }
+
+    genBtn.addEventListener('click', () => {
+        let arr1 = Array.from(activeSet1);
+        let arr2 = Array.from(activeSet2);
+        let arr3 = Array.from(activeSet3);
+
+        if (arr1.length === 0) arr1 = [null];
+        if (arr2.length === 0) arr2 = [null];
+        if (arr3.length === 0) arr3 = [null];
+
+        if (activeSet1.size === 0 && activeSet2.size === 0 && activeSet3.size === 0) {
+            alert('Please select at least one variant option to generate the table.');
+            return;
+        }
+
+        tableBody.innerHTML = '';
+
+        arr1.forEach(v1 => {
+            arr2.forEach(v2 => {
+                arr3.forEach(v3 => {
+                    tableBody.appendChild(createVariantRow(v1, v2, v3));
+                });
+            });
+        });
+        updateTotalQty();
+    });
+
+    addManualBtn.addEventListener('click', () => {
+        if (tableBody.querySelector('td[colspan="5"]')) tableBody.innerHTML = '';
+        tableBody.appendChild(createVariantRow('', '', ''));
+    });
+
+    function updateTotalQty() {
+        const qtyInputs = document.querySelectorAll('.variant-qty-input');
+        let total = 0;
+        qtyInputs.forEach(input => total += parseInt(input.value) || 0);
+        document.getElementById('totalQtyCounter').textContent = total;
+    }
+    // Make sure we attach event to financial calculator submit to not break existing logic
+    // The existing updateFinancials() does not conflict with this new logic.
 </script>
+
+
 
 <?php include('../include/footer.php'); ?>

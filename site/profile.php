@@ -165,7 +165,6 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
                                     </label>
                                 </div>
                                 <input type="file" id="image" name="image" accept="image/*" class="hidden">
-                                <p class="text-xs text-slate mt-3">Allowed: JPG, JPEG, PNG (Max 5MB)<br>Recommended size: 500x500px</p>
                             </div>
 
                             <!-- Personal Details -->
@@ -191,6 +190,7 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
                                         <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400"><i class="fas fa-at"></i></span>
                                         <input type="text" class="w-full bg-gray-50 border border-gray-200 text-navy font-medium rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-colors" id="username" name="username" value="<?php echo htmlspecialchars($user['username']); ?>" required>
                                     </div>
+                                    <span id="usernameFeedback" class="text-xs font-bold mt-1 hidden block"></span>
                                 </div>
                                 <div>
                                     <label for="email" class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Email Address <span class="text-[#0066FF]">*</span></label>
@@ -557,6 +557,49 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const usernameInput = document.getElementById('username');
+    const usernameFeedback = document.getElementById('usernameFeedback');
+    let debounceTimer;
+
+    if (usernameInput) {
+        usernameInput.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            const username = this.value.trim();
+            const originalUsername = '<?php echo htmlspecialchars($user['username'] ?? ''); ?>';
+            
+            if (username === '') {
+                usernameFeedback.classList.add('hidden');
+                return;
+            }
+            
+            if (username === originalUsername) {
+                usernameFeedback.textContent = 'Current username';
+                usernameFeedback.className = 'text-xs font-bold mt-1 block text-gray-500';
+                return;
+            }
+            
+            usernameFeedback.textContent = 'Checking...';
+            usernameFeedback.className = 'text-xs font-bold mt-1 block text-[#0066FF]';
+            
+            debounceTimer = setTimeout(() => {
+                fetch(`../Backend/check-username.php?u=${encodeURIComponent(username)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.available) {
+                            usernameFeedback.textContent = 'Username is available!';
+                            usernameFeedback.className = 'text-xs font-bold mt-1 block text-green-500';
+                        } else {
+                            usernameFeedback.textContent = 'Username is already taken.';
+                            usernameFeedback.className = 'text-xs font-bold mt-1 block text-red-500';
+                        }
+                    })
+                    .catch(error => {
+                        usernameFeedback.classList.add('hidden');
+                    });
+            }, 500);
+        });
+    }
+
     const updateForm = document.getElementById('updateForm');
     if (updateForm) {
         updateForm.addEventListener('submit', function(e) {

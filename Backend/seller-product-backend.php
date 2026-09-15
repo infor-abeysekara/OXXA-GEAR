@@ -8,6 +8,15 @@ if (!isset($_SESSION['userid']) || $_SESSION['type'] != 'seller') {
     exit();
 }
 
+$stmt = $pdo->prepare("SELECT is_approved FROM seller_profiles WHERE user_id = ?");
+$stmt->execute([$_SESSION['userid']]);
+$is_approved = $stmt->fetchColumn();
+
+if (!$is_approved) {
+    header('Location: ../site/business-registration.php');
+    exit();
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
     
     $seller_id = $_SESSION['userid'];
@@ -27,10 +36,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
     // Generate slug
     $slug = strtolower(preg_replace('/[^A-Za-z0-9-]+/', '-', $name)) . '-' . uniqid();
 
-    // Sum up variant quantities for total_qty
+    // Sum up variant quantities for total_qty from new structure
     $total_qty = 0;
-    if (isset($_POST['qtys']) && is_array($_POST['qtys'])) {
-        foreach ($_POST['qtys'] as $qty) {
+    if (isset($_POST['variant_qty']) && is_array($_POST['variant_qty'])) {
+        foreach ($_POST['variant_qty'] as $qty) {
             $total_qty += (int)$qty;
         }
     }
@@ -45,13 +54,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
         $product_id = $pdo->lastInsertId();
 
         // 2. Insert Variants
-        if (isset($_POST['sizes']) && is_array($_POST['sizes'])) {
-            $insertVar = $pdo->prepare("INSERT INTO product_variants (product_id, size, price, qty) VALUES (?, ?, 0, ?)");
-            for ($i = 0; $i < count($_POST['sizes']); $i++) {
-                $size = trim($_POST['sizes'][$i]);
-                $qty = (int)$_POST['qtys'][$i];
-                if (!empty($size)) {
-                    $insertVar->execute([$product_id, $size, $qty]);
+        if (isset($_POST['variant_qty']) && is_array($_POST['variant_qty'])) {
+            $insertVar = $pdo->prepare("INSERT INTO product_variants (product_id, size, color, flavor, weight, fit_type, sku, price, qty) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)");
+            for ($i = 0; $i < count($_POST['variant_qty']); $i++) {
+                $size = trim($_POST['variant_size'][$i] ?? '');
+                $color = trim($_POST['variant_color'][$i] ?? '');
+                $flavor = trim($_POST['variant_flavor'][$i] ?? '');
+                $weight = trim($_POST['variant_weight'][$i] ?? '');
+                $fit_type = trim($_POST['variant_fit'][$i] ?? '');
+                $sku = trim($_POST['variant_sku'][$i] ?? '');
+                $qty = (int)($_POST['variant_qty'][$i] ?? 0);
+                
+                if (!empty($size) || !empty($color) || !empty($flavor) || !empty($weight) || !empty($sku)) {
+                    $insertVar->execute([$product_id, $size, $color, $flavor, $weight, $fit_type, $sku, $qty]);
                 }
             }
         }
@@ -69,13 +84,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
             for ($i = 0; $i < count($_FILES['images']['name']); $i++) {
                 if ($_FILES['images']['error'][$i] === UPLOAD_ERR_OK) {
                     $ext = strtolower(pathinfo($_FILES['images']['name'][$i], PATHINFO_EXTENSION));
-                    if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
-                        $image_name = 'prod_' . $product_id . '_' . uniqid() . '.' . $ext;
-                        if (move_uploaded_file($_FILES['images']['tmp_name'][$i], $uploadDir . $image_name)) {
-                            $is_primary = ($i === 0) ? 1 : 0;
-                            $insertImg->execute([$product_id, $image_name, $is_primary, $sort_order]);
-                            $sort_order++;
-                        }
+                    $image_name = 'prod_' . $product_id . '_' . uniqid() . '.' . $ext;
+                    if (move_uploaded_file($_FILES['images']['tmp_name'][$i], $uploadDir . $image_name)) {
+                        $is_primary = ($i === 0) ? 1 : 0;
+                        $insertImg->execute([$product_id, $image_name, $is_primary, $sort_order]);
+                        $sort_order++;
                     }
                 }
             }
