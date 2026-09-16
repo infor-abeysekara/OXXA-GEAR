@@ -42,11 +42,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $user_id = $_SESSION['userid'];
 $product_id = sanitizeInput($_POST['product_id'] ?? '');
+$variant_id = sanitizeInput($_POST['variant_id'] ?? '');
 $size = sanitizeInput($_POST['size'] ?? 'Standard');
 $quantity = (int)($_POST['quantity'] ?? 1);
 $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
 
-debugLog("POST data - Product ID: $product_id, Size: $size, Quantity: $quantity, IsAjax: " . ($isAjax ? 'true' : 'false'));
+debugLog("POST data - Product ID: $product_id, Variant ID: $variant_id, Size: $size, Quantity: $quantity, IsAjax: " . ($isAjax ? 'true' : 'false'));
 
 // Validate inputs
 if (empty($product_id) || $quantity <= 0) {
@@ -72,7 +73,7 @@ try {
     }
     
     // Get product details
-    $productQuery = "SELECT * FROM production WHERE pid = ? AND approve = 1 AND status = 'active'";
+    $productQuery = "SELECT * FROM products WHERE id = ? AND is_approved = 1 AND status = 'active'";
     $productStmt = $conn->prepare($productQuery);
     
     if (!$productStmt) {
@@ -80,7 +81,8 @@ try {
         throw new Exception("Database query preparation failed");
     }
     
-    $productStmt->bind_param("s", $product_id);
+    // id is INT, but bind_param "s" will cast to int, better to use "i"
+    $productStmt->bind_param("i", $product_id);
     $productStmt->execute();
     $productResult = $productStmt->get_result();
 
@@ -100,23 +102,30 @@ try {
     }
 
     $product = $productResult->fetch_assoc();
-    debugLog("Product found: " . $product['pname']);
+    debugLog("Product found: " . $product['name']);
 
-    // Get price and check stock based on size
-    $price = $product['price'];
-    $availableStock = $product['qty'];
+    // Get price and check stock based on size or variant
+    $price = $product['base_price'];
+    $availableStock = $product['total_qty'];
 
-    if ($size !== 'Standard') {
-        debugLog("Checking size-specific pricing for size: $size");
-        $sizeQuery = "SELECT price, qty FROM productsize WHERE pid = ? AND size = ?";
+    if (!empty($variant_id)) {
+        debugLog("Checking variant-specific pricing for variant: $variant_id");
+        $sizeQuery = "SELECT price, qty FROM product_variants WHERE id = ? AND product_id = ?";
         $sizeStmt = $conn->prepare($sizeQuery);
-        
+        $sizeStmt->bind_param("ii", $variant_id, $product_id);
+    } elseif ($size !== 'Standard') {
+        debugLog("Checking size-specific pricing for size: $size");
+        $sizeQuery = "SELECT price, qty FROM product_variants WHERE product_id = ? AND size = ?";
+        $sizeStmt = $conn->prepare($sizeQuery);
+        $sizeStmt->bind_param("is", $product_id, $size);
+    }
+
+    if (isset($sizeStmt)) {
         if (!$sizeStmt) {
-            debugLog("Failed to prepare size query: " . $conn->error);
-            throw new Exception("Size query preparation failed");
+            debugLog("Failed to prepare variant query: " . $conn->error);
+            throw new Exception("Variant query preparation failed");
         }
         
-        $sizeStmt->bind_param("ss", $product_id, $size);
         $sizeStmt->execute();
         $sizeResult = $sizeStmt->get_result();
 
@@ -124,10 +133,10 @@ try {
             $sizeData = $sizeResult->fetch_assoc();
             $price = $sizeData['price'];
             $availableStock = $sizeData['qty'];
-            debugLog("Size found - Price: $price, Stock: $availableStock");
+            debugLog("Variant found - Price: $price, Stock: $availableStock");
         } else {
-            $message = 'Selected size not available';
-            debugLog("Size not available: $size");
+            $message = 'Selected variant not available';
+            debugLog("Variant not available");
             if ($isAjax) {
                 echo json_encode(['success' => false, 'message' => $message]);
                 exit;
@@ -155,15 +164,24 @@ try {
 
     // Check if item already exists in cart
     debugLog("Checking existing cart items");
-    $checkCartQuery = "SELECT Id, Qty FROM cart WHERE Userid = ? AND PID = ? AND Size = ?";
-    $checkCartStmt = $conn->prepare($checkCartQuery);
-    
-    if (!$checkCartStmt) {
-        debugLog("Failed to prepare cart check query: " . $conn->error);
-        throw new Exception("Cart check query preparation failed");
+    if (!empty($variant_id)) {
+        $checkCartQuery = "SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ? AND variant_id = ?";
+        $checkCartStmt = $conn->prepare($checkCartQuery);
+        if (!$checkCartStmt) {
+            debugLog("Failed to prepare cart check query: " . $conn->error);
+            throw new Exception("Cart check query preparation failed");
+        }
+        $checkCartStmt->bind_param("iii", $user_id, $product_id, $variant_id);
+    } else {
+        $checkCartQuery = "SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ? AND variant_id = (SELECT id FROM product_variants WHERE product_id = ? AND size = ? LIMIT 1)";
+        $checkCartStmt = $conn->prepare($checkCartQuery);
+        if (!$checkCartStmt) {
+            debugLog("Failed to prepare cart check query: " . $conn->error);
+            throw new Exception("Cart check query preparation failed");
+        }
+        $checkCartStmt->bind_param("iiis", $user_id, $product_id, $product_id, $size);
     }
     
-    $checkCartStmt->bind_param("sss", $user_id, $product_id, $size);
     $checkCartStmt->execute();
     $checkCartResult = $checkCartStmt->get_result();
 
@@ -173,11 +191,11 @@ try {
         // Update existing cart item
         debugLog("Updating existing cart item");
         $existingItem = $checkCartResult->fetch_assoc();
-        $newQuantity = $existingItem['Qty'] + $quantity;
+        $newQuantity = $existingItem['quantity'] + $quantity;
 
         // Check if new quantity exceeds stock
         if ($newQuantity > $availableStock) {
-            $maxAddable = $availableStock - $existingItem['Qty'];
+            $maxAddable = $availableStock - $existingItem['quantity'];
             if ($maxAddable <= 0) {
                 $message = 'This item is already at maximum quantity in your cart';
             } else {
@@ -195,7 +213,7 @@ try {
             }
         }
 
-        $updateQuery = "UPDATE cart SET Qty = ?, AddedAt = NOW() WHERE Id = ?";
+        $updateQuery = "UPDATE cart SET quantity = ?, added_at = NOW() WHERE id = ?";
         $updateStmt = $conn->prepare($updateQuery);
         
         if (!$updateStmt) {
@@ -203,7 +221,7 @@ try {
             throw new Exception("Update query preparation failed");
         }
         
-        $updateStmt->bind_param("ii", $newQuantity, $existingItem['Id']);
+        $updateStmt->bind_param("ii", $newQuantity, $existingItem['id']);
         
         if ($updateStmt->execute()) {
             $message = 'Cart updated successfully!';
@@ -217,15 +235,24 @@ try {
     } else {
         // Add new item to cart
         debugLog("Adding new item to cart");
-        $insertQuery = "INSERT INTO cart (Userid, PID, Size, Qty, AddedAt) VALUES (?, ?, ?, ?, NOW())";
-        $insertStmt = $conn->prepare($insertQuery);
         
-        if (!$insertStmt) {
-            debugLog("Failed to prepare insert query: " . $conn->error);
-            throw new Exception("Insert query preparation failed");
+        if (!empty($variant_id)) {
+            $insertQuery = "INSERT INTO cart (user_id, product_id, variant_id, quantity, added_at) VALUES (?, ?, ?, ?, NOW())";
+            $insertStmt = $conn->prepare($insertQuery);
+            if (!$insertStmt) {
+                debugLog("Failed to prepare insert query: " . $conn->error);
+                throw new Exception("Insert query preparation failed");
+            }
+            $insertStmt->bind_param("iiii", $user_id, $product_id, $variant_id, $quantity);
+        } else {
+            $insertQuery = "INSERT INTO cart (user_id, product_id, variant_id, quantity, added_at) VALUES (?, ?, (SELECT id FROM product_variants WHERE product_id = ? AND size = ? LIMIT 1), ?, NOW())";
+            $insertStmt = $conn->prepare($insertQuery);
+            if (!$insertStmt) {
+                debugLog("Failed to prepare insert query: " . $conn->error);
+                throw new Exception("Insert query preparation failed");
+            }
+            $insertStmt->bind_param("iiisi", $user_id, $product_id, $product_id, $size, $quantity);
         }
-        
-        $insertStmt->bind_param("sssi", $user_id, $product_id, $size, $quantity);
         
         if ($insertStmt->execute()) {
             $message = 'Product added to cart successfully!';

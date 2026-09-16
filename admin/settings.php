@@ -557,6 +557,6 @@ $brandsRes = $conn->query($brandsQuery);
             document.getElementById('brandForm').reset();
         }
     </script>
-    <?php include("../include/footer.php"); ?>
+
 </body>
 </html>

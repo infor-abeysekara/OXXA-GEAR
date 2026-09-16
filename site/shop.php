@@ -78,6 +78,7 @@ $query = "SELECT p.*,
                  COALESCE((SELECT MIN(ps.price) FROM product_variants ps WHERE ps.product_id = p.id AND ps.qty > 0 AND ps.price > 0), p.base_price) as lowest_price,
                  (SELECT SUM(ps.qty) FROM product_variants ps WHERE ps.product_id = p.id) as var_qty,
                  (SELECT image_path FROM product_images pi WHERE pi.product_id = p.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as image,
+                 (SELECT image_path FROM product_images pi WHERE pi.product_id = p.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1 OFFSET 1) as hover_image,
                  (SELECT name FROM brands b WHERE b.id = p.brand_id) as brand_name,
                  (SELECT business_name FROM seller_profiles sp WHERE sp.user_id = p.seller_id) as seller_name,
                  (SELECT logo_path FROM seller_profiles sp WHERE sp.user_id = p.seller_id) as seller_logo
@@ -134,9 +135,9 @@ function buildFilterUrl($updates) {
     <div id="activeFiltersContainer" class="flex flex-wrap gap-2 mb-4 empty:hidden"></div>
     
     <!-- Mobile Filter Toggle -->
-    <div class="lg:hidden mb-6 flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-        <h1 class="text-xl font-black text-navy uppercase"><?php echo htmlspecialchars($category_name); ?></h1>
-        <button id="mobileFilterBtn" class="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-xl font-bold text-sm text-navy hover:bg-gray-100 transition-colors">
+    <div class="lg:hidden mb-4 sm:mb-6 flex justify-between items-center bg-white p-3 sm:p-4 rounded-xl sm:rounded-2xl shadow-sm border border-gray-100">
+        <h1 class="text-base sm:text-xl font-black text-navy uppercase tracking-wide truncate pr-2"><?php echo htmlspecialchars($category_name); ?></h1>
+        <button id="mobileFilterBtn" class="flex-shrink-0 flex items-center gap-2 px-3 sm:px-4 py-2 bg-gray-50 rounded-lg sm:rounded-xl font-bold text-[11px] sm:text-sm text-navy hover:bg-gray-100 transition-colors uppercase tracking-wider">
             <i class="fas fa-filter"></i> Filters
         </button>
     </div>
@@ -254,51 +255,64 @@ function buildFilterUrl($updates) {
             <?php else: ?>
                 <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                     <?php foreach ($products as $p): ?>
-                        <div class="group relative bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                        <div class="group relative bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] overflow-hidden transition-all duration-300 hover:-translate-y-1 flex flex-col h-full">
                             
                             <!-- Wishlist Button -->
-                            <button class="absolute top-3 right-3 z-10 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-white transition-all shadow-sm">
-                                <i class="far fa-heart"></i>
+                            <button class="absolute top-3 right-3 z-20 w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-gray-50 transition-all shadow-sm">
+                                <i class="far fa-heart text-sm"></i>
                             </button>
 
+                            <!-- Discount Badge -->
+                            <?php if ($p['base_price'] > $p['lowest_price']): 
+                                $discount_pct = round((($p['base_price'] - $p['lowest_price']) / $p['base_price']) * 100);
+                            ?>
+                            <div class="absolute top-3 left-3 z-20 bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded-full shadow-sm">
+                                -<?php echo $discount_pct; ?>%
+                            </div>
+                            <?php endif; ?>
+
                             <!-- Image -->
-                            <a href="product-details.php?id=<?php echo $p['id']; ?>" class="block relative aspect-square bg-gray-50 overflow-hidden">
+                            <a href="product-details.php?id=<?php echo $p['id']; ?>" class="block relative aspect-square bg-[#F8F9FA] overflow-hidden rounded-t-2xl">
                                 <?php if(!empty($p['image'])): ?>
-                                    <img src="../assets/uploads/products/<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['name']); ?>" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                    <img src="../assets/uploads/products/<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['name']); ?>" class="absolute inset-0 w-full h-full object-cover mix-blend-multiply transition-all duration-500 group-hover:scale-105">
                                 <?php else: ?>
-                                    <div class="w-full h-full flex items-center justify-center"><i class="fas fa-image text-gray-300 text-4xl"></i></div>
+                                    <div class="w-full h-full flex items-center justify-center"><i class="fas fa-image text-gray-300 text-3xl"></i></div>
                                 <?php endif; ?>
                             </a>
 
                             <!-- Content -->
-                            <div class="p-4 flex flex-col flex-grow">
+                            <div class="p-4 flex flex-col flex-grow bg-white relative">
                                 <?php if(!empty($p['brand_name'])): ?>
-                                    <span class="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1 line-clamp-1"><?php echo htmlspecialchars($p['brand_name']); ?></span>
+                                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1 line-clamp-1"><?php echo htmlspecialchars($p['brand_name']); ?></span>
                                 <?php endif; ?>
                                 
-                                <?php if(!empty($p['seller_name'])): ?>
-                                <div class="flex items-center gap-2 mb-2">
-                                    <?php if(!empty($p['seller_logo']) && file_exists('../assets/uploads/' . $p['seller_logo'])): ?>
-                                        <img src="../assets/uploads/<?php echo htmlspecialchars($p['seller_logo']); ?>" class="w-5 h-5 rounded-full object-cover">
-                                    <?php else: ?>
-                                        <div class="w-5 h-5 rounded-full bg-blue-100 text-[#0066FF] flex items-center justify-center text-[8px] font-bold">
-                                            <?php echo strtoupper(substr($p['seller_name'], 0, 1)); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    <span class="text-xs text-gray-500 font-medium line-clamp-1"><?php echo htmlspecialchars($p['seller_name']); ?></span>
-                                </div>
-                                <?php endif; ?>
-                                
-                                <a href="product-details.php?id=<?php echo $p['id']; ?>" class="text-navy font-bold text-sm mb-2 line-clamp-2 hover:text-[#0066FF] transition-colors leading-tight">
+                                <a href="product-details.php?id=<?php echo $p['id']; ?>" class="text-black font-bold text-sm mb-1 line-clamp-2 hover:text-[#0066FF] transition-colors leading-snug">
                                     <?php echo htmlspecialchars($p['name']); ?>
                                 </a>
                                 
-                                <div class="mt-auto pt-3 flex items-center justify-between border-t border-gray-50">
-                                    <div class="font-black text-navy text-sm md:text-base">
-                                        Rs. <?php echo number_format($p['lowest_price'], 2); ?>
+                                <!-- Rating Mock (Update with real data later) -->
+                                <div class="flex items-center text-xs text-gray-400 mb-2">
+                                    <div class="text-yellow-400 text-[10px] me-1">
+                                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="far fa-star"></i>
                                     </div>
-                                    <button class="w-8 h-8 rounded-full bg-gray-50 text-gray-600 hover:bg-[#0066FF] hover:text-white transition-colors flex items-center justify-center">
-                                        <i class="fas fa-plus text-sm"></i>
+                                    <span>(12)</span>
+                                </div>
+                                
+                                <div class="mt-auto pt-2 flex items-center justify-between">
+                                    <div class="flex flex-col">
+                                        <span class="font-extrabold text-black text-base tracking-tight">
+                                            Rs. <?php echo number_format($p['lowest_price'], 2); ?>
+                                        </span>
+                                        <?php if ($p['base_price'] > $p['lowest_price']): ?>
+                                            <span class="text-[10px] text-gray-400 line-through">Rs. <?php echo number_format($p['base_price'], 2); ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons Overlay -->
+                                <div class="absolute bottom-4 right-4 flex gap-2">
+                                    <button class="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center shadow-lg hover:bg-[#0066FF] hover:scale-110 transition-all sm:opacity-0 sm:-translate-y-2 group-hover:opacity-100 group-hover:translate-y-0" onclick="quickAdd(<?php echo $p['id']; ?>)">
+                                        <i class="fas fa-plus"></i>
                                     </button>
                                 </div>
                             </div>
@@ -536,6 +550,11 @@ function clearAllFilters() {
 
 // Call update tags on initial load
 document.addEventListener('DOMContentLoaded', updateActiveTags);
+
+function quickAdd(productId) {
+    // Redirect to PDP for variant selection since Option A (Full Page) is used
+    window.location.href = 'product-details.php?id=' + productId;
+}
 </script>
 
 <style>

@@ -189,14 +189,14 @@ if (isset($_SESSION['userid'])) {
         <!-- Right Side Actions -->
         <div class="flex items-center space-x-2 md:space-x-4 flex-shrink-0 z-10 relative">
           
-          <!-- Search Toggle Button -->
+          <!-- Search Toggle Button (Visible on all) -->
           <button id="searchToggleBtn" type="button" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black group z-20">
             <i class="fas fa-search text-lg group-hover:text-primary transition-colors"></i>
           </button>
           
           <?php if(isset($_SESSION['userid'])): ?>
-            <!-- User Profile Dropdown -->
-            <div class="relative dropdown">
+            <!-- User Profile Dropdown (Hidden on mobile) -->
+            <div class="relative dropdown hidden lg:block">
               <button class="flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-black relative group dropdown-toggle" 
                       data-bs-toggle="dropdown" aria-expanded="false" id="profileDropdown" style="padding: 4px 12px 4px 4px;">
                 <div class="flex items-center gap-2">
@@ -235,7 +235,7 @@ if (isset($_SESSION['userid'])) {
                     </a>
                   </li>
                   <li>
-                    <a href="<?php echo $base_path; ?>site/add-product.php" class="dropdown-item hover:bg-gray-50 hover:text-primary px-4 py-2 font-medium text-sm transition-colors">
+                    <a href="<?php echo $base_path; ?>site/seller-add-product.php" class="dropdown-item hover:bg-gray-50 hover:text-primary px-4 py-2 font-medium text-sm transition-colors">
                       <i class="fas fa-plus-circle me-2 w-5 text-gray-400"></i>Add Product
                     </a>
                   </li>
@@ -250,8 +250,8 @@ if (isset($_SESSION['userid'])) {
               </ul>
             </div>
 
-            <!-- Wishlist -->
-            <a href="<?php echo $base_path; ?>site/notifications.php" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
+            <!-- Wishlist (Hidden on mobile) -->
+            <a href="<?php echo $base_path; ?>site/notifications.php" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
               <i class="far fa-heart text-lg group-hover:text-primary transition-colors"></i>
               <?php if ($notificationCount > 0): ?>
                 <span class="absolute top-0 right-0 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white">
@@ -260,8 +260,8 @@ if (isset($_SESSION['userid'])) {
               <?php endif; ?>
             </a>
 
-            <!-- Cart -->
-            <button onclick="toggleCartSidebar()" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
+            <!-- Cart (Hidden on mobile, visible on desktop) -->
+            <button onclick="toggleCartSidebar()" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
               <i class="fas fa-shopping-bag text-lg group-hover:text-primary transition-colors"></i>
               <?php 
               $cartCount = 0;
@@ -281,14 +281,15 @@ if (isset($_SESSION['userid'])) {
             </button>
 
           <?php else: ?>
-            <!-- Login -->
-            <button onclick="openAuthModal('login')" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
+            <!-- Login (Hidden on mobile) -->
+            <button onclick="openAuthModal('login')" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
               <i class="far fa-user text-lg group-hover:text-primary transition-colors"></i>
             </button>
-            <button onclick="openAuthModal('login')" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
+            <button onclick="openAuthModal('login')" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
               <i class="far fa-heart text-lg group-hover:text-primary transition-colors"></i>
             </button>
-            <button onclick="openAuthModal('login')" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
+            <!-- Cart (Hidden on mobile, visible on desktop) -->
+            <button onclick="openAuthModal('login')" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
               <i class="fas fa-shopping-bag text-lg group-hover:text-primary transition-colors"></i>
             </button>
           <?php endif; ?>
@@ -299,87 +300,101 @@ if (isset($_SESSION['userid'])) {
           </button>
         </div>
     </div>
-    
 
-    
-    <!-- Mobile Menu Drawer Overlay -->
-    <div id="mobileMenuOverlay" class="fixed inset-0 bg-black/50 opacity-0 invisible transition-all duration-300 z-[90]" onclick="toggleMobileMenu()"></div>
+  </header>
+  
+  <!-- Mobile Menu Drawer Overlay -->
+  <div id="mobileMenuOverlay" class="fixed inset-0 bg-black/50 opacity-0 invisible transition-all duration-300 z-[90]" onclick="toggleMobileMenu()"></div>
 
-    <!-- Mobile Menu Drawer -->
-    <div id="mobileMenuDrawer" class="fixed top-0 left-[-300px] w-[300px] h-full bg-white z-[100] transition-all duration-300 shadow-2xl flex flex-col">
-      <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-        <img src="<?php echo $base_path; ?>image/oxxa_gear_logo.png" alt="OXXA GEAR" class="h-8 w-auto">
-        <button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-black transition-colors">
-          <i class="fas fa-times text-2xl"></i>
-        </button>
-      </div>
-      <div class="p-6 overflow-y-auto flex-grow flex flex-col gap-6 font-space font-bold uppercase tracking-wider text-sm">
-        <a href="<?php echo $base_path; ?>site/products.php?category=Sports+Wear" class="block text-black hover:text-primary transition-colors">Sports Wear</a>
-        <a href="<?php echo $base_path; ?>site/products.php?category=Footwear" class="block text-black hover:text-primary transition-colors">Footwear</a>
-        <a href="<?php echo $base_path; ?>site/products.php?category=Fitness+Gym" class="block text-black hover:text-primary transition-colors">Fitness & Gym</a>
-        <a href="<?php echo $base_path; ?>site/products.php?category=Nutrition" class="block text-black hover:text-primary transition-colors">Nutrition</a>
-        <a href="<?php echo $base_path; ?>site/products.php?category=Accessories" class="block text-black hover:text-primary transition-colors">Accessories</a>
-        <a href="<?php echo $base_path; ?>site/products.php?category=Equipment" class="block text-black hover:text-primary transition-colors">Equipment</a>
-      </div>
+  <!-- Mobile Menu Drawer -->
+  <div id="mobileMenuDrawer" class="fixed top-0 left-[-300px] w-[300px] h-[100dvh] bg-white z-[100] transition-all duration-300 shadow-2xl flex flex-col">
+    <div class="p-6 border-b border-gray-100 flex justify-between items-center shrink-0">
+      <img src="<?php echo $base_path; ?>image/oxxa_gear_logo.png" alt="OXXA GEAR" class="h-8 w-auto">
+      <button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-black transition-colors w-11 h-11 flex items-center justify-center">
+        <i class="fas fa-times text-2xl"></i>
+      </button>
+    </div>
+    <div class="p-6 overflow-y-auto flex-grow flex flex-col gap-2 font-space font-bold uppercase tracking-wider text-sm">
+      <div class="text-gray-400 text-xs mb-2 mt-2">Categories</div>
+      <a href="<?php echo $base_path; ?>site/products.php?category=Sports+Wear" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="fas fa-tshirt w-6 text-center me-3"></i> Sports Wear</a>
+      <a href="<?php echo $base_path; ?>site/products.php?category=Footwear" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="fas fa-shoe-prints w-6 text-center me-3"></i> Footwear</a>
+      <a href="<?php echo $base_path; ?>site/products.php?category=Fitness+Gym" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="fas fa-dumbbell w-6 text-center me-3"></i> Fitness & Gym</a>
+      <a href="<?php echo $base_path; ?>site/products.php?category=Nutrition" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="fas fa-prescription-bottle-alt w-6 text-center me-3"></i> Nutrition</a>
       
-      <?php if(!isset($_SESSION['userid'])): ?>
-      <div class="p-6 border-t border-gray-100 bg-gray-50">
-          <button onclick="openAuthModal('login'); toggleMobileMenu();" class="flex items-center justify-center w-full bg-black text-white py-3 rounded-full hover:bg-primary transition-colors font-bold uppercase tracking-wide text-sm">
-              <i class="far fa-user mr-2"></i> Login / Register
-          </button>
-      </div>
-      <?php else: ?>
-      <div class="p-6 border-t border-gray-100 bg-gray-50">
-          <a href="<?php echo $base_path; ?>site/profile.php" class="flex items-center justify-center w-full bg-gray-200 text-black py-3 rounded-full hover:bg-gray-300 transition-colors font-bold uppercase tracking-wide text-sm mb-3">
-              <i class="far fa-user-circle mr-2"></i> My Profile
-          </a>
-          <a href="<?php echo $base_path; ?>Backend/logout.php" class="flex items-center justify-center w-full bg-red-50 text-danger border border-red-100 py-3 rounded-full hover:bg-red-100 transition-colors font-bold uppercase tracking-wide text-sm">
-              <i class="fas fa-sign-out-alt mr-2"></i> Logout
-          </a>
-      </div>
+      <?php if(isset($_SESSION['userid']) && $_SESSION['type'] == 'seller'): ?>
+        <hr class="border-gray-100 my-4">
+        <div class="text-gray-400 text-xs mb-2">Seller Menu</div>
+        <a href="<?php echo $base_path; ?>site/seller-dashboard.php" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="fas fa-chart-line w-6 text-center me-3"></i> Dashboard</a>
+        <a href="<?php echo $base_path; ?>site/business-registration.php" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="far fa-building w-6 text-center me-3"></i> Business</a>
+        <a href="<?php echo $base_path; ?>site/add-product.php" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="fas fa-plus-circle w-6 text-center me-3"></i> Add Product</a>
       <?php endif; ?>
     </div>
-  </header>
+    
+    <?php if(!isset($_SESSION['userid'])): ?>
+    <div class="p-6 border-t border-gray-100 bg-gray-50 shrink-0">
+        <button onclick="openAuthModal('login'); toggleMobileMenu();" class="flex items-center justify-center w-full h-12 bg-black text-white rounded-full hover:bg-primary transition-colors font-bold uppercase tracking-wide text-sm">
+            <i class="far fa-user mr-2"></i> Login / Register
+        </button>
+    </div>
+    <?php else: ?>
+    <div class="p-6 border-t border-gray-100 bg-gray-50 shrink-0">
+        <a href="<?php echo $base_path; ?>site/profile.php" class="flex items-center justify-center w-full h-12 bg-gray-200 text-black rounded-full hover:bg-gray-300 transition-colors font-bold uppercase tracking-wide text-sm mb-3">
+            <i class="far fa-user-circle mr-2"></i> My Profile
+        </a>
+        <a href="<?php echo $base_path; ?>Backend/logout.php" class="flex items-center justify-center w-full h-12 bg-red-50 text-danger border border-red-100 rounded-full hover:bg-red-100 transition-colors font-bold uppercase tracking-wide text-sm">
+            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+        </a>
+    </div>
+    <?php endif; ?>
+  </div>
   
   <!-- Spacer to prevent content from hiding under fixed header -->
   <div class="h-[120px] md:h-[80px]"></div>
 
-  <!-- Mobile Bottom Navigation -->
-  <div class="lg:hidden fixed bottom-0 left-0 w-full bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-[100] border-t border-gray-100 pb-safe">
+  <!-- Mobile Bottom Navigation (5 Icons: Home, Categories, Wishlist, Profile, Cart) -->
+  <div class="lg:hidden fixed bottom-0 left-0 w-full bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-[95] border-t border-gray-100 pb-safe">
       <div class="flex justify-around items-center h-16">
           <?php 
-          $current_cat = isset($_GET['category']) ? $_GET['category'] : ''; 
+          $current_page = basename($_SERVER['PHP_SELF'], '.php');
+          $is_shop = ($current_page == 'shop' || $current_page == 'products');
           ?>
           
-          <!-- Sports Wear -->
-          <a href="<?php echo $base_path; ?>site/shop.php?category=sports-wear" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'sports-wear') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
-              <i class="fas fa-tshirt text-xl mb-1"></i>
-              <?php if($current_cat == 'sports-wear'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
+          <!-- Home -->
+          <a href="<?php echo $base_path; ?>index.php" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_page == 'index') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+              <i class="fas fa-home text-xl mb-1"></i>
+              <?php if($current_page == 'index'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
           </a>
           
-          <!-- Footwear -->
-          <a href="<?php echo $base_path; ?>site/shop.php?category=footwear" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'footwear') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
-              <i class="fas fa-shoe-prints text-xl mb-1"></i>
-              <?php if($current_cat == 'footwear'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
+          <!-- Categories / Shop -->
+          <a href="<?php echo $base_path; ?>site/shop.php" class="flex flex-col items-center justify-center w-full h-full <?php echo $is_shop ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+              <i class="fas fa-border-all text-xl mb-1"></i>
+              <?php if($is_shop): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
           </a>
           
-          <!-- Fitness & Gym -->
-          <a href="<?php echo $base_path; ?>site/shop.php?category=fitness-gym" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'fitness-gym') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
-              <i class="fas fa-dumbbell text-xl mb-1"></i>
-              <?php if($current_cat == 'fitness-gym'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
+          <!-- Wishlist -->
+          <a href="<?php echo isset($_SESSION['userid']) ? $base_path . 'site/notifications.php' : 'javascript:openAuthModal(\'login\')'; ?>" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_page == 'notifications') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?> relative">
+              <i class="far fa-heart text-xl mb-1"></i>
+              <?php if ($notificationCount > 0): ?>
+                <span class="absolute top-1 right-2 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white">
+                  <?php echo $notificationCount > 99 ? '99+' : $notificationCount; ?>
+                </span>
+              <?php endif; ?>
+              <?php if($current_page == 'notifications'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
           </a>
           
-          <!-- Nutritions -->
-          <a href="<?php echo $base_path; ?>site/shop.php?category=nutrition" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'nutrition') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
-              <i class="fas fa-prescription-bottle-alt text-xl mb-1"></i>
-              <?php if($current_cat == 'nutrition'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
+          <!-- Profile -->
+          <a href="<?php echo isset($_SESSION['userid']) ? $base_path . 'site/profile.php' : 'javascript:openAuthModal(\'login\')'; ?>" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_page == 'profile') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+              <i class="far fa-user text-xl mb-1"></i>
+              <?php if($current_page == 'profile'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
           </a>
           
-          <!-- Accessories & Gear -->
-          <a href="<?php echo $base_path; ?>site/shop.php?category=accessories" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_cat == 'accessories') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+          <!-- Cart -->
+          <button onclick="<?php echo isset($_SESSION['userid']) ? 'toggleCartSidebar()' : 'openAuthModal(\'login\')'; ?>" class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 relative">
               <i class="fas fa-shopping-bag text-xl mb-1"></i>
-              <?php if($current_cat == 'accessories'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
-          </a>
+              <span class="cart-badge absolute top-1 right-2 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white" id="mobileCartBadge">
+                <?php echo $cartCount ?? 0; ?>
+              </span>
+          </button>
       </div>
   </div>
 
@@ -433,7 +448,7 @@ if (isset($_SESSION['userid'])) {
             }
             // Hide search
             expandedSearchBar.classList.add('w-0', 'opacity-0', 'pointer-events-none');
-            expandedSearchBar.classList.remove('w-[90%]', 'md:w-[600px]', 'max-w-[45vw]', 'opacity-100');
+            expandedSearchBar.classList.remove('w-full', 'bg-white', 'md:bg-transparent', 'px-4', 'md:w-[600px]', 'md:max-w-[45vw]', 'opacity-100');
             
             // Show the original search icon
             searchToggleBtn.classList.remove('hidden');
@@ -451,7 +466,7 @@ if (isset($_SESSION['userid'])) {
                 }
                 // Show search
                 expandedSearchBar.classList.remove('w-0', 'opacity-0', 'pointer-events-none');
-                expandedSearchBar.classList.add('w-[90%]', 'md:w-[600px]', 'max-w-[45vw]', 'opacity-100');
+                expandedSearchBar.classList.add('w-full', 'bg-white', 'md:bg-transparent', 'px-4', 'md:w-[600px]', 'md:max-w-[45vw]', 'opacity-100');
                 
                 // Hide the original search icon to prevent clicking again
                 searchToggleBtn.classList.add('hidden');

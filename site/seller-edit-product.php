@@ -27,6 +27,22 @@ $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
 $brandStmt = $pdo->query("SELECT id, name FROM brands WHERE is_active = 1 ORDER BY name ASC");
 $brands = $brandStmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Fetch product data
+$product_id = $_GET['id'] ?? null;
+if (!$product_id) {
+    header('Location: seller-dashboard.php');
+    exit();
+}
+
+$prodStmt = $pdo->prepare("SELECT * FROM products WHERE id = ? AND seller_id = ?");
+$prodStmt->execute([$product_id, $_SESSION['userid']]);
+$product = $prodStmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$product) {
+    header('Location: seller-dashboard.php?error=Product+Not+Found');
+    exit();
+}
+
 // Fetch Master Variants for dynamic UI
 $masterStmt = $pdo->query("SELECT * FROM master_variants ORDER BY category_id, variant_type, display_order");
 $masterRows = $masterStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -41,6 +57,17 @@ foreach ($masterRows as $row) {
         'meta' => $row['meta_data'] ? json_decode($row['meta_data'], true) : null
     ];
 }
+
+// Fetch existing variants for this product
+$varStmt = $pdo->prepare("SELECT * FROM product_variants WHERE product_id = ?");
+$varStmt->execute([$product_id]);
+$existingVariants = $varStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch product images
+$imgStmt = $pdo->prepare("SELECT * FROM product_images WHERE product_id = ? ORDER BY is_primary DESC");
+$imgStmt->execute([$product_id]);
+$existingImages = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
 <script>
     const categoryVariants = <?= json_encode($masterVariants) ?>;
@@ -54,8 +81,8 @@ foreach ($masterRows as $row) {
                 <i class="fas fa-arrow-left"></i>
             </a>
             <div>
-                <h1 class="text-2xl font-black text-navy uppercase tracking-wide">Add New Product</h1>
-                <p class="text-sm text-slate">List a new item in your store</p>
+                <h1 class="text-2xl font-black text-navy uppercase tracking-wide">Edit Product</h1>
+                <p class="text-sm text-slate">Update details for <?= htmlspecialchars($product['name']) ?></p>
             </div>
         </div>
 
@@ -67,6 +94,8 @@ foreach ($masterRows as $row) {
         <?php endif; ?>
 
         <form id="addProductForm" action="../Backend/seller-product-backend.php" method="POST" enctype="multipart/form-data" class="space-y-6">
+            <input type="hidden" name="update_product" value="1">
+            <input type="hidden" name="product_id" value="<?= $product_id ?>">
             
             <!-- Basic Details -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
@@ -75,7 +104,7 @@ foreach ($masterRows as $row) {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="col-span-1 md:col-span-2">
                         <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">Product Name *</label>
-                        <input type="text" name="name" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all">
+                        <input type="text" name="name" value="<?= htmlspecialchars($product['name']) ?>" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all">
                     </div>
                     
                     <div class="col-span-1">
@@ -83,7 +112,7 @@ foreach ($masterRows as $row) {
                         <select name="brand_id" class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all appearance-none">
                             <option value="">No Brand</option>
                             <?php foreach($brands as $b): ?>
-                                <option value="<?= $b['id'] ?>"><?= htmlspecialchars($b['name']) ?></option>
+                                <option value="<?= $b['id'] ?>" <?= $product['brand_id'] == $b['id'] ? 'selected' : '' ?>><?= htmlspecialchars($b['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -93,14 +122,14 @@ foreach ($masterRows as $row) {
                         <select name="category_id" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all appearance-none">
                             <option value="">Select Category...</option>
                             <?php foreach($categories as $cat): ?>
-                                <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
+                                <option value="<?= $cat['id'] ?>" <?= $product['category_id'] == $cat['id'] ? 'selected' : '' ?>><?= htmlspecialchars($cat['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
 
                     <div class="col-span-1 md:col-span-2">
                         <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">Description *</label>
-                        <textarea name="description" rows="4" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all"></textarea>
+                        <textarea name="description" rows="4" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all"><?= htmlspecialchars($product['description']) ?></textarea>
                     </div>
                 </div>
             </div>
@@ -117,7 +146,7 @@ foreach ($masterRows as $row) {
                         </label>
                         <div class="relative">
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">Rs.</span>
-                            <input type="number" step="0.01" min="0" id="cost_price" name="cost_price" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all font-bold">
+                            <input type="number" step="0.01" min="0" id="cost_price" name="cost_price" value="<?= $product['cost_price'] ?>" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all font-bold">
                         </div>
                     </div>
                     
@@ -127,7 +156,7 @@ foreach ($masterRows as $row) {
                         </label>
                         <div class="relative">
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">Rs.</span>
-                            <input type="number" step="0.01" min="0" id="selling_price" name="selling_price" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all font-bold">
+                            <input type="number" step="0.01" min="0" id="selling_price" name="selling_price" value="<?= $product['base_price'] ?>" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all font-bold">
                         </div>
                     </div>
                     
@@ -192,11 +221,42 @@ foreach ($masterRows as $row) {
                                 </tr>
                             </thead>
                             <tbody id="variantTableBody" class="divide-y divide-gray-100">
+                                <?php if (empty($existingVariants)): ?>
                                 <tr>
                                     <td colspan="8" class="p-6 text-center text-gray-400 text-sm font-medium" id="tableEmptyState">
                                         Select a Category first.
                                     </td>
                                 </tr>
+                                <?php else: ?>
+                                    <?php foreach ($existingVariants as $v): ?>
+                                    <tr>
+                                        <td class="p-3 border-b border-gray-100">
+                                            <input type="text" name="variant_size[]" value="<?= htmlspecialchars($v['size'] ?? $v['flavor'] ?? '') ?>" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none">
+                                        </td>
+                                        <td class="p-3 border-b border-gray-100">
+                                            <input type="text" name="variant_color[]" value="<?= htmlspecialchars($v['color'] ?? $v['weight'] ?? '') ?>" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none">
+                                        </td>
+                                        <td class="p-3 border-b border-gray-100">
+                                            <input type="number" step="0.01" min="0" name="variant_cost_price[]" value="<?= $v['cost_price'] ?>" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none var-buy" oninput="calculateVarProfit(this)">
+                                        </td>
+                                        <td class="p-3 border-b border-gray-100">
+                                            <input type="number" step="0.01" min="0" name="variant_price[]" value="<?= $v['price'] ?>" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none var-sell" oninput="calculateVarProfit(this)">
+                                        </td>
+                                        <td class="p-3 border-b border-gray-100">
+                                            <span class="text-sm font-bold text-[#0066FF] var-profit">Rs. <?= number_format($v['price'] - $v['cost_price'], 2) ?></span>
+                                        </td>
+                                        <td class="p-3 border-b border-gray-100">
+                                            <input type="number" name="variant_qty[]" value="<?= $v['qty'] ?>" min="0" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none variant-qty-input" oninput="updateTotalQty()">
+                                        </td>
+                                        <td class="p-3 border-b border-gray-100">
+                                            <input type="text" name="variant_sku[]" value="<?= htmlspecialchars($v['sku']) ?>" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none uppercase">
+                                        </td>
+                                        <td class="p-3 border-b border-gray-100 text-center">
+                                            <button type="button" class="text-red-400 hover:text-red-600 p-1" onclick="this.closest('tr').remove(); updateTotalQty();"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
@@ -216,8 +276,8 @@ foreach ($masterRows as $row) {
             </div>
 
             <div class="flex justify-end pt-4">
-                <button type="submit" name="add_product" class="bg-[#0066FF] hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-wide transition-all shadow-lg shadow-blue-500/30 flex items-center text-lg">
-                    Submit for Approval <i class="fas fa-paper-plane ms-2"></i>
+                <button type="submit" name="update_product_btn" class="bg-[#0066FF] hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold uppercase tracking-wide transition-all shadow-lg shadow-blue-500/30 flex items-center text-lg">
+                    Update Product <i class="fas fa-save ms-2"></i>
                 </button>
             </div>
 

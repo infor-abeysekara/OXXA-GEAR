@@ -301,6 +301,6 @@ $counts = $countStmt->fetch(PDO::FETCH_ASSOC);
             alert("Account number copied!");
         }
     </script>
-    <?php include("../include/footer.php"); ?>
+
 </body>
 </html>

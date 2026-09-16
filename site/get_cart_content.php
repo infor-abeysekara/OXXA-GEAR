@@ -8,15 +8,19 @@ if (!isset($_SESSION['userid'])) {
 }
 
 // Get cart items with proper joins
-$query = "SELECT c.Id, c.PID, c.Qty, c.Size, c.AddedAt, 
-                 p.pname, p.brand, p.price, p.image, p.qty as stock_qty
+$query = "SELECT c.id as Id, c.product_id as PID, c.quantity as Qty, c.added_at as AddedAt,
+                 p.name as pname, (SELECT name FROM brands WHERE id = p.brand_id) as brand, p.base_price as price, 
+                 (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image,
+                 p.total_qty as stock_qty,
+                 v.size as Size, v.price as var_price, v.qty as var_stock
           FROM cart c 
-          JOIN production p ON c.PID = p.pid 
-          WHERE c.Userid = ? 
-          ORDER BY c.AddedAt DESC";
+          JOIN products p ON c.product_id = p.id 
+          LEFT JOIN product_variants v ON c.variant_id = v.id
+          WHERE c.user_id = ? 
+          ORDER BY c.added_at DESC";
 
 $stmt = $conn->prepare($query);
-$stmt->bind_param("s", $_SESSION['userid']);
+$stmt->bind_param("i", $_SESSION['userid']);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -28,18 +32,15 @@ while ($row = $result->fetch_assoc()) {
     $itemPrice = $row['price'];
     $stockQty = $row['stock_qty'];
     
-    if ($row['Size'] !== 'Standard') {
-        $sizeQuery = "SELECT price, qty FROM productsize WHERE pid = ? AND size = ?";
-        $sizeStmt = $conn->prepare($sizeQuery);
-        $sizeStmt->bind_param("ss", $row['PID'], $row['Size']);
-        $sizeStmt->execute();
-        $sizeResult = $sizeStmt->get_result();
-        
-        if ($sizeResult->num_rows > 0) {
-            $sizeData = $sizeResult->fetch_assoc();
-            $itemPrice = $sizeData['price'];
-            $stockQty = $sizeData['qty'];
+    if (!empty($row['Size'])) {
+        if (!empty($row['var_price']) && $row['var_price'] > 0) {
+            $itemPrice = $row['var_price'];
         }
+        if (isset($row['var_stock'])) {
+            $stockQty = $row['var_stock'];
+        }
+    } else {
+        $row['Size'] = 'Standard';
     }
     
     $row['current_price'] = $itemPrice;

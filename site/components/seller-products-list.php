@@ -68,7 +68,7 @@
                         <?php endif; ?>
                     </td>
                     <td class="p-4 text-right">
-                        <button class="text-gray-400 hover:text-[#0066FF] transition-colors"><i class="fas fa-edit"></i></button>
+                        <a href="seller-edit-product.php?id=<?= $p['id'] ?>" class="text-gray-400 hover:text-[#0066FF] transition-colors"><i class="fas fa-edit"></i></a>
                     </td>
                 </tr>
                 <?php endforeach; else: ?>

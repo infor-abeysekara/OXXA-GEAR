@@ -166,6 +166,11 @@ $admin_image = $_SESSION['profile_image'] ?? '';
                 <i class="fas fa-tags"></i> Manage Coupons
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo ($current_page == 'manage-reviews.php') ? 'active' : ''; ?>" href="manage-reviews.php">
+                <i class="fas fa-star"></i> Manage Reviews
+            </a>
+        </li>
         <li class="nav-item mt-2">
             <a class="nav-link <?php echo ($current_page == 'settings.php') ? 'active' : ''; ?>" href="settings.php">
                 <i class="fas fa-cog"></i> Settings

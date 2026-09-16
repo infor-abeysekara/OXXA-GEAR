@@ -363,9 +363,9 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                         <!-- Personal Profile Card -->
-                        <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 relative">
+                        <div class="bg-white rounded-2xl md:rounded-[2rem] shadow-sm border border-gray-100 p-5 md:p-8 relative">
                             <div class="flex justify-between items-start mb-6">
-                                <h3 class="text-lg font-black text-navy uppercase tracking-wide">Personal Profile</h3>
+                                <h3 class="text-base md:text-lg font-black text-navy uppercase tracking-wide">Personal Profile</h3>
                                 <a href="profile.php?edit=profile" class="text-[#0066FF] font-bold text-sm hover:underline"><i class="fas fa-pen me-1 text-xs"></i> EDIT</a>
                             </div>
                             <div class="space-y-4">
@@ -431,9 +431,9 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
                         </div>
 
                         <!-- Address Book Card -->
-                        <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 relative flex flex-col">
+                        <div class="bg-white rounded-2xl md:rounded-[2rem] shadow-sm border border-gray-100 p-5 md:p-8 relative flex flex-col">
                             <div class="flex justify-between items-start mb-6">
-                                <h3 class="text-lg font-black text-navy uppercase tracking-wide">Address Book</h3>
+                                <h3 class="text-base md:text-lg font-black text-navy uppercase tracking-wide">Address Book</h3>
                                 <a href="#" class="text-[#0066FF] font-bold text-sm hover:underline"><i class="fas fa-pen me-1 text-xs"></i> EDIT</a>
                             </div>
                             <?php if ($address): ?>
@@ -459,10 +459,10 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
 
                     <!-- Recent Orders Table -->
-                    <div class="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-8 overflow-hidden">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-lg font-black text-navy uppercase tracking-wide">Recent Orders</h3>
-                            <a href="my-orders.php" class="text-gray-400 font-bold text-sm hover:text-black">View All <i class="fas fa-arrow-right ms-1 text-xs"></i></a>
+                    <div class="bg-white rounded-2xl md:rounded-[2rem] shadow-sm border border-gray-100 p-5 md:p-8 overflow-hidden">
+                        <div class="flex justify-between items-center mb-6 border-b border-gray-50 pb-4">
+                            <h3 class="text-base md:text-lg font-black text-navy uppercase tracking-wide">Recent Orders</h3>
+                            <a href="my-orders.php" class="text-gray-400 font-bold text-xs hover:text-[#0066FF] transition-colors">VIEW ALL <i class="fas fa-chevron-right ms-1 text-[10px]"></i></a>
                         </div>
                         
                         <?php if (count($recentOrders) > 0): ?>

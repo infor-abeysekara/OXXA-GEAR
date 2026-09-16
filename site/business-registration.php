@@ -25,7 +25,7 @@ $business = $stmt->fetch(PDO::FETCH_ASSOC);
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <div class="mb-8">
-            <h1 class="text-3xl font-black text-navy uppercase tracking-wide">Seller Dashboard</h1>
+            <h1 class="text-3xl font-black text-navy uppercase tracking-wide">Business Verification</h1>
             <p class="text-slate mt-1">Complete your business verification to start selling.</p>
         </div>
 

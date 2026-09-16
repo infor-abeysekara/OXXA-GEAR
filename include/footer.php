@@ -4,67 +4,67 @@
   <footer class="bg-[#0A0A0A] text-white border-t border-[#222222] mt-10">
     
     <!-- Top Trust Bar -->
-    <div class="border-b border-[#222222]">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center divide-x divide-[#222222]">
-                <div class="flex items-center justify-center gap-3">
-                    <i class="fas fa-truck-fast text-primary text-xl"></i>
-                    <span class="font-space uppercase tracking-wide text-sm font-bold">Islandwide Delivery</span>
+    <div class="border-b border-[#222222] bg-[#0f0f0f]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-2 text-center md:divide-x divide-[#222222]">
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
+                    <i class="fas fa-truck-fast text-primary text-lg sm:text-xl"></i>
+                    <span class="font-space uppercase tracking-wider text-[10px] sm:text-sm font-bold text-gray-300">Islandwide Delivery</span>
                 </div>
-                <div class="flex items-center justify-center gap-3">
-                    <i class="fas fa-shield-check text-primary text-xl"></i>
-                    <span class="font-space uppercase tracking-wide text-sm font-bold">100% Authentic</span>
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 border-l border-[#222222] md:border-l-0">
+                    <i class="fas fa-shield-check text-primary text-lg sm:text-xl"></i>
+                    <span class="font-space uppercase tracking-wider text-[10px] sm:text-sm font-bold text-gray-300">100% Authentic</span>
                 </div>
-                <div class="flex items-center justify-center gap-3">
-                    <img src="<?php echo $base_path; ?>image/KOKO_logo.png" class="h-4 w-auto" alt="KOKO">
-                    <span class="font-space uppercase tracking-wide text-sm font-bold">Pay in 3</span>
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 pt-4 sm:pt-0 border-t border-[#222222] md:border-t-0">
+                    <img src="<?php echo $base_path; ?>image/KOKO_logo.png" class="h-3 sm:h-4 w-auto brightness-0 invert opacity-70" alt="KOKO">
+                    <span class="font-space uppercase tracking-wider text-[10px] sm:text-sm font-bold text-gray-300">Pay in 3</span>
                 </div>
-                <div class="flex items-center justify-center gap-3">
-                    <i class="fas fa-undo-alt text-primary text-xl"></i>
-                    <span class="font-space uppercase tracking-wide text-sm font-bold">14-Day Returns</span>
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 pt-4 sm:pt-0 border-t border-[#222222] md:border-t-0 border-l border-[#222222] md:border-l-0">
+                    <i class="fas fa-undo-alt text-primary text-lg sm:text-xl"></i>
+                    <span class="font-space uppercase tracking-wider text-[10px] sm:text-sm font-bold text-gray-300">14-Day Returns</span>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Main Footer Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
         
         <!-- Col 1 - Brand Info -->
-        <div class="space-y-6">
+        <div class="space-y-4 sm:space-y-6 text-center sm:text-left flex flex-col items-center sm:items-start">
           <div class="flex items-center space-x-3">
             <?php
             $current_dir = dirname($_SERVER['PHP_SELF']);
             $base_path = (strpos($current_dir, '/site') !== false) ? '../' : '';
             ?>
             <a href="<?php echo $base_path; ?>index.php" class="flex items-center space-x-2 group">
-              <img src="<?php echo $base_path; ?>image/oxxa_gear_logo.png" alt="OXXA GEAR" class="h-12 w-auto object-contain filter brightness-0 invert transform group-hover:scale-105 transition-transform duration-300">
+              <img src="<?php echo $base_path; ?>image/oxxa_gear_logo.png" alt="OXXA GEAR" class="h-8 sm:h-12 w-auto object-contain filter brightness-0 invert transform group-hover:scale-105 transition-transform duration-300">
             </a>
           </div>
-          <p class="text-gray-400 text-sm leading-loose">
+          <p class="text-gray-400 text-xs sm:text-sm leading-relaxed sm:leading-loose max-w-xs">
             OXXA GEAR - Sri Lanka's ultimate destination for premium sports wear, footwear, fitness gear and nutrition. Gear Up. Train Hard.
           </p>
-          <div class="flex space-x-4 pt-2">
-            <a href="#" class="w-10 h-10 rounded-full border border-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:border-primary hover:bg-primary hover:scale-110 transition-all duration-300">
-              <i class="fab fa-facebook-f"></i>
+          <div class="flex space-x-3 pt-2">
+            <a href="#" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:border-primary hover:bg-primary transition-all duration-300">
+              <i class="fab fa-facebook-f text-sm sm:text-base"></i>
             </a>
-            <a href="#" class="w-10 h-10 rounded-full border border-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:border-primary hover:bg-primary hover:scale-110 transition-all duration-300">
-              <i class="fab fa-instagram"></i>
+            <a href="#" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:border-primary hover:bg-primary transition-all duration-300">
+              <i class="fab fa-instagram text-sm sm:text-base"></i>
             </a>
-            <a href="#" class="w-10 h-10 rounded-full border border-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:border-primary hover:bg-primary hover:scale-110 transition-all duration-300">
-              <i class="fab fa-twitter"></i>
+            <a href="#" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:border-primary hover:bg-primary transition-all duration-300">
+              <i class="fab fa-twitter text-sm sm:text-base"></i>
             </a>
-            <a href="#" class="w-10 h-10 rounded-full border border-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:border-primary hover:bg-primary hover:scale-110 transition-all duration-300">
-              <i class="fab fa-youtube"></i>
+            <a href="#" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:border-primary hover:bg-primary transition-all duration-300">
+              <i class="fab fa-youtube text-sm sm:text-base"></i>
             </a>
           </div>
         </div>
 
         <!-- Col 2 - Quick Links -->
-        <div class="space-y-6">
-          <h4 class="text-lg font-bold font-space text-white tracking-wide uppercase">Quick Links</h4>
-          <ul class="space-y-3">
+        <div class="space-y-4 text-center sm:text-left">
+          <h4 class="text-sm sm:text-lg font-bold font-space text-white tracking-widest uppercase">Quick Links</h4>
+          <ul class="space-y-2 sm:space-y-3">
             <?php
             $current_dir = dirname($_SERVER['PHP_SELF']);
             $base_path = '';
@@ -72,48 +72,48 @@
               $base_path = '../';
             }
             ?>
-            <li><a href="<?php echo $base_path; ?>index.php" class="text-gray-400 hover:text-primary hover:translate-x-1 inline-block transition-all text-sm">Home</a></li>
-            <li><a href="<?php echo $base_path; ?>site/products.php" class="text-gray-400 hover:text-primary hover:translate-x-1 inline-block transition-all text-sm">Products</a></li>
-            <li><a href="<?php echo $base_path; ?>site/my-orders.php" class="text-gray-400 hover:text-primary hover:translate-x-1 inline-block transition-all text-sm">Track Order</a></li>
-            <li><a href="#" class="text-gray-400 hover:text-primary hover:translate-x-1 inline-block transition-all text-sm">Shipping Info</a></li>
-            <li><a href="#" class="text-gray-400 hover:text-primary hover:translate-x-1 inline-block transition-all text-sm">FAQs</a></li>
-            <li><a href="<?php echo $base_path; ?>index.php#contact" class="text-gray-400 hover:text-primary hover:translate-x-1 inline-block transition-all text-sm">Contact Us</a></li>
+            <li><a href="<?php echo $base_path; ?>index.php" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">Home</a></li>
+            <li><a href="<?php echo $base_path; ?>site/shop.php" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">Products</a></li>
+            <li><a href="<?php echo $base_path; ?>site/my-orders.php" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">Track Order</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">Shipping Info</a></li>
+            <li><a href="#" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">FAQs</a></li>
+            <li><a href="<?php echo $base_path; ?>index.php#contact" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">Contact Us</a></li>
           </ul>
         </div>
 
         <!-- Col 3 - Categories -->
-        <div class="space-y-6">
-          <h4 class="text-lg font-bold font-space text-white tracking-wide uppercase">Categories</h4>
-          <ul class="space-y-3">
-            <li><a href="<?php echo $base_path; ?>site/products.php?category=Sports Wear" class="text-gray-400 hover:text-primary hover:translate-x-1 inline-block transition-all text-sm">SPORTS WEAR</a></li>
-            <li><a href="<?php echo $base_path; ?>site/products.php?category=Footwear" class="text-gray-400 hover:text-primary hover:translate-x-1 inline-block transition-all text-sm">FOOTWEAR</a></li>
-            <li><a href="<?php echo $base_path; ?>site/products.php?category=Fitness & Gym" class="text-gray-400 hover:text-primary hover:translate-x-1 inline-block transition-all text-sm">FITNESS & GYM</a></li>
-            <li><a href="<?php echo $base_path; ?>site/products.php?category=Nutrition" class="text-gray-400 hover:text-primary hover:translate-x-1 inline-block transition-all text-sm">NUTRITION</a></li>
-            <li><a href="<?php echo $base_path; ?>site/products.php?category=Accessories" class="text-gray-400 hover:text-primary hover:translate-x-1 inline-block transition-all text-sm">ACCESSORIES</a></li>
-            <li><a href="<?php echo $base_path; ?>site/products.php?category=Equipment" class="text-gray-400 hover:text-primary hover:translate-x-1 inline-block transition-all text-sm">EQUIPMENT</a></li>
+        <div class="space-y-4 text-center sm:text-left">
+          <h4 class="text-sm sm:text-lg font-bold font-space text-white tracking-widest uppercase">Categories</h4>
+          <ul class="space-y-2 sm:space-y-3">
+            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Sports+Wear" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">SPORTS WEAR</a></li>
+            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Footwear" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">FOOTWEAR</a></li>
+            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Fitness+%26+Gym" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">FITNESS & GYM</a></li>
+            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Nutrition" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">NUTRITION</a></li>
+            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Accessories" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">ACCESSORIES</a></li>
+            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Equipment" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">EQUIPMENT</a></li>
           </ul>
         </div>
 
         <!-- Col 4 - Newsletter & Contact -->
-        <div class="space-y-6">
-          <h4 class="text-lg font-bold font-space text-white tracking-wide uppercase">Stay In The Game</h4>
-          <form class="flex border border-gray-700 rounded-full overflow-hidden focus-within:border-primary transition-colors">
-            <input type="email" placeholder="Enter your email" class="w-full bg-transparent px-4 py-2 text-sm text-white focus:outline-none placeholder-gray-500" required>
-            <button type="submit" class="bg-primary hover:bg-primary-hover text-white px-5 py-2 text-sm font-bold uppercase transition-colors">JOIN</button>
+        <div class="space-y-4 sm:space-y-6 text-center sm:text-left border-t border-[#222222] sm:border-0 pt-6 sm:pt-0">
+          <h4 class="text-sm sm:text-lg font-bold font-space text-white tracking-widest uppercase">Stay In The Game</h4>
+          <form class="flex border border-gray-700 rounded-full overflow-hidden focus-within:border-primary transition-colors max-w-sm mx-auto sm:mx-0">
+            <input type="email" placeholder="Enter your email" class="w-full bg-transparent px-4 py-2 sm:py-3 text-xs sm:text-sm text-white focus:outline-none placeholder-gray-500" required>
+            <button type="submit" class="bg-primary hover:bg-primary-hover text-white px-4 sm:px-5 py-2 sm:py-3 text-xs sm:text-sm font-bold uppercase transition-colors">JOIN</button>
           </form>
           
-          <div class="space-y-3 pt-4 border-t border-[#222222]">
+          <div class="space-y-2 sm:space-y-3 pt-2 sm:pt-4 inline-block text-left mx-auto">
             <div class="flex items-start space-x-3 group cursor-default">
-              <i class="fas fa-map-marker-alt text-primary mt-1 text-sm group-hover:scale-110 transition-transform"></i>
-              <p class="text-gray-400 text-sm">123 Main Street,<br>Colombo 07, Sri Lanka</p>
+              <i class="fas fa-map-marker-alt text-primary mt-1 text-xs sm:text-sm"></i>
+              <p class="text-gray-400 text-xs sm:text-sm">123 Main Street,<br>Colombo 07, Sri Lanka</p>
             </div>
             <div class="flex items-center space-x-3 group cursor-default">
-              <i class="fas fa-phone-alt text-primary text-sm group-hover:scale-110 transition-transform"></i>
-              <p class="text-gray-400 text-sm">+94 77 123 4567</p>
+              <i class="fas fa-phone-alt text-primary text-xs sm:text-sm"></i>
+              <p class="text-gray-400 text-xs sm:text-sm">+94 77 123 4567</p>
             </div>
             <div class="flex items-center space-x-3 group cursor-pointer">
-              <i class="fas fa-envelope text-primary text-sm group-hover:scale-110 transition-transform"></i>
-              <a href="mailto:support@oxxagear.lk" class="text-gray-400 hover:text-white transition-colors text-sm">support@oxxagear.lk</a>
+              <i class="fas fa-envelope text-primary text-xs sm:text-sm"></i>
+              <a href="mailto:support@oxxagear.lk" class="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">support@oxxagear.lk</a>
             </div>
           </div>
         </div>
@@ -122,28 +122,28 @@
 
     <!-- Bottom Bar -->
     <div class="border-t border-[#222222] bg-[#0A0A0A]">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-          <div class="text-gray-500 text-xs font-space tracking-wide">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <div class="flex flex-col-reverse md:flex-row justify-between items-center gap-4">
+          <div class="text-gray-500 text-[10px] sm:text-xs font-space tracking-wide text-center">
             &copy; <?php echo date("Y"); ?> OXXA GEAR. All rights reserved.
           </div>
           
-          <!-- Payment Badges (SVG or Icon versions) -->
-          <div class="flex items-center gap-4 opacity-70 hover:opacity-100 transition-opacity duration-300">
-            <i class="fab fa-cc-visa text-3xl text-white"></i>
-            <i class="fab fa-cc-mastercard text-3xl text-white"></i>
-            <div class="h-6 flex items-center bg-white rounded px-2">
-                <img src="<?php echo $base_path; ?>image/KOKO_logo.png" class="h-3 w-auto" alt="KOKO">
+          <!-- Payment Badges -->
+          <div class="flex items-center justify-center gap-3 opacity-70 hover:opacity-100 transition-opacity duration-300">
+            <i class="fab fa-cc-visa text-2xl sm:text-3xl text-white"></i>
+            <i class="fab fa-cc-mastercard text-2xl sm:text-3xl text-white"></i>
+            <div class="h-5 sm:h-6 flex items-center bg-white rounded px-1.5 sm:px-2">
+                <img src="<?php echo $base_path; ?>image/KOKO_logo.png" class="h-2.5 sm:h-3 w-auto" alt="KOKO">
             </div>
-            <div class="h-6 flex items-center border border-gray-600 rounded px-2">
-                <span class="font-bold text-gray-300 tracking-widest text-xs">COD</span>
+            <div class="h-5 sm:h-6 flex items-center border border-gray-600 rounded px-1.5 sm:px-2">
+                <span class="font-bold text-gray-300 tracking-widest text-[10px] sm:text-xs">COD</span>
             </div>
           </div>
 
-          <div class="flex space-x-6">
-            <a href="#" class="text-gray-500 hover:text-primary transition-colors text-xs font-space uppercase">Privacy</a>
-            <a href="#" class="text-gray-500 hover:text-primary transition-colors text-xs font-space uppercase">Terms</a>
-            <a href="#" class="text-gray-500 hover:text-primary transition-colors text-xs font-space uppercase">Returns</a>
+          <div class="flex justify-center space-x-4 sm:space-x-6">
+            <a href="#" class="text-gray-500 hover:text-primary transition-colors text-[10px] sm:text-xs font-space uppercase">Privacy</a>
+            <a href="#" class="text-gray-500 hover:text-primary transition-colors text-[10px] sm:text-xs font-space uppercase">Terms</a>
+            <a href="<?php echo $base_path; ?>site/returns.php" class="text-gray-500 hover:text-primary transition-colors text-[10px] sm:text-xs font-space uppercase">Returns</a>
           </div>
         </div>
       </div>

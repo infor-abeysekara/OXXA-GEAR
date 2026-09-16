@@ -4,23 +4,25 @@ include('../include/connection.php');
 
 header('Content-Type: application/json');
 
+// User login wela innawada saha seller kenekda kiyala balanawa. Naththam me page ekata enna ba.
 if (!isset($_SESSION['userid']) || $_SESSION['type'] != 'seller') {
     echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
     exit();
 }
 
+// Form eka POST method eken awillada balanawa
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user_id = $_SESSION['userid'];
     $errors = [];
 
-    // Helper to add error
+    // Helper to add error (Error messages eka thanakata ekathu karaganna liyapu chuti function ekak)
     $addError = function($field, $message) use (&$errors) {
         if (!isset($errors[$field])) {
             $errors[$field] = $message;
         }
     };
 
-    // 1. Business Info
+    // 1. Business Info (Business ekata adala thopathuru)
     $business_name = trim($_POST['business_name'] ?? '');
     $business_type = trim($_POST['business_type'] ?? '');
     $business_reg_id = trim($_POST['business_reg_id'] ?? '');
@@ -33,11 +35,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!in_array($business_type, ['Sole Proprietorship', 'Partnership', 'Private Limited Company', 'Other'])) {
         $addError('business_type', 'Invalid business type.');
     }
+    
+    // Business Registration number eke format eka check karanawa
     if (!$business_reg_id || !preg_match('/^[A-Z]{1,3}-[A-Z]?-?\d{4,6}$/i', $business_reg_id)) {
         $addError('business_reg_id', 'Invalid BR format.');
     } else {
         $business_reg_id = strtoupper($business_reg_id); // auto uppercase
     }
+    
+    // Business eka hadapu dawasa anagathaye dawasak wenna baha
     if ($date_of_incorporation) {
         $doi = new DateTime($date_of_incorporation);
         $now = new DateTime();
@@ -49,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if (!$nature_of_business) $addError('nature_of_business', 'Nature of business is required.');
 
-    // 2. Owner Info
+    // 2. Owner Info (Aithikarayage wisthara)
     $owner_name = trim($_POST['owner_name'] ?? '');
     $owner_nic = trim($_POST['owner_nic'] ?? '');
     $personal_phone = trim($_POST['personal_phone'] ?? '');
@@ -60,9 +66,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$owner_name || !preg_match('/^[a-zA-Z\s]{3,100}$/', $owner_name)) {
         $addError('owner_name', 'Invalid owner name.');
     }
+    // NIC eka old format da new format da kiyala balanawa
     if (!$owner_nic || !preg_match('/^([0-9]{9}[vVxX]|[0-9]{12})$/', $owner_nic)) {
         $addError('owner_nic', 'Invalid NIC format.');
     }
+    
     $personal_phone = preg_replace('/\D/', '', $personal_phone);
     if (!$personal_phone || !preg_match('/^07[0-8]\d{7}$/', $personal_phone)) {
         $addError('personal_phone', 'Invalid personal SL mobile.');
@@ -92,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if (!$province) $addError('province', 'Province is required.');
 
-    // 5. Bank Details
+    // 5. Bank Details (Mudaw ganna dila thiyena banku wisthara)
     $bank_name = trim($_POST['bank_name'] ?? '');
     $branch_name = trim($_POST['branch_name'] ?? '');
     $account_number = trim($_POST['account_number'] ?? '');
@@ -125,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $addError('declaration', 'You must agree to the declaration.');
     }
 
-    // Database UNIQUE checks
+    // Database UNIQUE checks (Kalin liyapadinchi wela thiyena ewada kiyala balanawa)
     try {
         // Check BR Number
         if (!isset($errors['business_reg_id'])) {
@@ -162,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    // File upload function
+    // File upload function (Photo/PDF wage files server ekata save karana function eka)
     function uploadFile($fileInputName, $targetDir, $allowedTypes, $user_id, $prefix, $maxMB, $isRequired = true) {
         global $errors;
         
@@ -175,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 return null;
             }
             
-            // Verify Mime Type reliably
+            // Verify Mime Type reliably (Hariyatama file type eka mokakda kiyala balanawa, virus ena eka nawaththanna)
             $finfo = finfo_open(FILEINFO_MIME_TYPE);
             $mime = finfo_file($finfo, $_FILES[$fileInputName]['tmp_name']);
             finfo_close($finfo);
@@ -185,7 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 return null;
             }
 
-            // Specific check for logo dimensions
+            // Specific check for logo dimensions (Logo eka 200x200 wath wenna one)
             if ($prefix === 'logo' && strpos($mime, 'image/') === 0) {
                 $imgSize = getimagesize($_FILES[$fileInputName]['tmp_name']);
                 if ($imgSize === false || $imgSize[0] < 200 || $imgSize[1] < 200) {
@@ -195,7 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             $ext = pathinfo($_FILES[$fileInputName]['name'], PATHINFO_EXTENSION);
-            // Sanitize file name
+            // Sanitize file name (Save wenna kalin aluth namak hadanawa files override wena eka nawaththanna)
             $fileName = $prefix . '_' . $user_id . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
             
             if (move_uploaded_file($_FILES[$fileInputName]['tmp_name'], $targetDir . $fileName)) {
@@ -216,6 +224,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $docTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
     // Notice we use the same paths that admin/business-registrations.php expects
+    // File upload function eka call karala file jathi 5 ma upload karanawa
     $certificate_path = uploadFile('certificate_file', '../image/certificates/', $docTypes, $user_id, 'cert', 5, true);
     $nic_path = uploadFile('nic_file', '../image/certificates/', $docTypes, $user_id, 'nic', 5, true);
     $logo_path = uploadFile('logo_file', '../image/logos/', $imageTypes, $user_id, 'logo', 2, true);
@@ -229,6 +238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
+        // Okkoma hari nam database ekata details tika enter karanawa seller_profiles table ekata
         $stmt = $pdo->prepare("INSERT INTO seller_profiles (
             user_id, business_name, business_type, business_reg_id, business_number, 
             date_of_incorporation, nature_of_business, 
@@ -257,12 +267,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $selling_categories, $estimated_products, $social_website, $declaration
         ]);
 
+        // Operation eka success
         echo json_encode(['success' => true]);
         
     } catch (PDOException $e) {
+        // DB error
         echo json_encode(['success' => false, 'message' => 'Failed to save record to database.', 'db' => $e->getMessage()]);
     }
 } else {
+    // Bad request
     echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
 }
 ?>

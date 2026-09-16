@@ -226,6 +226,6 @@ $admin = $stmt->fetch();
             }
         });
     </script>
-    <?php include("../include/footer.php"); ?>
+
 </body>
 </html>

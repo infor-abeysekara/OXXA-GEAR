@@ -2,34 +2,47 @@
 include(__DIR__ . '/../include/header.php');
 ?>
 
-<!-- Hero Section -->
-<section class="relative h-[80vh] min-h-[600px] flex items-center justify-center overflow-hidden mb-12 shadow-xl bg-navy">
-    <!-- Background Video / Image -->
-    <video autoplay muted loop playsinline preload="auto" poster="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" class="hidden md:block absolute inset-0 w-full h-full object-cover">
+<!-- Hero Section (Mobile Slider, Desktop Video) -->
+<section class="relative h-[56.25vw] sm:h-[80vh] min-h-[250px] sm:min-h-[600px] mb-8 sm:mb-12 shadow-xl bg-navy group">
+    <!-- Desktop Video Background -->
+    <video autoplay muted loop playsinline preload="auto" poster="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" class="hidden sm:block absolute inset-0 w-full h-full object-cover">
         <source src="https://res.cloudinary.com/dhxfrmepy/video/upload/v1/videoplayback_zs3dor.mp4" type="video/mp4">
     </video>
-    <img src="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" alt="OXXA GEAR Performance" class="block md:hidden absolute inset-0 w-full h-full object-cover object-top">
+    
+    <!-- Mobile Image Slider (CSS Snap) -->
+    <div class="sm:hidden absolute inset-0 w-full h-full flex overflow-x-auto snap-x snap-mandatory hide-scrollbar">
+        <img src="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" alt="Slide 1" class="w-full h-full object-cover object-top flex-shrink-0 snap-center">
+        <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" alt="Slide 2" class="w-full h-full object-cover object-top flex-shrink-0 snap-center">
+        <img src="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" alt="Slide 3" class="w-full h-full object-cover object-top flex-shrink-0 snap-center">
+    </div>
+    
+    <!-- Slider Dots (Mobile only) -->
+    <div class="sm:hidden absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-20">
+        <div class="w-2 h-2 rounded-full bg-primary"></div>
+        <div class="w-2 h-2 rounded-full bg-white/50"></div>
+        <div class="w-2 h-2 rounded-full bg-white/50"></div>
+    </div>
     
     <!-- Black Overlay -->
-    <div class="absolute inset-0" style="background: rgba(0,0,0,0.65);"></div>
+    <div class="absolute inset-0 bg-black/50 sm:bg-black/65 z-10"></div>
     
     <!-- Hero Content -->
-    <div class="relative z-10 text-center px-4 max-w-4xl mx-auto">
-        <h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold text-white uppercase tracking-tight mb-6" style="text-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-            <span class="block text-primary mb-2 text-xl md:text-2xl tracking-widest font-bold">PERFORMANCE STARTS HERE</span>
+    <div class="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-4 max-w-4xl mx-auto">
+        <h1 class="text-[1.35rem] leading-tight sm:text-6xl lg:text-7xl font-extrabold text-white uppercase tracking-tight mb-2 sm:mb-6" style="text-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+            <span class="block text-primary mb-1 sm:mb-2 text-[10px] sm:text-2xl tracking-widest font-bold">PERFORMANCE STARTS HERE</span>
             Gear Up. Train Hard.<br>
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">Perform Better.</span>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 text-lg sm:text-6xl">Perform Better.</span>
         </h1>
         
-        <p class="text-gray-300 text-lg md:text-xl mb-10 max-w-2xl mx-auto font-medium">
+        <p class="hidden sm:block text-gray-300 text-lg md:text-xl mb-10 max-w-2xl mx-auto font-medium">
             Discover premium gear for cricket, football, gym, running & every sport. Push your limits with OXXA GEAR.
         </p>
         
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a href="products.php" class="w-full sm:w-auto bg-primary hover:bg-primary-hover text-white px-8 py-4 rounded-xl font-bold uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(22,119,255,0.4)] hover:shadow-[0_0_30px_rgba(22,119,255,0.6)] hover:-translate-y-1">
+        <div class="mt-4 sm:mt-0 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full px-4 sm:px-0">
+            <a href="products.php" class="w-full sm:w-auto bg-primary hover:bg-primary-hover text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(22,119,255,0.4)] text-sm sm:text-base">
                 Shop Sports Gear
             </a>
-            <a href="#categories" class="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/20 px-8 py-4 rounded-xl font-bold uppercase tracking-wider transition-all hover:-translate-y-1">
+            <a href="#categories" class="hidden sm:block w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/20 px-8 py-4 rounded-xl font-bold uppercase tracking-wider transition-all">
                 Explore Collection
             </a>
         </div>
@@ -164,15 +177,16 @@ include(__DIR__ . '/../include/header.php');
     </section>
 
 <!-- Quick Categories Section -->
-<section id="categories" class="container mb-16">
-    <div class="text-center mb-10">
-        <h2 class="text-3xl md:text-4xl font-extrabold text-navy font-space uppercase tracking-widest mb-4">
+<section id="categories" class="container mb-12 sm:mb-16 mt-4 sm:mt-0">
+    <div class="text-left sm:text-center mb-6 sm:mb-10 px-4 sm:px-0">
+        <h2 class="text-2xl md:text-4xl font-extrabold text-navy font-space uppercase tracking-widest mb-2 sm:mb-4">
             Shop By <span class="text-primary">Category</span>
         </h2>
-        <div class="w-24 h-1 bg-primary mx-auto rounded-full"></div>
+        <div class="w-16 sm:w-24 h-1 bg-primary sm:mx-auto rounded-full"></div>
     </div>
     
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <!-- Desktop Grid / Mobile Horizontal Chips -->
+    <div class="flex sm:grid sm:grid-cols-3 lg:grid-cols-6 overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-3 sm:gap-4 px-4 sm:px-0 pb-4 sm:pb-0 -mx-4 sm:mx-0">
         <?php
         $catStmt = $pdo->query("SELECT * FROM categories ORDER BY FIELD(name, 'Sports Wear', 'Footwear', 'Fitness & Gym', 'Nutrition', 'Accessories', 'Equipment')");
         $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -180,7 +194,17 @@ include(__DIR__ . '/../include/header.php');
         foreach ($categories as $cat) {
             $catImage = !empty($cat['image']) ? $base_path . 'assets/uploads/categories/' . htmlspecialchars($cat['image']) : 'https://via.placeholder.com/400x500?text=' . urlencode($cat['name']);
             ?>
-            <a href="shop.php?category=<?php echo htmlspecialchars($cat['slug']); ?>" class="group relative rounded-2xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all">
+            <!-- Mobile Chip View -->
+            <a href="shop.php?category=<?php echo htmlspecialchars($cat['slug']); ?>" class="sm:hidden flex-shrink-0 snap-start relative rounded-2xl w-32 h-20 overflow-hidden shadow-sm border border-gray-100/20">
+                <img src="<?php echo $catImage; ?>" alt="<?php echo htmlspecialchars($cat['name']); ?>" class="absolute inset-0 w-full h-full object-cover">
+                <div class="absolute inset-0 bg-black/50"></div>
+                <div class="absolute inset-0 flex items-center justify-center p-2 text-center text-white font-space font-bold text-[11px] uppercase tracking-wider leading-tight">
+                    <?php echo htmlspecialchars($cat['name']); ?>
+                </div>
+            </a>
+            
+            <!-- Desktop Grid View -->
+            <a href="shop.php?category=<?php echo htmlspecialchars($cat['slug']); ?>" class="hidden sm:block group relative rounded-2xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all">
                 <img src="<?php echo $catImage; ?>" alt="<?php echo htmlspecialchars($cat['name']); ?>" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div class="absolute inset-0 flex flex-col items-center justify-end p-4 pb-6 text-center">
@@ -198,16 +222,19 @@ include(__DIR__ . '/../include/header.php');
 <div class="container mb-5">
 
     <!-- Trending Products -->
-    <section class="mb-16 py-8">
-        <div class="text-center mb-10">
-            <h2 class="text-3xl md:text-4xl font-extrabold text-navy font-space uppercase tracking-widest mb-2">
-                Trending <span class="text-primary">Now</span>
-            </h2>
-            <p class="text-slate mb-4">Top picks from OXXA GEAR</p>
-            <div class="w-16 h-1 bg-primary mx-auto rounded-full"></div>
+    <section class="mb-12 sm:mb-16 py-4 sm:py-8 px-4 sm:px-0">
+        <div class="flex justify-between items-end mb-6 sm:mb-10">
+            <div class="text-left sm:text-center sm:mx-auto">
+                <h2 class="text-2xl md:text-4xl font-extrabold text-navy font-space uppercase tracking-widest mb-1 sm:mb-2">
+                    Trending <span class="text-primary">Now</span>
+                </h2>
+                <p class="hidden sm:block text-slate mb-4">Top picks from OXXA GEAR</p>
+                <div class="w-16 h-1 bg-primary sm:mx-auto rounded-full"></div>
+            </div>
+            <a href="shop.php" class="sm:hidden text-primary font-bold text-sm uppercase">See All</a>
         </div>
         
-        <div class="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-6 pb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-6">
             <?php
             $trendingQuery = "SELECT p.*, 
                 COALESCE((SELECT SUM(oi.quantity) FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE oi.product_id = p.id AND o.status != 'cancelled'), 0) as total_sold,
@@ -229,34 +256,21 @@ include(__DIR__ . '/../include/header.php');
                     $img = !empty($p['image']) ? $base_path . 'assets/uploads/products/' . htmlspecialchars($p['image']) : 'https://via.placeholder.com/400x400?text=No+Image';
             ?>
             <!-- Product Card -->
-            <div class="group min-w-[280px] w-[280px] snap-start bg-white rounded-2xl border border-gray-100 shadow-sm hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.1)] transition-all duration-300 relative flex flex-col overflow-hidden">
-                <button class="absolute top-3 right-3 z-10 w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-gray-400 hover:text-danger hover:bg-white shadow-sm transition-all" onclick="showToast('Added to Wishlist ✓', 'success')">
-                    <i class="far fa-heart"></i>
+            <div class="group bg-white rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 relative flex flex-col overflow-hidden">
+                <button class="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 w-7 h-7 sm:w-8 sm:h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-gray-400 hover:text-danger hover:bg-white shadow-sm transition-all" onclick="showToast('Added to Wishlist ✓', 'success')">
+                    <i class="far fa-heart text-sm sm:text-base"></i>
                 </button>
                 <a href="product-details.php?id=<?php echo $p['id']; ?>" class="block relative aspect-square overflow-hidden bg-offwhite">
-                    <img src="<?php echo $img; ?>" alt="<?php echo htmlspecialchars($p['name']); ?>" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-100 group-hover:opacity-90">
+                    <img src="<?php echo $img; ?>" alt="<?php echo htmlspecialchars($p['name']); ?>" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
                 </a>
-                <div class="p-5 flex-grow flex flex-col relative">
-                    <div class="text-[10px] text-slate font-bold uppercase tracking-widest mb-1"><?php echo htmlspecialchars($p['category_name'] ?? 'General'); ?></div>
-                    <a href="product-details.php?id=<?php echo $p['id']; ?>"><h3 class="text-navy font-bold text-lg mb-1 leading-tight hover:text-primary transition-colors line-clamp-2"><?php echo htmlspecialchars($p['name']); ?></h3></a>
-                    <div class="flex items-center mb-4">
-                        <div class="text-yellow-400 text-xs flex gap-0.5"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-                        <span class="text-slate text-xs ml-2">(<?php echo rand(10, 200); ?>)</span>
-                    </div>
+                <div class="p-3 sm:p-5 flex-grow flex flex-col relative">
+                    <div class="text-[9px] sm:text-[10px] text-slate font-bold uppercase tracking-widest mb-1 truncate"><?php echo htmlspecialchars($p['category_name'] ?? 'General'); ?></div>
+                    <a href="product-details.php?id=<?php echo $p['id']; ?>"><h3 class="text-navy font-bold text-sm sm:text-lg mb-1 leading-tight hover:text-primary transition-colors line-clamp-2"><?php echo htmlspecialchars($p['name']); ?></h3></a>
                     
-                    <div class="mt-auto flex items-end justify-between group-hover:opacity-0 transition-opacity duration-300">
+                    <div class="mt-auto pt-2 flex flex-col sm:flex-row sm:items-end justify-between">
                         <div>
-                            <span class="text-navy font-extrabold text-lg">Rs. <?php echo number_format($p['lowest_price'], 2); ?></span>
+                            <span class="text-navy font-black text-sm sm:text-lg">Rs. <?php echo number_format($p['lowest_price'], 0); ?></span>
                         </div>
-                        <button class="w-10 h-10 rounded-full bg-offwhite text-navy flex items-center justify-center transition-colors">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="absolute bottom-4 left-4 right-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                        <a href="product-details.php?id=<?php echo $p['id']; ?>" class="block w-full bg-primary hover:bg-primary-hover text-white text-center font-bold py-3 rounded-xl uppercase tracking-widest text-xs shadow-lg shadow-primary/30 transition-all active:scale-95">
-                            View Details
-                        </a>
                     </div>
                 </div>
             </div>
@@ -264,7 +278,7 @@ include(__DIR__ . '/../include/header.php');
                 endforeach;
             else:
             ?>
-                <p class="text-gray-500 w-full text-center py-8">No trending products available yet.</p>
+                <p class="text-gray-500 w-full text-center py-8 col-span-2 lg:col-span-5">No trending products available yet.</p>
             <?php endif; ?>
         </div>
     </section>

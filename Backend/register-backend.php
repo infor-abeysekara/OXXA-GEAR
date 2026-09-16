@@ -5,6 +5,7 @@ include('../include/functions.php');
 
 header('Content-Type: application/json');
 
+// Form eka POST method eken awillada balanawa
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     $errors = [];
@@ -19,12 +20,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirm = $_POST['confirm'] ?? '';
     $user_type = isset($_POST['user_type']) ? $_POST['user_type'] : '';
     
-    // Regex Patterns
+    // Regex Patterns (Data eka valid format ekakda kiyala check karanna use karana patterns)
     $nameRegex = '/^[A-Za-z ]{2,50}$/';
     $usernameRegex = '/^[a-zA-Z0-9_]{3,20}$/';
     $phoneRegex = '/^(?:\+94|0)?7[0-9]{8}$/';
     
     // Validation
+    // Name eke akuru vitharak tiyenawada kiyala balanawa
     if (!preg_match($nameRegex, $firstname)) {
         $errors[] = "First name must be 2-50 letters only.";
     }
@@ -41,10 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "Invalid email format.";
     }
     
+    // Phone number eka Sri Lankan number ekakda kiyala balanawa
     if (!preg_match($phoneRegex, $phone)) {
         $errors[] = "Invalid Sri Lankan phone number.";
     } else {
-        // Format phone to 947XXXXXXXX
+        // Format phone to 947XXXXXXXX (Phone number eka database ekata save karanna kalin standard format ekata gannawa)
         $phone = preg_replace('/^(?:\+94|0)?/', '94', $phone);
     }
     
@@ -52,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "Passwords do not match.";
     }
     
+    // Password eke strongness eka balanawa (akuru, ilakkam, symbols thiyenawada kiyala)
     if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/', $password)) {
         $errors[] = "Password must be at least 8 characters with upper, lower, number, and special character.";
     }
@@ -64,13 +68,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "You must agree to the Terms of Service.";
     }
 
+    // Errors thiyenawanam wada karanne na, e errors tika apahu pass karanawa frontend ekata
     if (!empty($errors)) {
         echo json_encode(['success' => false, 'errors' => $errors]);
         exit();
     }
 
     try {
-        // Check if username, email, or phone already exists using PDO
+        // Check if username, email, or phone already exists using PDO (Database eke kalinma me details thiyenawada kiyala balanawa)
         $checkStmt = $pdo->prepare("SELECT * FROM users WHERE username = ? OR email = ? OR phone = ?");
         $checkStmt->execute([$username, $email, $phone]);
         
@@ -93,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $imageName = '';
         if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] === UPLOAD_ERR_OK) {
             $uploadDir = '../assets/uploads/profiles/';
+            // Folder eka naththam eka hadanawa
             if (!is_dir($uploadDir)) {
                 mkdir($uploadDir, 0755, true);
             }
@@ -119,6 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 else if ($fileType == 'image/webp') $imageExt = 'webp';
             }
             
+            // Image ekata unique namak deela save karanawa server eke
             $imageName = 'user_' . uniqid() . '.' . $imageExt;
             $imagePath = $uploadDir . $imageName;
             
@@ -135,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Use md5 for backward compatibility with old login system
         $hashedPassword = md5($password);
         
-        // Insert user into database using PDO
+        // Insert user into database using PDO (Aluth user wa database eke users table ekata save karanawa)
         $insertStmt = $pdo->prepare("INSERT INTO users (user_code, first_name, last_name, username, email, phone, password, profile_image, user_type, is_approved) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)");
         
         if ($insertStmt->execute([$user_code, $firstname, $lastname, $username, $email, $phone, $hashedPassword, $imageName, $user_type])) {
@@ -152,6 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['profile_image'] = $imageName;
             $_SESSION['type'] = $user_type;
             
+            // User seller kenek nam, business registration ekata yawai. Naththam home ekata yawai.
             if ($user_type == 'seller') {
                 $redirect = '../site/business-registration.php';
             } else {
@@ -161,14 +169,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(['success' => true, 'redirect' => $redirect]);
             exit();
         } else {
+            // DB insertion failed
             echo json_encode(['success' => false, 'errors' => ["Database error occurred during registration."]]);
             exit();
         }
     } catch (PDOException $e) {
+        // Exception caught
         echo json_encode(['success' => false, 'errors' => ["Database error occurred: " . $e->getMessage()]]);
         exit();
     }
 } else {
+    // Bad request
     echo json_encode(['success' => false, 'errors' => ["Invalid request."]]);
     exit();
 }
