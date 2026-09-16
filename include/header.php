@@ -250,9 +250,9 @@ if (isset($_SESSION['userid'])) {
               </ul>
             </div>
 
-            <!-- Wishlist (Hidden on mobile) -->
+            <!-- Notifications (Hidden on mobile) -->
             <a href="<?php echo $base_path; ?>site/notifications.php" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
-              <i class="far fa-heart text-lg group-hover:text-primary transition-colors"></i>
+              <i class="far fa-bell text-lg group-hover:text-primary transition-colors"></i>
               <?php if ($notificationCount > 0): ?>
                 <span class="absolute top-0 right-0 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white">
                   <?php echo $notificationCount > 99 ? '99+' : $notificationCount; ?>
@@ -286,7 +286,7 @@ if (isset($_SESSION['userid'])) {
               <i class="far fa-user text-lg group-hover:text-primary transition-colors"></i>
             </button>
             <button onclick="openAuthModal('login')" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
-              <i class="far fa-heart text-lg group-hover:text-primary transition-colors"></i>
+              <i class="far fa-bell text-lg group-hover:text-primary transition-colors"></i>
             </button>
             <!-- Cart (Hidden on mobile, visible on desktop) -->
             <button onclick="openAuthModal('login')" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
@@ -371,9 +371,9 @@ if (isset($_SESSION['userid'])) {
               <?php if($is_shop): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
           </a>
           
-          <!-- Wishlist -->
+          <!-- Notifications -->
           <a href="<?php echo isset($_SESSION['userid']) ? $base_path . 'site/notifications.php' : 'javascript:openAuthModal(\'login\')'; ?>" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_page == 'notifications') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?> relative">
-              <i class="far fa-heart text-xl mb-1"></i>
+              <i class="far fa-bell text-xl mb-1"></i>
               <?php if ($notificationCount > 0): ?>
                 <span class="absolute top-1 right-2 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white">
                   <?php echo $notificationCount > 99 ? '99+' : $notificationCount; ?>

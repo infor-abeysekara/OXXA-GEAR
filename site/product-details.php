@@ -184,7 +184,7 @@ $trueToSizePct = $totalReviews > 0 ? round(($fitCounts['True to Size'] / $totalR
             <?php if(count($images) > 1): ?>
             <div class="hidden md:flex gap-4 mt-6 overflow-x-auto pb-4 custom-scrollbar">
                 <?php foreach($images as $index => $img): ?>
-                <button onclick="productSwiper.slideTo(<?php echo $index; ?>)" class="w-20 h-20 rounded-xl bg-[#F8F9FA] border-2 border-transparent hover:border-primary focus:border-primary transition-colors flex-shrink-0 flex items-center justify-center overflow-hidden">
+                <button onclick="productSwiper.slideTo(<?php echo $index; ?>)" onmouseenter="productSwiper.slideTo(<?php echo $index; ?>)" class="w-20 h-20 rounded-xl bg-[#F8F9FA] border-2 border-transparent hover:border-primary focus:border-primary transition-colors flex-shrink-0 flex items-center justify-center overflow-hidden">
                     <img src="../assets/uploads/products/<?php echo htmlspecialchars($img['image_path']); ?>" class="w-full h-full object-contain mix-blend-multiply p-2">
                 </button>
                 <?php endforeach; ?>
