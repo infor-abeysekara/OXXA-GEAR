@@ -31,7 +31,11 @@ $imgStmt->execute([$product_id]);
 $images = $imgStmt->fetchAll();
 
 // Fetch Variants
-$varStmt = $pdo->prepare("SELECT * FROM product_variants WHERE product_id = ? ORDER BY price ASC");
+$varStmt = $pdo->prepare("SELECT cs.id, pc.color_name as color, cs.size, cs.selling_price as price, cs.qty, pc.thumbnail_path
+                          FROM color_sizes cs 
+                          JOIN product_colors pc ON cs.color_id = pc.id 
+                          WHERE pc.product_id = ? 
+                          ORDER BY cs.selling_price ASC");
 $varStmt->execute([$product_id]);
 $variants = $varStmt->fetchAll();
 

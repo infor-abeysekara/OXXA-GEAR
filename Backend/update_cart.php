@@ -38,10 +38,10 @@ try {
             // Check stock first
             $stmt = $conn->prepare("
                 SELECT c.product_id, c.variant_id, 
-                       p.total_qty as product_stock, pv.qty as variant_stock
+                       p.total_qty as product_stock, cs.qty as variant_stock
                 FROM cart c
                 JOIN products p ON c.product_id = p.id
-                LEFT JOIN product_variants pv ON c.variant_id = pv.id
+                LEFT JOIN color_sizes cs ON c.variant_id = cs.id
                 WHERE c.id = ? AND c.user_id = ?
             ");
             $stmt->bind_param("ii", $cart_id, $user_id);

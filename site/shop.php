@@ -75,8 +75,8 @@ $total_pages = ceil($total_items / $limit);
 
 // Get items
 $query = "SELECT p.*, 
-                 COALESCE((SELECT MIN(ps.price) FROM product_variants ps WHERE ps.product_id = p.id AND ps.qty > 0 AND ps.price > 0), p.base_price) as lowest_price,
-                 (SELECT SUM(ps.qty) FROM product_variants ps WHERE ps.product_id = p.id) as var_qty,
+                 COALESCE((SELECT MIN(cs.selling_price) FROM color_sizes cs JOIN product_colors pc ON pc.id = cs.color_id WHERE pc.product_id = p.id AND cs.qty > 0 AND cs.selling_price > 0), p.base_price) as lowest_price,
+                 (SELECT SUM(cs.qty) FROM color_sizes cs JOIN product_colors pc ON pc.id = cs.color_id WHERE pc.product_id = p.id) as var_qty,
                  (SELECT image_path FROM product_images pi WHERE pi.product_id = p.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as image,
                  (SELECT image_path FROM product_images pi WHERE pi.product_id = p.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1 OFFSET 1) as hover_image,
                  (SELECT name FROM brands b WHERE b.id = p.brand_id) as brand_name,

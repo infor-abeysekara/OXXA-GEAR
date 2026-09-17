@@ -14,7 +14,39 @@ $admin_image = $_SESSION['profile_image'] ?? '';
         width: 250px;
         z-index: 1000;
         box-shadow: 2px 0 15px rgba(0,0,0,0.5);
+        transition: width 0.3s ease;
     }
+    .admin-sidebar.collapsed {
+        width: 80px;
+    }
+    
+    /* Global class for main-content transition */
+    body.sidebar-collapsed .main-content {
+        margin-left: 80px !important;
+    }
+
+    .sidebar-toggle-btn {
+        position: absolute;
+        top: 30px;
+        right: -15px;
+        width: 30px;
+        height: 30px;
+        background: #0066FF;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 1001;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        transition: transform 0.3s ease;
+        border: 2px solid white;
+    }
+    .admin-sidebar.collapsed .sidebar-toggle-btn {
+        transform: rotate(180deg);
+    }
+
     .admin-sidebar .nav-link {
         color: rgba(255, 255, 255, 0.6);
         border-radius: 10px;
@@ -22,6 +54,10 @@ $admin_image = $_SESSION['profile_image'] ?? '';
         padding: 10px 15px;
         transition: all 0.3s ease;
         font-weight: 500;
+        display: flex;
+        align-items: center;
+        white-space: nowrap;
+        overflow: hidden;
     }
     .admin-sidebar .nav-link:hover, .admin-sidebar .nav-link.active {
         background: rgba(0, 102, 255, 0.1);
@@ -30,17 +66,19 @@ $admin_image = $_SESSION['profile_image'] ?? '';
     }
     .admin-sidebar .nav-link i {
         width: 25px;
+        text-align: center;
+        flex-shrink: 0;
     }
-    @media (max-width: 768px) {
-        .admin-sidebar {
-            width: 100%;
-            height: auto;
-            position: relative;
-            min-height: auto;
-            border-left: none;
-            border-top: 4px solid #0066FF;
-        }
+    
+    .admin-sidebar.collapsed .nav-link {
+        padding: 10px;
+        margin: 5px 10px;
+        justify-content: center;
     }
+    .admin-sidebar.collapsed .nav-text {
+        display: none;
+    }
+
     .sidebar-profile {
         display: flex;
         align-items: center;
@@ -51,16 +89,30 @@ $admin_image = $_SESSION['profile_image'] ?? '';
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
         cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        overflow: hidden;
     }
+    .admin-sidebar.collapsed .sidebar-profile {
+        padding: 10px;
+        margin: 10px;
+        justify-content: center;
+    }
+    .admin-sidebar.collapsed .sidebar-profile .name,
+    .admin-sidebar.collapsed .sidebar-profile .fa-chevron-down {
+        display: none;
+    }
+
     .sidebar-profile:hover {
         background: rgba(255, 255, 255, 0.1);
     }
-    .sidebar-profile img {
+    .sidebar-profile img, .sidebar-profile .profile-initial {
         width: 35px;
         height: 35px;
         border-radius: 50%;
         object-fit: cover;
         border: 2px solid #0066FF;
+        flex-shrink: 0;
     }
     .sidebar-profile .name {
         font-weight: 600;
@@ -70,6 +122,20 @@ $admin_image = $_SESSION['profile_image'] ?? '';
         overflow: hidden;
         text-overflow: ellipsis;
     }
+    
+    .sidebar-logo {
+        transition: all 0.3s ease;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+    .admin-sidebar.collapsed .sidebar-logo img {
+        width: 40px !important;
+    }
+    .admin-sidebar.collapsed .sidebar-logo h5, 
+    .admin-sidebar.collapsed .sidebar-logo small {
+        display: none;
+    }
+
     .sidebar-dropdown-menu {
         background: #1A1A1A !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -93,15 +159,38 @@ $admin_image = $_SESSION['profile_image'] ?? '';
         background: rgba(220, 53, 69, 0.1);
         color: #ff6b6b !important;
     }
-    .sidebar-dropdown-menu .dropdown-divider {
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    
+    @media (max-width: 768px) {
+        .admin-sidebar {
+            width: 100%;
+            height: auto;
+            position: relative;
+            min-height: auto;
+            border-left: none;
+            border-top: 4px solid #0066FF;
+        }
+        .sidebar-toggle-btn {
+            display: none;
+        }
+        .admin-sidebar.collapsed {
+            width: 100%;
+        }
+        .admin-sidebar.collapsed .nav-text,
+        .admin-sidebar.collapsed .sidebar-profile .name,
+        .admin-sidebar.collapsed .sidebar-logo h5 {
+            display: block;
+        }
     }
 </style>
 
-<nav class="admin-sidebar">
-    <div class="p-4 text-center">
+<nav class="admin-sidebar" id="adminSidebar">
+    <div class="sidebar-toggle-btn" id="sidebarInlineToggle">
+        <i class="fas fa-chevron-left"></i>
+    </div>
+
+    <div class="p-4 text-center sidebar-logo">
         <a href="dashboard.php" class="text-decoration-none">
-            <img src="../image/oxxa_gear_logo.png" alt="OXXA GEAR Logo" class="img-fluid mb-2" style="width: 140px; filter: brightness(0) invert(1);">
+            <img src="../image/oxxa_gear_logo.png" alt="OXXA GEAR Logo" class="img-fluid mb-2" style="width: 140px; filter: brightness(0) invert(1); transition: width 0.3s ease;">
             <h5 class="fw-bold text-white mb-0 mt-2">OXXA GEAR</h5>
             <small style="color: #0066FF; font-weight: 600; letter-spacing: 1px;">CONTROL CENTER</small>
         </a>
@@ -113,7 +202,7 @@ $admin_image = $_SESSION['profile_image'] ?? '';
             <?php if(!empty($admin_image)): ?>
                 <img src="../assets/uploads/profiles/<?php echo htmlspecialchars($admin_image); ?>" alt="Profile">
             <?php else: ?>
-                <div style="width: 35px; height: 35px; border-radius: 50%; background: #0066FF; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">
+                <div class="profile-initial" style="background: #0066FF; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">
                     <?php echo strtoupper(substr($admin_name, 0, 1)); ?>
                 </div>
             <?php endif; ?>
@@ -138,48 +227,75 @@ $admin_image = $_SESSION['profile_image'] ?? '';
     <ul class="nav flex-column mt-3">
         <li class="nav-item">
             <a class="nav-link <?php echo ($current_page == 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php">
-                <i class="fas fa-tachometer-alt"></i> Dashboard
+                <i class="fas fa-tachometer-alt"></i> <span class="nav-text ms-2">Dashboard</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?php echo ($current_page == 'manage-users.php') ? 'active' : ''; ?>" href="manage-users.php">
-                <i class="fas fa-users"></i> Manage Users
+                <i class="fas fa-users"></i> <span class="nav-text ms-2">Manage Users</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?php echo ($current_page == 'manage-products.php') ? 'active' : ''; ?>" href="manage-products.php">
-                <i class="fas fa-box"></i> Manage Products
+                <i class="fas fa-box"></i> <span class="nav-text ms-2">Manage Products</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?php echo ($current_page == 'finance.php') ? 'active' : ''; ?>" href="finance.php">
-                <i class="fas fa-chart-line"></i> Finance Analytics
+                <i class="fas fa-chart-line"></i> <span class="nav-text ms-2">Finance Analytics</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?php echo ($current_page == 'business-registrations.php') ? 'active' : ''; ?>" href="business-registrations.php">
-                <i class="fas fa-building"></i> Registrations
+                <i class="fas fa-building"></i> <span class="nav-text ms-2">Registrations</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?php echo ($current_page == 'manage-coupons.php') ? 'active' : ''; ?>" href="manage-coupons.php">
-                <i class="fas fa-tags"></i> Manage Coupons
+                <i class="fas fa-tags"></i> <span class="nav-text ms-2">Manage Coupons</span>
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?php echo ($current_page == 'manage-reviews.php') ? 'active' : ''; ?>" href="manage-reviews.php">
-                <i class="fas fa-star"></i> Manage Reviews
+                <i class="fas fa-star"></i> <span class="nav-text ms-2">Manage Reviews</span>
             </a>
         </li>
         <li class="nav-item mt-2">
             <a class="nav-link <?php echo ($current_page == 'settings.php') ? 'active' : ''; ?>" href="settings.php">
-                <i class="fas fa-cog"></i> Settings
+                <i class="fas fa-cog"></i> <span class="nav-text ms-2">Settings</span>
             </a>
         </li>
         <li class="nav-item mt-4">
             <a class="nav-link text-warning" href="../index.php" target="_blank">
-                <i class="fas fa-globe"></i> View Website
+                <i class="fas fa-globe"></i> <span class="nav-text ms-2">View Website</span>
             </a>
         </li>
     </ul>
 </nav>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebarInlineToggle = document.getElementById('sidebarInlineToggle');
+    const adminSidebar = document.getElementById('adminSidebar');
+    
+    // Check local storage for sidebar state
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+        adminSidebar.classList.add('collapsed');
+        document.body.classList.add('sidebar-collapsed');
+    }
+
+    if (sidebarInlineToggle) {
+        sidebarInlineToggle.addEventListener('click', function() {
+            adminSidebar.classList.toggle('collapsed');
+            document.body.classList.toggle('sidebar-collapsed');
+            
+            // Save state
+            if (adminSidebar.classList.contains('collapsed')) {
+                localStorage.setItem('sidebarCollapsed', 'true');
+            } else {
+                localStorage.setItem('sidebarCollapsed', 'false');
+            }
+        });
+    }
+});
+</script>

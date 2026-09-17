@@ -110,12 +110,12 @@ try {
 
     if (!empty($variant_id)) {
         debugLog("Checking variant-specific pricing for variant: $variant_id");
-        $sizeQuery = "SELECT price, qty FROM product_variants WHERE id = ? AND product_id = ?";
+        $sizeQuery = "SELECT cs.selling_price as price, cs.qty FROM color_sizes cs JOIN product_colors pc ON cs.color_id = pc.id WHERE cs.id = ? AND pc.product_id = ?";
         $sizeStmt = $conn->prepare($sizeQuery);
         $sizeStmt->bind_param("ii", $variant_id, $product_id);
     } elseif ($size !== 'Standard') {
         debugLog("Checking size-specific pricing for size: $size");
-        $sizeQuery = "SELECT price, qty FROM product_variants WHERE product_id = ? AND size = ?";
+        $sizeQuery = "SELECT cs.selling_price as price, cs.qty FROM color_sizes cs JOIN product_colors pc ON cs.color_id = pc.id WHERE pc.product_id = ? AND cs.size = ?";
         $sizeStmt = $conn->prepare($sizeQuery);
         $sizeStmt->bind_param("is", $product_id, $size);
     }
@@ -173,7 +173,7 @@ try {
         }
         $checkCartStmt->bind_param("iii", $user_id, $product_id, $variant_id);
     } else {
-        $checkCartQuery = "SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ? AND variant_id = (SELECT id FROM product_variants WHERE product_id = ? AND size = ? LIMIT 1)";
+        $checkCartQuery = "SELECT id, quantity FROM cart WHERE user_id = ? AND product_id = ? AND variant_id = (SELECT cs.id FROM color_sizes cs JOIN product_colors pc ON cs.color_id = pc.id WHERE pc.product_id = ? AND cs.size = ? LIMIT 1)";
         $checkCartStmt = $conn->prepare($checkCartQuery);
         if (!$checkCartStmt) {
             debugLog("Failed to prepare cart check query: " . $conn->error);
@@ -245,7 +245,7 @@ try {
             }
             $insertStmt->bind_param("iiii", $user_id, $product_id, $variant_id, $quantity);
         } else {
-            $insertQuery = "INSERT INTO cart (user_id, product_id, variant_id, quantity, added_at) VALUES (?, ?, (SELECT id FROM product_variants WHERE product_id = ? AND size = ? LIMIT 1), ?, NOW())";
+            $insertQuery = "INSERT INTO cart (user_id, product_id, variant_id, quantity, added_at) VALUES (?, ?, (SELECT cs.id FROM color_sizes cs JOIN product_colors pc ON cs.color_id = pc.id WHERE pc.product_id = ? AND cs.size = ? LIMIT 1), ?, NOW())";
             $insertStmt = $conn->prepare($insertQuery);
             if (!$insertStmt) {
                 debugLog("Failed to prepare insert query: " . $conn->error);

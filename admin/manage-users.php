@@ -12,13 +12,20 @@ if(!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
 if(isset($_POST['action']) && isset($_POST['user_id'])) {
     $user_id = $_POST['user_id'];
     $action = $_POST['action'];
+    $prod_query = null;
     
     if($action == 'approve') {
         $update_query = "UPDATE users SET is_approved = 1 WHERE id = ?";
+        // Optionally, reactivate their suspended products if they were just suspended by the system
+        $prod_query = "UPDATE products SET status = 'active' WHERE seller_id = ? AND status = 'suspended'";
     } elseif($action == 'suspend') {
         $update_query = "UPDATE users SET is_approved = 0 WHERE id = ?";
+        // Hide their products
+        $prod_query = "UPDATE products SET status = 'suspended' WHERE seller_id = ? AND status = 'active'";
     } elseif($action == 'delete') {
         $update_query = "DELETE FROM users WHERE id = ?";
+        // Delete their products
+        $prod_query = "DELETE FROM products WHERE seller_id = ?";
     }
     
     if(isset($update_query)) {
@@ -26,6 +33,11 @@ if(isset($_POST['action']) && isset($_POST['user_id'])) {
         $stmt->bind_param("i", $user_id);
         
         if($stmt->execute()) {
+            if($prod_query) {
+                $prod_stmt = $conn->prepare($prod_query);
+                $prod_stmt->bind_param("i", $user_id);
+                $prod_stmt->execute();
+            }
             $success_message = ucfirst($action) . " action completed successfully!";
         } else {
             $error_message = "Failed to " . $action . " user.";

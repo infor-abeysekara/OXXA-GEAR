@@ -13,11 +13,12 @@ $user_id = $_SESSION['userid'];
 // Fetch cart items
 $query = "
     SELECT c.id as cart_id, c.quantity, p.id as product_id, p.name, p.base_price, 
-           pv.id as variant_id, pv.size, pv.color, pv.price as variant_price, pv.qty as stock,
+           cs.id as variant_id, cs.size, pc.color_name as color, cs.selling_price as variant_price, cs.qty as stock,
            (SELECT image_path FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC LIMIT 1) as image
     FROM cart c
     JOIN products p ON c.product_id = p.id
-    LEFT JOIN product_variants pv ON c.variant_id = pv.id
+    LEFT JOIN color_sizes cs ON c.variant_id = cs.id
+    LEFT JOIN product_colors pc ON cs.color_id = pc.id
     WHERE c.user_id = ?
 ";
 $stmt = $conn->prepare($query);

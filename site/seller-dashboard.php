@@ -1,14 +1,13 @@
 <?php
 session_start();
-$page_title = 'Seller Dashboard - OXXA GEAR';
-include('../include/header.php');
-include('../include/connection.php');
 
 // Check if user is logged in and is a seller
 if (!isset($_SESSION['userid']) || $_SESSION['type'] != 'seller') {
     header('Location: login.php');
     exit();
 }
+
+include('../include/connection.php');
 
 // Check business verification status
 $stmt = $pdo->prepare("SELECT * FROM seller_profiles WHERE user_id = ?");
@@ -20,6 +19,10 @@ if (!$business || $business['is_approved'] == 0) {
     header('Location: business-registration.php');
     exit();
 }
+
+$page_title = 'Seller Dashboard - OXXA GEAR';
+include('../include/header.php');
+
 
 $tab = isset($_GET['tab']) ? $_GET['tab'] : 'dashboard';
 

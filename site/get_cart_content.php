@@ -12,10 +12,11 @@ $query = "SELECT c.id as Id, c.product_id as PID, c.quantity as Qty, c.added_at 
                  p.name as pname, (SELECT name FROM brands WHERE id = p.brand_id) as brand, p.base_price as price, 
                  (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image,
                  p.total_qty as stock_qty,
-                 v.size as Size, v.price as var_price, v.qty as var_stock
+                 cs.size as Size, cs.selling_price as var_price, cs.qty as var_stock
           FROM cart c 
           JOIN products p ON c.product_id = p.id 
-          LEFT JOIN product_variants v ON c.variant_id = v.id
+          LEFT JOIN color_sizes cs ON c.variant_id = cs.id
+          LEFT JOIN product_colors pc ON cs.color_id = pc.id
           WHERE c.user_id = ? 
           ORDER BY c.added_at DESC";
 

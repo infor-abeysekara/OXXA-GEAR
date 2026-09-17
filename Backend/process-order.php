@@ -45,11 +45,11 @@ try {
         $cartStmt = $pdo->prepare("
             SELECT c.product_id, c.variant_id, c.quantity,
                    p.name, p.base_price, p.cost_price, p.seller_id,
-                   v.size, v.price as variant_price,
+                   cs.size, cs.selling_price as variant_price,
                    (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image_path
             FROM cart c
             JOIN products p ON c.product_id = p.id
-            LEFT JOIN product_variants v ON c.variant_id = v.id
+            LEFT JOIN color_sizes cs ON c.variant_id = cs.id
             WHERE c.user_id = ?
         ");
         $cartStmt->execute([$user_id]);
@@ -133,11 +133,11 @@ try {
 
                 // Update product stock
                 if ($item['variant_id']) {
-                    $stockStmt = $pdo->prepare("UPDATE product_variants SET qty = qty - ? WHERE id = ?");
+                    $stockStmt = $pdo->prepare("UPDATE color_sizes SET qty = qty - ? WHERE id = ?");
                     $stockStmt->execute([$item['quantity'], $item['variant_id']]);
                     
                     // Check if stock is low
-                    $checkStock = $pdo->prepare("SELECT qty FROM product_variants WHERE id = ?");
+                    $checkStock = $pdo->prepare("SELECT qty FROM color_sizes WHERE id = ?");
                     $checkStock->execute([$item['variant_id']]);
                     if ($stockRow = $checkStock->fetch(PDO::FETCH_ASSOC)) {
                         if ($stockRow['qty'] > 0 && $stockRow['qty'] <= 5) {

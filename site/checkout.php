@@ -23,11 +23,11 @@ $user = $user_result->fetch_assoc();
 $cartStmt = $pdo->prepare("
     SELECT c.product_id, c.variant_id, c.quantity as qty,
            p.name as pname, p.base_price,
-           v.size, v.price as variant_price,
+           cs.size, cs.selling_price as variant_price,
            (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
     FROM cart c
     JOIN products p ON c.product_id = p.id
-    LEFT JOIN product_variants v ON c.variant_id = v.id
+    LEFT JOIN color_sizes cs ON c.variant_id = cs.id
     WHERE c.user_id = ?
 ");
 $cartStmt->execute([$user_id]);
