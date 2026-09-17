@@ -466,12 +466,12 @@ $trueToSizePct = $totalReviews > 0 ? round(($fitCounts['True to Size'] / $totalR
                         <button type="button" onclick="updateQty(1)" class="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-navy transition-colors font-bold"><i class="fas fa-plus text-xs"></i></button>
                     </div>
                     
-                    <button onclick="addToCart()" class="flex-1 bg-navy hover:bg-black text-white rounded-xl font-black uppercase tracking-widest text-sm shadow-xl shadow-black/10 transition-all flex items-center justify-center gap-3">
-                    <i class="fas fa-shopping-bag"></i> Add to Cart
+                    <button id="addToCartDesktopBtn" onclick="addToCart(this)" class="flex-1 bg-navy hover:bg-black text-white rounded-xl font-black uppercase tracking-widest text-sm shadow-xl shadow-black/10 transition-all flex items-center justify-center gap-3">
+                    <i class="fas fa-shopping-bag"></i> <span>Add to Cart</span>
                 </button>
             </div>
-            <button class="w-full h-14 bg-primary hover:bg-blue-700 text-white rounded-xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/30 transition-all flex items-center justify-center">
-                Buy It Now
+            <button id="buyNowDesktopBtn" onclick="buyNow(this)" class="w-full h-14 bg-primary hover:bg-blue-700 text-white rounded-xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/30 transition-all flex items-center justify-center">
+                <span>Buy It Now</span>
             </button>
             
             <!-- Trust Badges -->
@@ -565,7 +565,7 @@ $trueToSizePct = $totalReviews > 0 ? round(($fitCounts['True to Size'] / $totalR
         <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate mb-0.5"><?php echo htmlspecialchars($product['name']); ?></div>
         <div class="text-lg font-black text-navy truncate" id="mobileStickyPrice">Rs. <?php echo number_format($lowestPrice, 0); ?></div>
     </div>
-    <button onclick="addToCart()" class="bg-navy hover:bg-black text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-sm shadow-lg shadow-black/10 shrink-0">Add to Cart</button>
+    <button id="addToCartMobileBtn" onclick="addToCart(this)" class="bg-navy hover:bg-black text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest text-sm shadow-lg shadow-black/10 shrink-0 flex items-center gap-2"><span>Add to Cart</span></button>
 </div>
 
 <!-- Swiper JS -->
@@ -750,87 +750,126 @@ $trueToSizePct = $totalReviews > 0 ? round(($fitCounts['True to Size'] / $totalR
         }
     });
 
-    function addToCart() {
-        const productId = <?php echo $product_id; ?>;
-        
-        // Validation for variants
+    function validateSelection() {
         <?php if(!empty($variants)): ?>
-        if(!selectedSize) {
-            // Add shake animation to size container
-            const container = document.getElementById('variantContainer');
+        <?php if($isTwoStep): ?>
+        if(!selectedColor) {
+            const container = document.getElementById('selectedColorLabel').parentElement.nextElementSibling;
             container.classList.add('animate-[shake_0.5s_ease-in-out]');
+            container.querySelectorAll('button').forEach(b => b.classList.add('border-red-500'));
             setTimeout(() => {
                 container.classList.remove('animate-[shake_0.5s_ease-in-out]');
+                container.querySelectorAll('button').forEach(b => b.classList.remove('border-red-500'));
             }, 500);
+            return 'Please select a color';
+        }
+        <?php endif; ?>
+        if(!selectedSize && selectedSize !== 'Standard') {
+            const container = document.getElementById('sizeContainer') || document.getElementById('variantContainer');
+            container.classList.add('animate-[shake_0.5s_ease-in-out]');
+            container.querySelectorAll('button:not(.cursor-not-allowed)').forEach(b => b.classList.add('border-red-500'));
+            setTimeout(() => {
+                container.classList.remove('animate-[shake_0.5s_ease-in-out]');
+                container.querySelectorAll('button:not(.cursor-not-allowed)').forEach(b => b.classList.remove('border-red-500'));
+            }, 500);
+            return 'Please select a variant';
+        }
+        <?php endif; ?>
+        return null;
+    }
 
-            const Toast = Swal.mixin({
+    function addToCart(btn) {
+        const error = validateSelection();
+        if (error) {
+            Swal.fire({
+                icon: 'warning',
+                title: error,
                 toast: true,
                 position: 'top-end',
                 showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true
-            });
-            Toast.fire({
-                icon: 'warning',
-                title: 'Please select a size'
+                timer: 3000
             });
             return;
         }
-        <?php endif; ?>
 
-        // Setup AJAX using fetch
+        const productId = <?php echo $product_id; ?>;
+        
+        // Button loading state
+        const originalHtml = btn.innerHTML;
+        const originalClass = btn.className;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>ADDING...</span>';
+        btn.disabled = true;
+
         const formData = new FormData();
         formData.append('product_id', productId);
-        formData.append('variant_id', selectedVariantId);
-        formData.append('size', selectedSize); // Keep for backwards compatibility
+        formData.append('variant_id', selectedVariantId || '');
         formData.append('quantity', currentQty);
 
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 2000,
-            timerProgressBar: true
-        });
-
-        // Backend/add_to_cart.php will be fixed in a future task. Currently using demo functionality
+        // Call the backend API
         fetch('../Backend/add_to_cart.php', {
             method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            },
             body: formData
         })
         .then(response => response.json())
         .then(data => {
             if(data.success) {
-                // Update badge
+                // Success state
+                btn.innerHTML = '<i class="fas fa-check"></i> <span>ADDED</span>';
+                btn.className = btn.className.replace('bg-navy', 'bg-green-500').replace('hover:bg-black', 'hover:bg-green-600');
+                
+                // Update badge with animation
                 const badges = document.querySelectorAll('.cart-badge');
                 badges.forEach(b => {
-                    b.innerText = parseInt(b.innerText || 0) + currentQty;
+                    b.innerText = data.cart_count;
+                    b.classList.remove('hidden');
+                    b.classList.add('animate__animated', 'animate__bounceIn');
+                    setTimeout(() => b.classList.remove('animate__animated', 'animate__bounceIn'), 1000);
                 });
                 
-                Toast.fire({
-                    icon: 'success',
-                    title: 'Added to cart'
-                });
+                showToast(`Added to cart - ${selectedSize || 'Standard'}`, 'success');
                 
-                // Mini cart drawer slide up (call header.php toggle if it exists)
-                if(typeof toggleCartSidebar === 'function') toggleCartSidebar();
+                // Refresh and show mini cart if available
+                if(typeof toggleCartSidebar === 'function') {
+                    // Ideally we'd refresh the sidebar content here via fetch
+                    toggleCartSidebar();
+                }
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.className = originalClass;
+                    btn.disabled = false;
+                }, 1000);
             } else {
-                Toast.fire({
-                    icon: 'error',
-                    title: data.message || 'Something went wrong!'
-                });
+                showToast(data.message || 'Error adding to cart', 'error');
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
             }
         })
-        .catch(error => {
-            console.error('Error:', error);
-            Toast.fire({
-                icon: 'success',
-                title: 'Added to cart (Demo)'
-            });
+        .catch(err => {
+            showToast('Network error', 'error');
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
         });
+    }
+
+    function buyNow(btn) {
+        const error = validateSelection();
+        if (error) {
+            Swal.fire({
+                icon: 'warning',
+                title: error,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+            return;
+        }
+        
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>REDIRECTING...</span>';
+        btn.disabled = true;
+        
+        window.location.href = `checkout.php?buy_now=${selectedVariantId || '0'}&qty=${currentQty}`;
     }
 </script>
 

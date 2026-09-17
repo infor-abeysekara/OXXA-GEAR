@@ -56,7 +56,7 @@ try {
             "Your order #{$orderId} for {$orderData['pname']} has been confirmed by the seller." :
             "Your order #{$orderId} for {$orderData['pname']} has been rejected by the seller.";
         
-        addNotification($conn, $orderData['user_id'], $message, 'order');
+        addNotification($conn, $orderData['user_id'], $message, 'order', 'Orders', 'site/my-orders.php');
         
         echo json_encode([
             'success' => true, 

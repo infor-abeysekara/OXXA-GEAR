@@ -1,6 +1,7 @@
 <?php
 session_start();
 include_once("../include/connection.php");
+include_once("../include/functions.php");
 
 // Check if admin is logged in
 if(!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
@@ -49,6 +50,21 @@ if(isset($_POST['action']) && isset($_POST['product_id'])) {
         
         if($stmt->execute()) {
             $success_message = ucfirst($action) . " action completed successfully!";
+            
+            // Get product name and seller ID
+            $p_query = "SELECT p.name, u.user_code FROM products p JOIN users u ON p.seller_id = u.id WHERE p.id = ?";
+            $p_stmt = $conn->prepare($p_query);
+            $p_stmt->bind_param("i", $product_id);
+            $p_stmt->execute();
+            $p_res = $p_stmt->get_result();
+            if ($p_row = $p_res->fetch_assoc()) {
+                if ($action == 'approve') {
+                    addNotification($conn, $p_row['user_code'], "Product Approved! - Your product {$p_row['name']} has been approved and is now live on the store.", 'info', 'Business', 'site/product-details.php?id=' . $product_id);
+                } elseif ($action == 'suspend') {
+                    addNotification($conn, $p_row['user_code'], "Product Suspended - Your product {$p_row['name']} has been suspended from the store.", 'warning', 'Business', 'site/seller-dashboard.php');
+                }
+            }
+            
         } else {
             $error_message = "Failed to " . $action . " product.";
         }

@@ -1,6 +1,7 @@
 <?php
 session_start();
 include('../include/connection.php');
+include('../include/functions.php');
 
 if (!isset($_SESSION['userid']) || $_SESSION['user_type'] != 'admin') {
     header('Location: ../index.php');
@@ -15,6 +16,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
     if ($action == 'approve') {
         $stmt = $pdo->prepare("UPDATE reviews SET status = 'approved' WHERE id = ?");
         $stmt->execute([$review_id]);
+        
+        // Notify seller about the review
+        $r_stmt = $pdo->prepare("SELECT r.rating, r.review, r.user_id, p.seller_id, p.name as product_name, u.first_name, r.product_id FROM reviews r JOIN products p ON r.product_id = p.id JOIN users u ON r.user_id = u.id WHERE r.id = ?");
+        $r_stmt->execute([$review_id]);
+        if ($r = $r_stmt->fetch(PDO::FETCH_ASSOC)) {
+            // Note: addNotification needs mysqli connection. We have $mysql from connection.php
+            addNotification($mysql, $r['seller_id'], "New {$r['rating']}★ Review - \"{$r['review']}\" on {$r['product_name']} by {$r['first_name']}", 'info', 'Reviews', 'site/product-details.php?id=' . $r['product_id']);
+            
+            // Create a Rs. 200 coupon for the buyer as an incentive
+            $coupon_code = 'RVW-' . strtoupper(substr(md5(uniqid()), 0, 6));
+            $stmt_coupon = $pdo->prepare("INSERT INTO coupons (code, discount_type, discount_value, min_order_amount, usage_limit, is_active, expiry_date) VALUES (?, 'fixed', 200, 0, 1, 1, DATE_ADD(CURDATE(), INTERVAL 30 DAY))");
+            $stmt_coupon->execute([$coupon_code]);
+            
+            // Notify the buyer about their coupon
+            addNotification($mysql, $r['user_id'], "Your review was approved! Enjoy Rs. 200 off your next order with code: {$coupon_code}", 'success', 'System', 'site/shop.php');
+        }
+        
     } elseif ($action == 'reject') {
         $stmt = $pdo->prepare("UPDATE reviews SET status = 'rejected' WHERE id = ?");
         $stmt->execute([$review_id]);

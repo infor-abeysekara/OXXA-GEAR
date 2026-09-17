@@ -251,14 +251,25 @@ if (isset($_SESSION['userid'])) {
             </div>
 
             <!-- Notifications (Hidden on mobile) -->
-            <a href="<?php echo $base_path; ?>site/notifications.php" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
-              <i class="far fa-bell text-lg group-hover:text-primary transition-colors"></i>
-              <?php if ($notificationCount > 0): ?>
-                <span class="absolute top-0 right-0 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white">
+            <div class="relative dropdown hidden lg:block">
+              <button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group dropdown-toggle" 
+                      data-bs-toggle="dropdown" aria-expanded="false" id="notificationDropdown">
+                <i class="far fa-bell text-lg group-hover:text-primary transition-colors"></i>
+                <span id="desktopNotificationBadge" class="absolute top-0 right-0 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white <?php echo $notificationCount > 0 ? '' : 'hidden'; ?>">
                   <?php echo $notificationCount > 99 ? '99+' : $notificationCount; ?>
                 </span>
-              <?php endif; ?>
-            </a>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-xl border border-gray-100 mt-2 rounded-2xl p-0 min-w-[320px] max-w-[350px] overflow-hidden" aria-labelledby="notificationDropdown">
+                <div class="bg-gray-50 border-b border-gray-100 px-4 py-3 flex justify-between items-center">
+                    <span class="font-bold text-sm">Notifications</span>
+                    <a href="<?php echo $base_path; ?>site/notifications.php" class="text-xs text-primary font-medium hover:underline">View All</a>
+                </div>
+                <div id="notificationDropdownContent" class="max-h-[350px] overflow-y-auto">
+                    <!-- Notifications will be loaded here via JS -->
+                    <div class="p-4 text-center text-sm text-gray-500">Loading...</div>
+                </div>
+              </ul>
+            </div>
 
             <!-- Cart (Hidden on mobile, visible on desktop) -->
             <button onclick="toggleCartSidebar()" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
@@ -552,6 +563,65 @@ if (isset($_SESSION['userid'])) {
       function updateCartBadge(count) {
         document.getElementById('cartBadge').textContent = count;
       }
+
+      // Real-time Notification Polling
+      <?php if(isset($_SESSION['userid'])): ?>
+      function fetchNotifications() {
+        fetch('<?php echo $base_path; ?>site/api/get_notifications.php')
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              // Update badge
+              const desktopBadge = document.getElementById('desktopNotificationBadge');
+              if (desktopBadge) {
+                  if (data.count > 0) {
+                      desktopBadge.textContent = data.count > 99 ? '99+' : data.count;
+                      desktopBadge.classList.remove('hidden');
+                  } else {
+                      desktopBadge.classList.add('hidden');
+                  }
+              }
+
+              // Update dropdown content if it exists
+              const dropdownContent = document.getElementById('notificationDropdownContent');
+              if (dropdownContent) {
+                  if (data.notifications.length > 0) {
+                      let html = '';
+                      data.notifications.forEach(notif => {
+                          let iconClass = 'fa-info-circle text-blue-500';
+                          if (notif.type === 'success') iconClass = 'fa-check-circle text-green-500';
+                          else if (notif.type === 'warning') iconClass = 'fa-exclamation-circle text-orange-500';
+                          else if (notif.type === 'error') iconClass = 'fa-times-circle text-red-500';
+                          
+                          let bgClass = notif.is_read == 0 ? 'bg-blue-50' : 'bg-white';
+                          
+                          html += `
+                          <a href="<?php echo $base_path; ?>site/notifications.php" class="block px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors ${bgClass}">
+                              <div class="flex gap-3">
+                                  <div class="mt-0.5"><i class="fas ${iconClass}"></i></div>
+                                  <div>
+                                      <p class="text-sm text-gray-800 line-clamp-2 leading-snug">${notif.message}</p>
+                                      <span class="text-[10px] text-gray-400 font-medium uppercase mt-1 block">${notif.category || 'System'}</span>
+                                  </div>
+                              </div>
+                          </a>`;
+                      });
+                      dropdownContent.innerHTML = html;
+                  } else {
+                      dropdownContent.innerHTML = '<div class="p-4 text-center text-sm text-gray-500">No notifications yet</div>';
+                  }
+              }
+            }
+          })
+          .catch(error => console.error('Error fetching notifications:', error));
+      }
+
+      // Fetch immediately and then every 30 seconds
+      document.addEventListener('DOMContentLoaded', function() {
+          fetchNotifications();
+          setInterval(fetchNotifications, 30000);
+      });
+      <?php endif; ?>
     </script>
 
     <style>

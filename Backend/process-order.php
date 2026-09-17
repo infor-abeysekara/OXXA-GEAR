@@ -44,7 +44,7 @@ try {
         // Fetch Cart Items from NEW structure
         $cartStmt = $pdo->prepare("
             SELECT c.product_id, c.variant_id, c.quantity,
-                   p.name, p.base_price, p.cost_price,
+                   p.name, p.base_price, p.cost_price, p.seller_id,
                    v.size, v.price as variant_price,
                    (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image_path
             FROM cart c
@@ -135,6 +135,17 @@ try {
                 if ($item['variant_id']) {
                     $stockStmt = $pdo->prepare("UPDATE product_variants SET qty = qty - ? WHERE id = ?");
                     $stockStmt->execute([$item['quantity'], $item['variant_id']]);
+                    
+                    // Check if stock is low
+                    $checkStock = $pdo->prepare("SELECT qty FROM product_variants WHERE id = ?");
+                    $checkStock->execute([$item['variant_id']]);
+                    if ($stockRow = $checkStock->fetch(PDO::FETCH_ASSOC)) {
+                        if ($stockRow['qty'] > 0 && $stockRow['qty'] <= 5) {
+                            addNotification($mysql, $item['seller_id'], "Low Stock Alert! - {$item['name']} ({$item['size']}) - Only {$stockRow['qty']} left.", 'warning', 'Business', 'site/seller-products.php');
+                        } elseif ($stockRow['qty'] <= 0) {
+                            addNotification($mysql, $item['seller_id'], "Out of Stock! - {$item['name']} ({$item['size']}) is out of stock.", 'error', 'Business', 'site/seller-products.php');
+                        }
+                    }
                 }
                 
                 // Update total_qty in products table

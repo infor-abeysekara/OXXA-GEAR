@@ -356,10 +356,10 @@ if (!function_exists('uploadImage')) {
     }
 
     // Add notification with user validation
-    function addNotification($conn, $user_id, $message, $type = 'info')
+    function addNotification($conn, $user_id, $message, $type = 'info', $category = 'System', $action_url = null)
     {
         // First check if the target user exists
-        $checkQuery = "SELECT user_id FROM users WHERE user_id = ?";
+        $checkQuery = "SELECT id FROM users WHERE id = ?";
         $checkStmt = $conn->prepare($checkQuery);
         $checkStmt->bind_param("s", $user_id);
         $checkStmt->execute();
@@ -367,12 +367,12 @@ if (!function_exists('uploadImage')) {
         
         if ($checkResult->num_rows === 0) {
             // User doesn't exist, try to find any admin user
-            $adminQuery = "SELECT user_id FROM users WHERE type = 'admin' LIMIT 1";
+            $adminQuery = "SELECT id FROM users WHERE user_type = 'admin' LIMIT 1";
             $adminResult = mysqli_query($conn, $adminQuery);
             
             if ($adminResult && mysqli_num_rows($adminResult) > 0) {
                 $adminRow = mysqli_fetch_assoc($adminResult);
-                $user_id = $adminRow['user_id'];
+                $user_id = $adminRow['id'];
             } else {
                 // No admin found, skip notification
                 return false;
@@ -380,9 +380,9 @@ if (!function_exists('uploadImage')) {
         }
         
         // Now insert the notification
-        $query = "INSERT INTO notifications (user_id, message, type, created_at) VALUES (?, ?, ?, NOW())";
+        $query = "INSERT INTO notifications (user_id, message, type, category, action_url, created_at) VALUES (?, ?, ?, ?, ?, NOW())";
         $stmt = $conn->prepare($query);
-        $stmt->bind_param("sss", $user_id, $message, $type);
+        $stmt->bind_param("sssss", $user_id, $message, $type, $category, $action_url);
         return $stmt->execute();
     }
 

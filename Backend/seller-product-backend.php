@@ -38,10 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
 
     // Sum up variant quantities for total_qty from new structure
     $total_qty = 0;
-    if (isset($_POST['variant_qty']) && is_array($_POST['variant_qty'])) {
+    if (isset($_POST['variant_qty']) && is_array($_POST['variant_qty']) && count($_POST['variant_qty']) > 0) {
         foreach ($_POST['variant_qty'] as $qty) {
             $total_qty += (int)$qty;
         }
+    } else {
+        $total_qty = isset($_POST['total_qty']) ? (int)$_POST['total_qty'] : 0;
     }
 
     try {
@@ -130,10 +132,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
 
     // Sum up variant quantities
     $total_qty = 0;
-    if (isset($_POST['variant_qty']) && is_array($_POST['variant_qty'])) {
+    if (isset($_POST['variant_qty']) && is_array($_POST['variant_qty']) && count($_POST['variant_qty']) > 0) {
         foreach ($_POST['variant_qty'] as $qty) {
             $total_qty += (int)$qty;
         }
+    } else {
+        $total_qty = isset($_POST['total_qty']) ? (int)$_POST['total_qty'] : 0;
     }
 
     try {

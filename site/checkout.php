@@ -22,7 +22,7 @@ $user = $user_result->fetch_assoc();
 // Get cart items via PDO
 $cartStmt = $pdo->prepare("
     SELECT c.product_id, c.variant_id, c.quantity as qty,
-           p.name as pname, p.base_price, p.brand,
+           p.name as pname, p.base_price,
            v.size, v.price as variant_price,
            (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
     FROM cart c
@@ -107,7 +107,7 @@ include('../include/header.php');
                             <div class="flex-grow min-w-0">
                                 <h6 class="font-bold text-navy text-sm mb-1 truncate"><?php echo htmlspecialchars($item['pname']); ?></h6>
                                 <p class="text-xs text-slate mb-1">
-                                    <span class="uppercase tracking-wider"><?php echo htmlspecialchars($item['brand']); ?></span>
+                                    <span class="uppercase tracking-wider">Product</span>
                                     <?php if ($item['size'] != 'Standard'): ?>
                                         <span class="mx-1">•</span> <span class="bg-navy text-white px-2 py-0.5 rounded text-[10px]"><?php echo htmlspecialchars($item['size']); ?></span>
                                     <?php endif; ?>
@@ -480,12 +480,12 @@ include('../include/header.php');
                             text: 'Thank you for your purchase.',
                             icon: 'success',
                             confirmButtonColor: '#1677FF',
-                            confirmButtonText: 'Go to Home'
+                            confirmButtonText: 'View Order'
                         }).then(() => {
-                            goToHome();
+                            window.location.href = data.redirect;
                         });
                         
-                        setTimeout(goToHome, 3000);
+                        setTimeout(() => window.location.href = data.redirect, 3000);
                     } else {
                         if(typeof showToast === 'function') showToast(data.message, 'error'); else alert(data.message);
                         placeOrderBtn.disabled = false;

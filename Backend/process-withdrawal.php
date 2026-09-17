@@ -1,6 +1,7 @@
 <?php
 session_start();
 include_once("../include/connection.php");
+include_once("../include/functions.php");
 
 // Check if admin is logged in
 if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
@@ -47,6 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             $updateReq = $pdo->prepare("UPDATE withdrawal_requests SET status = 'Approved' WHERE id = ?");
             $updateReq->execute([$request_id]);
+            
+            addNotification($conn, $seller_id, "Withdrawal Approved - Your withdrawal request for Rs.{$amount} has been approved and is being processed.", 'info', 'Payouts', 'site/seller-dashboard.php');
 
         } elseif ($action == 'reject') {
             if ($req['status'] != 'Pending') {
@@ -61,6 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             // Update request status
             $updateReq = $pdo->prepare("UPDATE withdrawal_requests SET status = 'Rejected', reject_reason = ? WHERE id = ?");
             $updateReq->execute([$reject_reason, $request_id]);
+            
+            addNotification($conn, $seller_id, "Withdrawal Rejected - Your withdrawal request for Rs.{$amount} was rejected: {$reject_reason}", 'error', 'Payouts', 'site/seller-dashboard.php');
 
             // Release locked funds back to pending balance
             $updateWallet = $pdo->prepare("UPDATE seller_wallets SET locked_balance = locked_balance - ?, pending_balance = pending_balance + ? WHERE seller_id = ?");
@@ -103,6 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             // Update request status
             $updateReq = $pdo->prepare("UPDATE withdrawal_requests SET status = 'Paid', reference_no = ?, proof_image = ?, paid_at = NOW() WHERE id = ?");
             $updateReq->execute([$reference_no, $proof_path, $request_id]);
+            
+            addNotification($conn, $seller_id, "Payout Paid - Rs.{$amount} has been successfully paid to your bank account. Ref: {$reference_no}", 'success', 'Payouts', 'site/seller-dashboard.php');
 
             // Move funds from locked to paid
             $updateWallet = $pdo->prepare("UPDATE seller_wallets SET locked_balance = locked_balance - ?, paid_balance = paid_balance + ? WHERE seller_id = ?");

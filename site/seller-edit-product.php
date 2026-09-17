@@ -198,61 +198,124 @@ $existingImages = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
 
                 <!-- 3. Variant Table -->
-                <div>
-                    <div class="flex justify-between items-end mb-3">
+                <div class="mt-8">
+                    <div class="flex justify-between items-end mb-4">
                         <label class="block text-sm font-bold text-navy uppercase tracking-wide">Variant Table & Inventory</label>
-                        <button type="button" id="generateVariantsBtn" class="bg-navy hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase transition-colors hidden">
+                        <button type="button" id="generateVariantsBtn" class="bg-navy hover:bg-gray-800 text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm hidden">
                             <i class="fas fa-magic me-1"></i> Generate Table
                         </button>
                     </div>
 
-                    <div class="overflow-x-auto border border-gray-200 rounded-xl">
-                        <table class="w-full text-left border-collapse" id="variantTable">
-                            <thead>
-                                <tr class="bg-gray-50 border-b border-gray-200" id="variantTableHeader">
-                                    <th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Variant 1</th>
-                                    <th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Variant 2</th>
-                                    <th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-28">Buy Price</th>
-                                    <th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-28">Sell Price</th>
-                                    <th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24">Profit</th>
-                                    <th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-20">Qty</th>
-                                    <th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24">SKU</th>
-                                    <th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-8 text-center"></th>
+                    <!-- Bulk Actions -->
+                    <div id="bulkActionBar" class="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 flex flex-wrap items-end gap-4">
+                        <div class="flex-1 min-w-[120px]">
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Bulk Buy Price</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">Rs.</span>
+                                <input type="number" id="bulkBuyPrice" class="w-full bg-white border border-gray-200 rounded-lg py-2 pl-9 pr-3 text-sm focus:border-[#0066FF] outline-none">
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-[120px]">
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Bulk Sell Price</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">Rs.</span>
+                                <input type="number" id="bulkSellPrice" class="w-full bg-white border border-gray-200 rounded-lg py-2 pl-9 pr-3 text-sm focus:border-[#0066FF] outline-none">
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-[100px]">
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Bulk Qty</label>
+                            <input type="number" id="bulkQty" class="w-full bg-white border border-gray-200 rounded-lg py-2 px-3 text-sm focus:border-[#0066FF] outline-none">
+                        </div>
+                        <div>
+                            <button type="button" id="applyBulkBtn" class="bg-[#0066FF] hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-bold transition-colors h-[38px]">
+                                Apply to All
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Desktop Table Wrapper (Hidden on Mobile) -->
+                    <div class="hidden md:block overflow-x-auto border border-gray-200 rounded-xl custom-scrollbar" style="max-height: 500px;">
+                        <table class="w-full text-left border-collapse min-w-[1200px]" id="variantTable">
+                            <thead class="sticky top-0 z-10 bg-gray-50 shadow-[0_1px_0_rgba(229,231,235,1)]">
+                                <tr id="variantTableHeader">
+                                    <th class="p-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[120px]">Variant 1</th>
+                                    <th class="p-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[120px]">Variant 2</th>
+                                    <th class="p-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[140px]">Fit Type</th>
+                                    <th class="p-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[130px]">Buy Price</th>
+                                    <th class="p-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[130px]">Sell Price</th>
+                                    <th class="p-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[110px]">Profit</th>
+                                    <th class="p-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[120px]">Qty</th>
+                                    <th class="p-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[150px]">SKU</th>
+                                    <th class="p-4 text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[60px] text-center"></th>
                                 </tr>
                             </thead>
-                            <tbody id="variantTableBody" class="divide-y divide-gray-100">
+                            <tbody id="variantTableBody" class="divide-y divide-gray-100 bg-white">
                                 <?php if (empty($existingVariants)): ?>
                                 <tr>
-                                    <td colspan="8" class="p-6 text-center text-gray-400 text-sm font-medium" id="tableEmptyState">
+                                    <td colspan="9" class="p-8 text-center text-gray-400 text-sm font-medium" id="tableEmptyState">
                                         Select a Category first.
                                     </td>
                                 </tr>
                                 <?php else: ?>
-                                    <?php foreach ($existingVariants as $v): ?>
-                                    <tr>
-                                        <td class="p-3 border-b border-gray-100">
-                                            <input type="text" name="variant_size[]" value="<?= htmlspecialchars($v['size'] ?? $v['flavor'] ?? '') ?>" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none">
+                                    <?php foreach ($existingVariants as $v): 
+                                        $v1 = $v['size'] ?? $v['flavor'] ?? '';
+                                        $v2 = $v['color'] ?? $v['weight'] ?? '';
+                                        $vFit = $v['fit_type'] ?? '';
+                                        $profit = $v['price'] - $v['cost_price'];
+                                    ?>
+                                    <tr class="hover:bg-[#f0f7ff] transition-colors h-[60px] even:bg-[#fafafa]">
+                                        <td class="p-4 border-b border-gray-100">
+                                            <div class="inline-block bg-blue-50 text-[#0066FF] border border-[#0066FF]/20 px-3 py-1.5 rounded-lg text-xs font-black min-w-[80px] text-center">
+                                                <?= htmlspecialchars($v1 ?: '-') ?>
+                                                <input type="hidden" name="variant_size[]" value="<?= htmlspecialchars($v1) ?>">
+                                            </div>
                                         </td>
-                                        <td class="p-3 border-b border-gray-100">
-                                            <input type="text" name="variant_color[]" value="<?= htmlspecialchars($v['color'] ?? $v['weight'] ?? '') ?>" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none">
+                                        <td class="p-4 border-b border-gray-100">
+                                            <span class="text-xs font-bold text-navy"><?= htmlspecialchars($v2 ?: '-') ?></span>
+                                            <input type="hidden" name="variant_color[]" value="<?= htmlspecialchars($v2) ?>">
                                         </td>
-                                        <td class="p-3 border-b border-gray-100">
-                                            <input type="number" step="0.01" min="0" name="variant_cost_price[]" value="<?= $v['cost_price'] ?>" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none var-buy" oninput="calculateVarProfit(this)">
+                                        <td class="p-4 border-b border-gray-100">
+                                            <select name="variant_fit[]" class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 px-2 text-xs font-bold focus:border-[#0066FF] outline-none">
+                                                <option value="Regular" <?= $vFit==='Regular'?'selected':'' ?>>Regular</option>
+                                                <option value="Slim" <?= $vFit==='Slim'?'selected':'' ?>>Slim</option>
+                                                <option value="Oversized" <?= $vFit==='Oversized'?'selected':'' ?>>Oversized</option>
+                                                <option value="<?= htmlspecialchars($vFit) ?>" <?= $vFit && $vFit!=='Regular' && $vFit!=='Slim' && $vFit!=='Oversized' ? 'selected':'' ?> class="hidden"><?= htmlspecialchars($vFit) ?></option>
+                                            </select>
                                         </td>
-                                        <td class="p-3 border-b border-gray-100">
-                                            <input type="number" step="0.01" min="0" name="variant_price[]" value="<?= $v['price'] ?>" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none var-sell" oninput="calculateVarProfit(this)">
+                                        <td class="p-4 border-b border-gray-100">
+                                            <div class="relative">
+                                                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">Rs.</span>
+                                                <input type="number" step="0.01" min="0" name="variant_cost_price[]" value="<?= $v['cost_price'] ?>" placeholder="0.00" required class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 pl-7 pr-2 text-xs font-bold focus:border-[#0066FF] outline-none var-buy" oninput="calculateVarProfit(this)">
+                                            </div>
                                         </td>
-                                        <td class="p-3 border-b border-gray-100">
-                                            <span class="text-sm font-bold text-[#0066FF] var-profit">Rs. <?= number_format($v['price'] - $v['cost_price'], 2) ?></span>
+                                        <td class="p-4 border-b border-gray-100">
+                                            <div class="relative">
+                                                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">Rs.</span>
+                                                <input type="number" step="0.01" min="0" name="variant_price[]" value="<?= $v['price'] ?>" placeholder="0.00" required class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 pl-7 pr-2 text-xs font-bold focus:border-[#0066FF] outline-none var-sell" oninput="calculateVarProfit(this)">
+                                            </div>
                                         </td>
-                                        <td class="p-3 border-b border-gray-100">
-                                            <input type="number" name="variant_qty[]" value="<?= $v['qty'] ?>" min="0" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none variant-qty-input" oninput="updateTotalQty()">
+                                        <td class="p-4 border-b border-gray-100">
+                                            <?php if($profit < 0): ?>
+                                                <span class="text-xs font-black text-red-500 var-profit">-Rs. <?= number_format(abs($profit), 2) ?></span>
+                                            <?php else: ?>
+                                                <span class="text-xs font-black text-green-500 var-profit">+Rs. <?= number_format($profit, 2) ?></span>
+                                            <?php endif; ?>
                                         </td>
-                                        <td class="p-3 border-b border-gray-100">
-                                            <input type="text" name="variant_sku[]" value="<?= htmlspecialchars($v['sku']) ?>" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none uppercase">
+                                        <td class="p-4 border-b border-gray-100">
+                                            <div class="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden w-[80px]">
+                                                <button type="button" class="px-2 py-1 bg-gray-50 text-gray-500 hover:bg-gray-100 font-bold border-r border-gray-200" onclick="const i=this.nextElementSibling; i.value=Math.max(0,(parseInt(i.value)||0)-1); updateTotalQty();">-</button>
+                                                <input type="number" name="variant_qty[]" value="<?= $v['qty'] ?>" min="0" required class="w-full text-center py-1 text-xs font-bold focus:outline-none variant-qty-input" oninput="updateTotalQty()">
+                                                <button type="button" class="px-2 py-1 bg-gray-50 text-gray-500 hover:bg-gray-100 font-bold border-l border-gray-200" onclick="const i=this.previousElementSibling; i.value=(parseInt(i.value)||0)+1; updateTotalQty();">+</button>
+                                            </div>
                                         </td>
-                                        <td class="p-3 border-b border-gray-100 text-center">
-                                            <button type="button" class="text-red-400 hover:text-red-600 p-1" onclick="this.closest('tr').remove(); updateTotalQty();"><i class="fas fa-trash"></i></button>
+                                        <td class="p-4 border-b border-gray-100">
+                                            <div class="relative">
+                                                <input type="text" name="variant_sku[]" value="<?= htmlspecialchars($v['sku']) ?>" required class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 px-2 text-xs font-bold focus:border-[#0066FF] outline-none uppercase pr-6">
+                                                <i class="fas fa-pencil-alt absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-300"></i>
+                                            </div>
+                                        </td>
+                                        <td class="p-4 border-b border-gray-100 text-center">
+                                            <button type="button" class="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-colors shadow-sm" onclick="if(confirm('Remove this variant?')) { this.closest('tr').remove(); syncMobileCards(); updateTotalQty(); }"><i class="fas fa-trash-alt"></i></button>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
@@ -260,10 +323,27 @@ $existingImages = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Mobile Cards Wrapper (Hidden on Desktop) -->
+                    <div id="mobileVariantCards" class="md:hidden space-y-4">
+                        <?php if (empty($existingVariants)): ?>
+                            <div class="p-6 text-center text-gray-400 text-sm font-medium border border-gray-200 rounded-xl bg-gray-50" id="cardsEmptyState">
+                                Select a Category first.
+                            </div>
+                        <?php else: ?>
+                            <div class="p-6 text-center text-gray-500 text-xs font-bold bg-yellow-50 border border-yellow-200 rounded-xl"><i class="fas fa-desktop mb-2 text-xl block"></i> Please use a Desktop device to easily edit variant prices and quantities.</div>
+                        <?php endif; ?>
+                    </div>
                     
-                    <div class="mt-4 flex justify-between items-center">
+                    <!-- Footer Summary -->
+                    <div class="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-wrap gap-4 justify-between items-center">
                         <button type="button" id="addManualRowBtn" class="text-sm font-bold text-[#0066FF] hover:underline hidden"><i class="fas fa-plus me-1"></i> Add Manual Row</button>
-                        <div class="text-sm font-bold text-navy bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">Total Qty: <span id="totalQtyCounter" class="text-[#0066FF] text-lg ms-1">0</span></div>
+                        <div class="flex flex-wrap gap-4 md:gap-6 ml-auto">
+                            <div class="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wide">Variants: <span id="totalVariantsCounter" class="text-navy text-sm ms-1 font-black">0</span></div>
+                            <div class="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wide">Qty: <span id="totalQtyCounter" class="text-navy text-sm ms-1 font-black">0</span></div>
+                            <div class="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wide">Buy: <span id="totalBuyCounter" class="text-navy text-sm ms-1 font-black">Rs. 0.00</span></div>
+                            <div class="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wide">Sell: <span id="totalSellCounter" class="text-navy text-sm ms-1 font-black">Rs. 0.00</span></div>
+                        </div>
                     </div>
                 </div>
 
@@ -659,61 +739,165 @@ sellInput.addEventListener('input', updateFinancials);
         return sku;
     }
 
-    function createVariantRow(v1, v2, v3) {
-        const tr = document.createElement('tr');
+    function createVariantRow(v1, v2, v3, isMobile = false) {
         const sku = generateSKU(v1, v2, v3);
-        let html = '';
         
-        if (currentConfig.col1) {
-            html += `<td class="p-3 border-b border-gray-100">
-                <input type="text" name="${currentConfig.dbCol1}" value="${v1||''}" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none">
-            </td>`;
-        }
-
-        if (currentConfig.col2) {
-            if (currentConfig.col2 === 'Color') {
-                const colorName = v2 ? v2.name : '';
-                const colorHex = v2 ? v2.hex : 'transparent';
-                html += `<td class="p-3 border-b border-gray-100">
-                    <div class="flex items-center gap-2">
-                        ${v2 ? `<span class="w-4 h-4 rounded-full border border-gray-200 block shrink-0" style="background-color: ${colorHex};"></span>` : ''}
-                        <input type="text" name="${currentConfig.dbCol2}" value="${colorName}" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none">
+        // --- Desktop Row ---
+        if (!isMobile) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-[#f0f7ff] transition-colors h-[60px] even:bg-[#fafafa]";
+            let html = '';
+            
+            // Size (Variant 1) - Chip
+            if (currentConfig.col1) {
+                html += `<td class="p-4 border-b border-gray-100">
+                    <div class="inline-block bg-blue-50 text-[#0066FF] border border-[#0066FF]/20 px-3 py-1.5 rounded-lg text-xs font-black min-w-[80px] text-center">
+                        ${v1||'-'}
+                        <input type="hidden" name="${currentConfig.dbCol1}" value="${v1||''}">
                     </div>
                 </td>`;
-            } else {
-                html += `<td class="p-3 border-b border-gray-100">
-                    <input type="text" name="${currentConfig.dbCol2}" value="${v2||''}" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none">
+            }
+
+            // Color (Variant 2) - Circle + Name
+            if (currentConfig.col2) {
+                if (currentConfig.col2 === 'Color') {
+                    const colorName = v2 ? v2.name : '-';
+                    const colorHex = v2 ? v2.hex : 'transparent';
+                    html += `<td class="p-4 border-b border-gray-100">
+                        <div class="flex items-center gap-2">
+                            ${v2 ? `<span class="w-5 h-5 rounded-full border border-gray-200 block shrink-0 shadow-sm" style="background-color: ${colorHex};"></span>` : ''}
+                            <span class="text-xs font-bold text-navy">${colorName}</span>
+                            <input type="hidden" name="${currentConfig.dbCol2}" value="${colorName}">
+                        </div>
+                    </td>`;
+                } else {
+                    html += `<td class="p-4 border-b border-gray-100">
+                        <span class="text-xs font-bold text-navy">${v2||'-'}</span>
+                        <input type="hidden" name="${currentConfig.dbCol2}" value="${v2||''}">
+                    </td>`;
+                }
+            }
+
+            // Fit Type
+            if (currentConfig.hasFit) {
+                html += `<td class="p-4 border-b border-gray-100">
+                    <select name="variant_fit[]" class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 px-2 text-xs font-bold focus:border-[#0066FF] outline-none">
+                        <option value="Regular" ${v3==='Regular'?'selected':''}>Regular</option>
+                        <option value="Slim" ${v3==='Slim'?'selected':''}>Slim</option>
+                        <option value="Oversized" ${v3==='Oversized'?'selected':''}>Oversized</option>
+                        <option value="${v3||''}" ${v3 && v3!=='Regular' && v3!=='Slim' && v3!=='Oversized' ? 'selected':''} class="hidden">${v3||''}</option>
+                    </select>
                 </td>`;
             }
-        }
 
-        if (currentConfig.hasFit) {
-            html += `<td class="p-3 border-b border-gray-100">
-                <input type="text" name="variant_fit[]" value="${v3||''}" class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none">
+            // Buy Price
+            html += `<td class="p-4 border-b border-gray-100">
+                <div class="relative">
+                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">Rs.</span>
+                    <input type="number" step="0.01" min="0" name="variant_cost_price[]" value="" placeholder="0.00" required class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 pl-7 pr-2 text-xs font-bold focus:border-[#0066FF] outline-none var-buy" oninput="calculateVarProfit(this)">
+                </div>
             </td>`;
-        }
 
-        html += `<td class="p-3 border-b border-gray-100">
-                <input type="number" step="0.01" min="0" name="variant_cost_price[]" value="0" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none var-buy" oninput="calculateVarProfit(this)">
-            </td>
-            <td class="p-3 border-b border-gray-100">
-                <input type="number" step="0.01" min="0" name="variant_price[]" value="0" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none var-sell" oninput="calculateVarProfit(this)">
-            </td>
-            <td class="p-3 border-b border-gray-100">
-                <span class="text-sm font-bold text-[#0066FF] var-profit">Rs. 0</span>
-            </td>
-            <td class="p-3 border-b border-gray-100">
-                <input type="number" name="variant_qty[]" value="0" min="0" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none variant-qty-input" oninput="updateTotalQty()">
-            </td>
-            <td class="p-3 border-b border-gray-100">
-                <input type="text" name="variant_sku[]" value="${sku}" required class="w-full bg-gray-50 border border-gray-200 text-navy rounded-lg py-1.5 px-3 text-sm focus:border-[#0066FF] outline-none uppercase">
-            </td>
-            <td class="p-3 border-b border-gray-100 text-center">
-                <button type="button" class="text-red-400 hover:text-red-600 p-1" onclick="this.closest('tr').remove(); updateTotalQty();"><i class="fas fa-trash"></i></button>
+            // Sell Price
+            html += `<td class="p-4 border-b border-gray-100">
+                <div class="relative">
+                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">Rs.</span>
+                    <input type="number" step="0.01" min="0" name="variant_price[]" value="" placeholder="0.00" required class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 pl-7 pr-2 text-xs font-bold focus:border-[#0066FF] outline-none var-sell" oninput="calculateVarProfit(this)">
+                </div>
             </td>`;
+
+            // Profit
+            html += `<td class="p-4 border-b border-gray-100">
+                <span class="text-xs font-black text-gray-400 var-profit">-</span>
+            </td>`;
+
+            // Qty Stepper
+            html += `<td class="p-4 border-b border-gray-100">
+                <div class="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden w-[80px]">
+                    <button type="button" class="px-2 py-1 bg-gray-50 text-gray-500 hover:bg-gray-100 font-bold border-r border-gray-200" onclick="const i=this.nextElementSibling; i.value=Math.max(0,(parseInt(i.value)||0)-1); updateTotalQty();">-</button>
+                    <input type="number" name="variant_qty[]" value="0" min="0" required class="w-full text-center py-1 text-xs font-bold focus:outline-none variant-qty-input" oninput="updateTotalQty()">
+                    <button type="button" class="px-2 py-1 bg-gray-50 text-gray-500 hover:bg-gray-100 font-bold border-l border-gray-200" onclick="const i=this.previousElementSibling; i.value=(parseInt(i.value)||0)+1; updateTotalQty();">+</button>
+                </div>
+            </td>`;
+
+            // SKU
+            html += `<td class="p-4 border-b border-gray-100">
+                <div class="relative">
+                    <input type="text" name="variant_sku[]" value="${sku}" required class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 px-2 text-xs font-bold focus:border-[#0066FF] outline-none uppercase pr-6">
+                    <i class="fas fa-pencil-alt absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-300"></i>
+                </div>
+            </td>`;
+
+            // Delete
+            html += `<td class="p-4 border-b border-gray-100 text-center">
+                <button type="button" class="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-colors shadow-sm" onclick="if(confirm('Remove this variant?')) { this.closest('tr').remove(); syncMobileCards(); updateTotalQty(); }"><i class="fas fa-trash-alt"></i></button>
+            </td>`;
+            
+            tr.innerHTML = html;
+            return tr;
+        } 
         
-        tr.innerHTML = html;
-        return tr;
+        // --- Mobile Card ---
+        else {
+            const div = document.createElement('div');
+            div.className = "bg-white border border-gray-200 rounded-xl p-4 shadow-sm relative";
+            let html = `<button type="button" class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors" onclick="if(confirm('Remove this variant?')) { this.closest('.bg-white').remove(); /* Need proper sync to desktop table here ideally, but for now we rely on desktop sync generating this */ }"><i class="fas fa-trash-alt"></i></button>`;
+            
+            html += `<div class="flex flex-wrap items-center gap-3 mb-4 pr-10">`;
+            if (currentConfig.col1) {
+                html += `<div class="bg-blue-50 text-[#0066FF] px-2 py-1 rounded text-xs font-black">${v1||'-'}</div>`;
+            }
+            if (currentConfig.col2 && currentConfig.col2 === 'Color') {
+                const colorName = v2 ? v2.name : '-';
+                const colorHex = v2 ? v2.hex : 'transparent';
+                html += `<div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full border border-gray-200" style="background-color: ${colorHex};"></span><span class="text-xs font-bold text-navy">${colorName}</span></div>`;
+            }
+            if (currentConfig.hasFit) {
+                html += `<div class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold">${v3||'Regular'}</div>`;
+            }
+            html += `</div>`;
+
+            html += `<div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Buy Price (Rs)</label>
+                    <input type="number" step="0.01" value="" placeholder="0.00" class="w-full bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-xs font-bold" readonly>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Sell Price (Rs)</label>
+                    <input type="number" step="0.01" value="" placeholder="0.00" class="w-full bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-xs font-bold" readonly>
+                </div>
+            </div>`;
+
+            html += `<div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg mb-3">
+                <span class="text-[10px] font-bold text-gray-500 uppercase">Profit</span>
+                <span class="text-xs font-black text-gray-400">-</span>
+            </div>`;
+
+            html += `<div class="grid grid-cols-2 gap-3 items-end">
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Qty</label>
+                    <input type="number" value="0" class="w-full bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-xs font-bold" readonly>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">SKU</label>
+                    <input type="text" value="${sku}" class="w-full bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-xs font-bold uppercase" readonly>
+                </div>
+            </div>`;
+
+            div.innerHTML = html;
+            return div;
+        }
+    }
+
+    // Function to keep mobile cards synchronized with desktop table data (one-way sync for simplicity, actual submission relies on desktop table form fields)
+    // In a production app, the form fields would be in the mobile cards too, but here we just hide the table visually. 
+    // The form still submits the table's hidden inputs.
+    function syncMobileCards() {
+        // Not fully implemented for two-way edit in this prototype. 
+        // We will just show a message on mobile.
+        const cardsContainer = document.getElementById('mobileVariantCards');
+        if(!cardsContainer) return;
+        cardsContainer.innerHTML = '<div class="p-6 text-center text-gray-500 text-xs font-bold bg-yellow-50 border border-yellow-200 rounded-xl"><i class="fas fa-desktop mb-2 text-xl block"></i> Please use a Desktop device to easily edit variant prices and quantities.</div>';
     }
 
     genBtn.addEventListener('click', () => {
@@ -730,29 +914,94 @@ sellInput.addEventListener('input', updateFinancials);
             return;
         }
 
-        tableBody.innerHTML = '';
+        // Show bulk action bar
+        document.getElementById('bulkActionBar').classList.remove('hidden');
+        document.getElementById('bulkActionBar').classList.add('flex');
+
+        // Check duplicates logic
+        const existingRows = Array.from(tableBody.querySelectorAll('tr'));
+        const existingCombinations = existingRows.map(tr => {
+            const inputs = tr.querySelectorAll('input[type="hidden"]');
+            if(inputs.length >= 2) return inputs[0].value + '|' + inputs[1].value;
+            return null;
+        }).filter(Boolean);
+
+        const emptyState = document.getElementById('tableEmptyState');
+        if(emptyState) emptyState.parentElement.remove();
+
+        let addedCount = 0;
 
         arr1.forEach(v1 => {
             arr2.forEach(v2 => {
                 arr3.forEach(v3 => {
-                    tableBody.appendChild(createVariantRow(v1, v2, v3));
+                    const v1Val = v1 || '';
+                    const v2Val = v2 ? (typeof v2 === 'object' ? v2.name : v2) : '';
+                    const combo = v1Val + '|' + v2Val;
+                    
+                    if (!existingCombinations.includes(combo) || combo === '|') {
+                        tableBody.appendChild(createVariantRow(v1, v2, v3, false));
+                        addedCount++;
+                    }
                 });
             });
+        });
+        
+        if (addedCount > 0) {
+            syncMobileCards();
+            updateTotalQty();
+        } else {
+            alert('Selected variants already exist in the table.');
+        }
+    });
+
+    // Bulk Apply Logic
+    document.getElementById('applyBulkBtn').addEventListener('click', () => {
+        const bBuy = document.getElementById('bulkBuyPrice').value;
+        const bSell = document.getElementById('bulkSellPrice').value;
+        const bQty = document.getElementById('bulkQty').value;
+        
+        const rows = document.querySelectorAll('#variantTableBody tr');
+        rows.forEach(tr => {
+            if(bBuy !== '') tr.querySelector('.var-buy').value = bBuy;
+            if(bSell !== '') tr.querySelector('.var-sell').value = bSell;
+            if(bQty !== '') tr.querySelector('.variant-qty-input').value = bQty;
+            
+            if(bBuy !== '' || bSell !== '') calculateVarProfit(tr.querySelector('.var-buy'));
         });
         updateTotalQty();
     });
 
     addManualBtn.addEventListener('click', () => {
-        if (tableBody.querySelector('td[colspan="5"]')) tableBody.innerHTML = '';
+        if (tableBody.querySelector('td[colspan="9"]')) tableBody.innerHTML = '';
         tableBody.appendChild(createVariantRow('', '', ''));
+        syncMobileCards();
     });
 
     function updateTotalQty() {
-        const qtyInputs = document.querySelectorAll('.variant-qty-input');
-        let total = 0;
-        qtyInputs.forEach(input => total += parseInt(input.value) || 0);
-        document.getElementById('totalQtyCounter').textContent = total;
+        const rows = document.querySelectorAll('#variantTableBody tr');
+        let totalQty = 0;
+        let totalBuy = 0;
+        let totalSell = 0;
+        let variantCount = 0;
+
+        rows.forEach(tr => {
+            if (tr.querySelector('td[colspan="9"]')) return; // empty state
+            variantCount++;
+            const qty = parseInt(tr.querySelector('.variant-qty-input').value) || 0;
+            const buy = parseFloat(tr.querySelector('.var-buy').value) || 0;
+            const sell = parseFloat(tr.querySelector('.var-sell').value) || 0;
+            
+            totalQty += qty;
+            totalBuy += (buy * qty);
+            totalSell += (sell * qty);
+        });
+
+        document.getElementById('totalVariantsCounter').textContent = variantCount;
+        document.getElementById('totalQtyCounter').textContent = totalQty;
+        document.getElementById('totalBuyCounter').textContent = 'Rs. ' + totalBuy.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('totalSellCounter').textContent = 'Rs. ' + totalSell.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
+
     function calculateVarProfit(el) {
         const tr = el.closest('tr');
         const buy = parseFloat(tr.querySelector('.var-buy').value) || 0;
@@ -761,14 +1010,19 @@ sellInput.addEventListener('input', updateFinancials);
         
         let profit = sell - buy;
         if (buy > 0 && sell > 0 && sell < buy) {
-            profitEl.textContent = 'Error';
+            profitEl.textContent = '-Rs. ' + Math.abs(profit).toFixed(2);
+            profitEl.classList.remove('text-[#0066FF]', 'text-gray-400', 'text-green-500');
             profitEl.classList.add('text-red-500');
-            profitEl.classList.remove('text-[#0066FF]');
+        } else if (buy > 0 || sell > 0) {
+            profitEl.textContent = '+Rs. ' + profit.toFixed(2);
+            profitEl.classList.remove('text-red-500', 'text-gray-400', 'text-[#0066FF]');
+            profitEl.classList.add('text-green-500');
         } else {
-            profitEl.textContent = 'Rs. ' + profit.toFixed(2);
-            profitEl.classList.remove('text-red-500');
-            profitEl.classList.add('text-[#0066FF]');
+            profitEl.textContent = '-';
+            profitEl.classList.remove('text-red-500', 'text-green-500', 'text-[#0066FF]');
+            profitEl.classList.add('text-gray-400');
         }
+        updateTotalQty();
     }
 
     function applyBasePricesToVariants() {

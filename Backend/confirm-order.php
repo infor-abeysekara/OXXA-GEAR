@@ -63,7 +63,7 @@ try {
     }
     
     // Add notification for buyer
-    addNotification($conn, $order['user_id'], $message, 'order');
+    addNotification($conn, $order['user_id'], $message, 'order', 'Orders', 'site/my-orders.php');
     
     // Commit transaction
     $conn->commit();

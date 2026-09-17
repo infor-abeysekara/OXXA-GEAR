@@ -1,6 +1,7 @@
 <?php
 session_start();
 include_once("../include/connection.php");
+include_once("../include/functions.php");
 
 // Check if admin is logged in
 if(!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
@@ -21,6 +22,16 @@ if(isset($_POST['action']) && isset($_POST['user_id'])) {
         
         if($stmt->execute()) {
             $success_message = "Business registration approved successfully!";
+            
+            // Get business name
+            $b_query = "SELECT business_name FROM seller_profiles WHERE user_id = ?";
+            $b_stmt = $conn->prepare($b_query);
+            $b_stmt->bind_param("s", $user_id);
+            $b_stmt->execute();
+            $b_res = $b_stmt->get_result();
+            if ($b_row = $b_res->fetch_assoc()) {
+                addNotification($conn, $user_id, "Business Verified! - Your business {$b_row['business_name']} has been approved. You can now add products and start selling.", 'success', 'Business', 'site/seller-dashboard.php');
+            }
         } else {
             $error_message = "Failed to approve business registration.";
         }
@@ -32,6 +43,16 @@ if(isset($_POST['action']) && isset($_POST['user_id'])) {
         
         if($stmt->execute()) {
             $success_message = "Business registration rejected successfully!";
+            
+            // Get business name
+            $b_query = "SELECT business_name FROM seller_profiles WHERE user_id = ?";
+            $b_stmt = $conn->prepare($b_query);
+            $b_stmt->bind_param("s", $user_id);
+            $b_stmt->execute();
+            $b_res = $b_stmt->get_result();
+            if ($b_row = $b_res->fetch_assoc()) {
+                addNotification($conn, $user_id, "Business Registration Rejected - Your application for {$b_row['business_name']} has been declined. Please update your details and try again.", 'error', 'Business', 'site/seller-dashboard.php');
+            }
         } else {
             $error_message = "Failed to reject business registration.";
         }
