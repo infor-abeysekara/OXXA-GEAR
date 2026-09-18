@@ -24,6 +24,7 @@ $cartStmt = $pdo->prepare("
            p.name as pname, p.base_price, p.seller_id,
            COALESCE(sp.business_name, CONCAT(u.first_name, ' ', u.last_name), 'OXXA Official Store') as seller_name,
            p.is_hot_deal, p.sale_price, p.original_price, p.hot_deal_status, p.hot_deal_expiry,
+           p.is_free_shipping, p.shipping_cost,
            cs.size, cs.selling_price as variant_price,
            COALESCE(
                (SELECT ci.image_path FROM color_images ci WHERE ci.color_id = cs.color_id ORDER BY ci.is_primary DESC, ci.sort_order ASC LIMIT 1),
@@ -72,11 +73,18 @@ if (empty($cartItems)) {
 
 // Calculate totals
 $subtotal = 0;
+$allFreeShipping = true;
 foreach ($cartItems as $item) {
     $subtotal += ($item['price'] * $item['qty']);
+    if (empty($item['is_free_shipping'])) {
+        $allFreeShipping = false;
+    }
 }
 
-$deliveryFee = 450.00;
+$freeShippingThreshold = 5000.00;
+$isFreeShipping = ($subtotal >= $freeShippingThreshold || ($allFreeShipping && count($cartItems) > 0));
+$deliveryFee = ($subtotal > 0 && !$isFreeShipping) ? 300.00 : 0.00;
+
 $discount = 0;
 $couponCode = '';
 $total = $subtotal + $deliveryFee;
@@ -197,7 +205,14 @@ include('../include/header.php');
                         </div>
                         <div class="flex justify-between">
                             <span>Delivery Fee</span>
-                            <span id="deliveryFee" class="text-white">Rs. <?php echo number_format($deliveryFee, 2); ?></span>
+                            <span id="deliveryFee" class="text-white">
+                                <?php if ($deliveryFee == 0): ?>
+                                    <span class="text-[#CCFF00] font-black tracking-wide uppercase text-sm">FREE</span> 
+                                    <span class="text-gray-500 line-through text-xs ml-1 font-medium">Rs. 300</span>
+                                <?php else: ?>
+                                    Rs. <?php echo number_format($deliveryFee, 2); ?>
+                                <?php endif; ?>
+                            </span>
                         </div>
                     </div>
                     <div class="border-t border-gray-600 pt-4 relative z-10">

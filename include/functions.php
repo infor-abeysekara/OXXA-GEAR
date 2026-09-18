@@ -583,4 +583,14 @@ if (!function_exists('uploadImage')) {
     }
 
 } // End of function_exists check
+
+// Sri Lanka Provinces list (used in Business Registration)
+if (!function_exists('getSriLankanProvinces')) {
+    function getSriLankanProvinces() {
+        return [
+            'Western', 'Central', 'Southern', 'Northern', 'Eastern',
+            'North Western', 'North Central', 'Uva', 'Sabaragamuwa'
+        ];
+    }
+}
 ?>

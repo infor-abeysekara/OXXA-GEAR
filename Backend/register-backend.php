@@ -22,7 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Regex Patterns (Data eka valid format ekakda kiyala check karanna use karana patterns)
     $nameRegex = '/^[A-Za-z ]{2,50}$/';
-    $usernameRegex = '/^[a-zA-Z0-9_]{3,20}$/';
+    $usernameRegex = '/^[a-z0-9]{3,20}$/';
+    $username = strtolower($username); // Force lowercase before validation
     $phoneRegex = '/^(?:\+94|0)?7[0-9]{8}$/';
     
     // Validation
@@ -36,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if (!preg_match($usernameRegex, $username)) {
-        $errors[] = "Username must be 3-20 characters, letters, numbers, and underscores only.";
+        $errors[] = "Username must be 3-20 characters, lowercase letters and numbers only.";
     }
     
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {

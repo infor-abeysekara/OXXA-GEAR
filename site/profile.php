@@ -420,10 +420,10 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
                                     <p class="text-[10px] font-bold text-gray-400 uppercase">Member Since: <?php echo date('M Y', strtotime($user['created_at'])); ?></p>
                                 </div>
                                 <div class="pt-4 flex flex-col sm:flex-row gap-3">
-                                    <a href="settings.php" class="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-navy text-xs font-bold px-4 py-2 rounded-lg text-center uppercase tracking-wide transition-colors">
+                                    <a href="profile.php?edit=profile" class="flex-1 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-navy text-xs font-bold px-4 py-2 rounded-lg text-center uppercase tracking-wide transition-colors">
                                         <i class="fas fa-lock me-1"></i> Change Password
                                     </a>
-                                    <button class="flex-1 bg-red-50 hover:bg-red-100 border border-red-100 text-red-500 text-xs font-bold px-4 py-2 rounded-lg text-center uppercase tracking-wide transition-colors">
+                                    <button onclick="openDeleteAccountModal()" type="button" class="flex-1 bg-red-50 hover:bg-red-100 border border-red-100 text-red-500 text-xs font-bold px-4 py-2 rounded-lg text-center uppercase tracking-wide transition-colors">
                                         <i class="fas fa-trash-alt me-1"></i> Delete Account
                                     </button>
                                 </div>
@@ -674,6 +674,78 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+</script>
+
+<!-- Delete Account Modal -->
+<div id="deleteAccountModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl p-8" onclick="event.stopPropagation()">
+        <div class="flex flex-col items-center text-center">
+            <div class="w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center text-3xl mb-4">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="text-xl font-black text-navy uppercase tracking-wide mb-2">Delete Account?</h3>
+            <p class="text-gray-500 text-sm mb-6">This action is permanent and cannot be undone. Please enter your password to confirm.</p>
+            
+            <div class="w-full relative mb-6">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400"><i class="fas fa-lock"></i></span>
+                <input type="password" id="deleteAccountPassword" class="w-full bg-gray-50 border border-gray-200 text-navy font-medium rounded-xl py-3 pl-11 pr-4 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors" placeholder="Enter your password">
+            </div>
+            
+            <div class="flex w-full gap-3">
+                <button onclick="closeDeleteAccountModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-navy py-3 rounded-xl font-bold uppercase tracking-wide transition-colors text-sm">Cancel</button>
+                <button onclick="confirmDeleteAccount()" id="confirmDeleteBtn" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl font-bold uppercase tracking-wide transition-colors text-sm shadow-md">
+                    <span id="confirmDeleteText">Delete</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openDeleteAccountModal() {
+    document.getElementById('deleteAccountModal').classList.remove('hidden');
+    document.getElementById('deleteAccountPassword').value = '';
+}
+
+function closeDeleteAccountModal() {
+    document.getElementById('deleteAccountModal').classList.add('hidden');
+}
+
+function confirmDeleteAccount() {
+    const pwd = document.getElementById('deleteAccountPassword').value;
+    if (!pwd) {
+        Swal.fire({icon: 'warning', title: 'Wait!', text: 'Please enter your password first', confirmButtonColor: '#0066FF'});
+        return;
+    }
+    
+    const btn = document.getElementById('confirmDeleteBtn');
+    const txt = document.getElementById('confirmDeleteText');
+    btn.disabled = true;
+    txt.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    fetch('../Backend/delete_account.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password: pwd })
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        txt.innerHTML = 'Delete';
+        if(data.success) {
+            window.location.href = 'index.php?success=account_deleted';
+        } else {
+            Swal.fire({icon: 'error', title: 'Error', text: data.message, confirmButtonColor: '#0066FF'});
+        }
+    })
+    .catch(e => {
+        btn.disabled = false;
+        txt.innerHTML = 'Delete';
+        Swal.fire({icon: 'error', title: 'Error', text: 'Connection failed', confirmButtonColor: '#0066FF'});
+    });
+}
 </script>
 
 <?php

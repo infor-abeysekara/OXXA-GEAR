@@ -130,7 +130,6 @@ $joined_date = $joinStmt->fetchColumn();
                         </a>
                         <a href="?tab=reviews" class="flex items-center justify-between px-4 py-3 rounded-xl transition-colors <?= $tab == 'reviews' ? 'bg-blue-50 text-[#0066FF] font-bold shadow-sm border border-blue-100' : 'text-slate hover:bg-gray-50 hover:text-navy font-medium' ?>">
                             <span><i class="fas fa-star w-6 text-yellow-500"></i> My Reviews</span>
-                            <span class="bg-[#0066FF] text-white text-[9px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-wider">New</span>
                         </a>
                     </nav>
                     

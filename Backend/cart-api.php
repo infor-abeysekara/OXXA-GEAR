@@ -50,7 +50,7 @@ if ($action === 'get_cart') {
             SELECT c.id as cart_id, c.quantity, c.price_at_add, c.variant_id,
                    p.id as product_id, p.name as product_name, p.base_price, p.cost_price,
                    p.is_hot_deal, p.sale_price, p.original_price, p.discount_percent, p.hot_deal_status, p.hot_deal_expiry,
-                   p.seller_id,
+                   p.seller_id, p.is_free_shipping, p.shipping_cost,
                    cs.size, cs.selling_price as variant_price, cs.qty as variant_stock,
                    pc.color_name,
                    COALESCE(
@@ -123,7 +123,9 @@ if ($action === 'get_cart') {
                 'stock' => $stock,
                 'stock_status' => $stockStatus,
                 'stock_label' => $stockLabel,
-                'price_change' => $priceChangeNotice
+                'price_change' => $priceChangeNotice,
+                'is_free_shipping' => (int)($row['is_free_shipping'] ?? 0),
+                'shipping_cost' => (float)($row['shipping_cost'] ?? 300)
             ];
         }
     } else {
@@ -142,6 +144,7 @@ if ($action === 'get_cart') {
                     $pStmt = $conn->prepare("
                         SELECT p.id as product_id, p.name as product_name, p.base_price, p.seller_id,
                                p.is_hot_deal, p.sale_price, p.original_price, p.discount_percent, p.hot_deal_status, p.hot_deal_expiry,
+                               p.is_free_shipping, p.shipping_cost,
                                sp.business_name as seller_business_name,
                                u.first_name as seller_first_name, u.last_name as seller_last_name
                         FROM products p
@@ -230,7 +233,9 @@ if ($action === 'get_cart') {
                         'stock' => $variantStock,
                         'stock_status' => $stockStatus,
                         'stock_label' => $stockLabel,
-                        'price_change' => $priceChangeNotice
+                        'price_change' => $priceChangeNotice,
+                        'is_free_shipping' => (int)($pRow['is_free_shipping'] ?? 0),
+                        'shipping_cost' => (float)($pRow['shipping_cost'] ?? 300)
                     ];
                 }
             }
@@ -258,10 +263,19 @@ if ($action === 'get_cart') {
         $totalCount += $item['quantity'];
     }
 
-    // Shipping calculation (Free over Rs. 5000)
+    // Shipping calculation
     $freeShippingThreshold = 5000.00;
-    $isFreeShipping = ($subtotal >= $freeShippingThreshold);
-    $shippingFee = ($subtotal > 0 && !$isFreeShipping) ? 450.00 : 0.00;
+    
+    $allFreeShipping = true;
+    foreach ($items as $item) {
+        if (empty($item['is_free_shipping'])) {
+            $allFreeShipping = false;
+            break;
+        }
+    }
+
+    $isFreeShipping = ($subtotal >= $freeShippingThreshold || ($allFreeShipping && count($items) > 0));
+    $shippingFee = ($subtotal > 0 && !$isFreeShipping) ? 300.00 : 0.00;
     $freeShippingRemaining = max(0, $freeShippingThreshold - $subtotal);
 
     // Coupon calculation

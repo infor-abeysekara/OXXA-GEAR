@@ -69,6 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // NIC eka old format da new format da kiyala balanawa
     if (!$owner_nic || !preg_match('/^([0-9]{9}[vVxX]|[0-9]{12})$/', $owner_nic)) {
         $addError('owner_nic', 'Invalid NIC format.');
+    } else {
+        $owner_nic = strtoupper($owner_nic);
     }
     
     $personal_phone = preg_replace('/\D/', '', $personal_phone);
@@ -76,6 +78,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $addError('personal_phone', 'Invalid personal SL mobile.');
     }
     $business_phone = preg_replace('/\D/', '', $business_phone);
+    // Strip country code 94 prefix and replace with 0
+    if (strpos($business_phone, '94') === 0 && strlen($business_phone) === 11) {
+        $business_phone = '0' . substr($business_phone, 2);
+    }
     if (!$business_phone || !preg_match('/^0\d{9}$/', $business_phone)) {
         $addError('business_phone', 'Invalid business phone.');
     }
@@ -89,16 +95,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 3. Address
     $address_line1 = trim($_POST['address_line1'] ?? '');
     $address_line2 = trim($_POST['address_line2'] ?? '');
-    $city = trim($_POST['city'] ?? '');
-    $postal_code = trim($_POST['postal_code'] ?? '');
-    $province = trim($_POST['province'] ?? '');
+    $province      = trim($_POST['province'] ?? '');
+    $district      = trim($_POST['district'] ?? '');
+    $city          = trim($_POST['city'] ?? '');
+    $postal_code   = trim($_POST['postal_code'] ?? '');
 
     if (strlen($address_line1) < 5) $addError('address_line1', 'Address Line 1 too short.');
+    if (!$province) $addError('province', 'Province is required.');
+    if (!$district) $addError('district', 'District is required.');
     if (!$city) $addError('city', 'City is required.');
     if (!$postal_code || !preg_match('/^[0-9]{5}$/', $postal_code)) {
         $addError('postal_code', 'Invalid postal code.');
     }
-    if (!$province) $addError('province', 'Province is required.');
 
     // 5. Bank Details (Mudaw ganna dila thiyena banku wisthara)
     $bank_name = trim($_POST['bank_name'] ?? '');
@@ -142,11 +150,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmt->rowCount() > 0) $addError('business_reg_id', 'BR Number already registered.');
         }
 
-        // Check NIC (Assuming NIC uniqueness in seller_profiles)
+        // Check NIC Number (Kalin use karapu NIC danna ba)
         if (!isset($errors['owner_nic'])) {
-            $stmt = $pdo->prepare("SELECT id FROM seller_profiles WHERE owner_nic = ?");
+            $stmt = $pdo->prepare("SELECT id FROM seller_profiles WHERE UPPER(owner_nic) = ?");
             $stmt->execute([$owner_nic]);
-            if ($stmt->rowCount() > 0) $addError('owner_nic', 'NIC already registered.');
+            if ($stmt->rowCount() > 0) {
+                $addError('owner_nic', 'This NIC number has already been registered.');
+            }
         }
 
         // Check Email/Phone globally in users table (since they might be used for login)
@@ -222,11 +232,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $imageTypes = ['image/jpeg', 'image/png', 'image/webp'];
     $docTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    $pdfTypes = ['application/pdf'];
 
     // Notice we use the same paths that admin/business-registrations.php expects
     // File upload function eka call karala file jathi 5 ma upload karanawa
-    $certificate_path = uploadFile('certificate_file', '../image/certificates/', $docTypes, $user_id, 'cert', 5, true);
-    $nic_path = uploadFile('nic_file', '../image/certificates/', $docTypes, $user_id, 'nic', 5, true);
+    $certificate_path = uploadFile('certificate_file', '../image/certificates/', $pdfTypes, $user_id, 'cert', 5, true);
+    $nic_path = uploadFile('nic_file', '../image/certificates/', $pdfTypes, $user_id, 'nic', 5, true);
     $logo_path = uploadFile('logo_file', '../image/logos/', $imageTypes, $user_id, 'logo', 2, true);
     $shop_photo_path = uploadFile('shop_photo_file', '../image/logos/', $imageTypes, $user_id, 'shop', 3, false);
     $bank_book_path = uploadFile('bank_book_file', '../image/certificates/', $docTypes, $user_id, 'bank', 5, false);
@@ -243,7 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             user_id, business_name, business_type, business_reg_id, business_number, 
             date_of_incorporation, nature_of_business, 
             owner_name, owner_nic, personal_phone, personal_email, business_email,
-            address_line1, address_line2, city, postal_code, province,
+            address_line1, address_line2, province, district, city, postal_code,
             certificate_path, logo_path, nic_path, shop_photo_path,
             bank_name, branch_name, account_number, account_holder_name, bank_book_path,
             selling_categories, estimated_products, social_website, declaration, is_approved
@@ -251,7 +262,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ?, ?, ?, ?, ?, 
             ?, ?, 
             ?, ?, ?, ?, ?,
-            ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?,
             ?, ?, ?, ?,
             ?, ?, ?, ?, ?,
             ?, ?, ?, ?, 0
@@ -261,7 +272,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user_id, $business_name, $business_type, $business_reg_id, $business_phone,
             $date_of_incorporation, $nature_of_business,
             $owner_name, $owner_nic, $personal_phone, $personal_email, $business_email,
-            $address_line1, $address_line2, $city, $postal_code, $province,
+            $address_line1, $address_line2, $province, $district, $city, $postal_code,
             $certificate_path, $logo_path, $nic_path, $shop_photo_path,
             $bank_name, $branch_name, $account_number, $account_holder_name, $bank_book_path,
             $selling_categories, $estimated_products, $social_website, $declaration

@@ -24,7 +24,7 @@ $pending_replies = $pendingStmt->fetchColumn();
 // 2. Get Reviews
 $reviewsStmt = $pdo->prepare("
     SELECT r.*, 
-           p.name as product_name, p.image as product_image, 
+           p.name as product_name, (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as product_image, 
            u.first_name as customer_name,
            (SELECT reply_text FROM review_replies rep WHERE rep.review_id = r.id LIMIT 1) as seller_reply
     FROM reviews r

@@ -1,15 +1,15 @@
 <?php
 session_start();
 $page_title = 'Add Product - OXXA GEAR Seller';
-include('../include/header.php');
 include('../include/connection.php');
 
+// Auth check BEFORE any HTML output
 if (!isset($_SESSION['userid']) || $_SESSION['type'] != 'seller') {
     header('Location: login.php');
     exit();
 }
-session_write_close(); // Free session lock for parallel AJAX requests
 
+// Business profile check BEFORE any HTML output
 $stmt = $pdo->prepare("SELECT * FROM seller_profiles WHERE user_id = ?");
 $stmt->execute([$_SESSION['userid']]);
 $business = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -18,6 +18,10 @@ if (!$business || $business['is_approved'] == 0) {
     header('Location: business-registration.php');
     exit();
 }
+
+session_write_close(); // Free session lock for parallel AJAX requests
+
+include('../include/header.php');
 
 // Fetch categories
 $catStmt = $pdo->query("SELECT * FROM categories ORDER BY name ASC");
@@ -136,6 +140,48 @@ foreach ($masterRows as $row) {
                 </div>
                 <p class="text-[11px] text-gray-400 mt-3 font-medium"><i class="fas fa-info-circle me-1"></i> Entering a price here and clicking <strong>"Apply All"</strong> will automatically set the buy/sell price for all generated variants. You can override individual variant prices in the table below.</p>
             </div>
+
+            <!-- CARD 2.5: SHIPPING OPTIONS -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                <h2 class="text-lg font-black text-navy uppercase tracking-wide mb-6 pb-2 border-b border-gray-100"><i class="fas fa-truck text-emerald-500 me-2"></i> Shipping Options</h2>
+                
+                <div class="mb-4">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" name="is_free_shipping" id="is_free_shipping" value="1" class="w-5 h-5 rounded text-[#0066FF] border-gray-300 focus:ring-[#0066FF] cursor-pointer">
+                        <span class="text-sm font-bold text-navy uppercase tracking-wide group-hover:text-[#0066FF] transition-colors">🚚 Free Shipping - Offer free delivery for this product</span>
+                    </label>
+                    <p id="freeShippingHelp" class="text-xs text-gray-400 mt-2 ml-8 font-medium">Customer ta delivery free. <span class="text-emerald-500 font-bold hidden" id="freeShippingSuccessMsg">Free delivery will be shown on product page</span></p>
+                </div>
+
+                <div id="shippingCostContainer">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Shipping Cost (Rs) *</label>
+                    <div class="relative max-w-xs">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">Rs.</span>
+                        <input type="number" name="shipping_cost" id="shippingCost" value="300" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-9 pr-4 text-sm font-bold text-navy focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all disabled:opacity-50 disabled:bg-gray-100" step="0.01">
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2 font-medium">Leave 300 for standard islandwide delivery</p>
+                </div>
+            </div>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const freeShippingCheckbox = document.getElementById('is_free_shipping');
+                    const shippingCostInput = document.getElementById('shippingCost');
+                    const freeShippingSuccessMsg = document.getElementById('freeShippingSuccessMsg');
+                    
+                    freeShippingCheckbox.addEventListener('change', function() {
+                        if (this.checked) {
+                            shippingCostInput.disabled = true;
+                            shippingCostInput.value = '0';
+                            freeShippingSuccessMsg.classList.remove('hidden');
+                        } else {
+                            shippingCostInput.disabled = false;
+                            shippingCostInput.value = '300';
+                            freeShippingSuccessMsg.classList.add('hidden');
+                        }
+                    });
+                });
+            </script>
 
             <!-- CARD 3: PRODUCT IMAGES (GLOBAL) -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">

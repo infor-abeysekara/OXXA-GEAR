@@ -653,6 +653,25 @@ foreach ($usersData as $user) {
             document.body.removeChild(a);
         }
         
+        function toggleDropdown(btn) {
+            const menu = btn.nextElementSibling;
+            const isHidden = menu.classList.contains('hidden');
+            
+            // Close all other dropdowns
+            document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('hidden'));
+            
+            if (isHidden) {
+                menu.classList.remove('hidden');
+            }
+        }
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.dropdown-menu') && !e.target.closest('button[onclick="toggleDropdown(this)"]')) {
+                document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('hidden'));
+            }
+        });
+        
         // Initial render
         renderTable();
 

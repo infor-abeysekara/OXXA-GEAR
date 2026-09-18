@@ -32,8 +32,8 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
         
         <!-- Col 1 - Brand Info -->
-        <div class="space-y-4 sm:space-y-6 text-center sm:text-left flex flex-col items-center sm:items-start">
-          <div class="flex items-center space-x-3">
+        <div class="space-y-4 sm:space-y-6 text-left flex flex-col items-start">
+          <div class="flex items-start space-x-3">
             <?php
             $current_dir = dirname($_SERVER['PHP_SELF']);
             $base_path = (strpos($current_dir, '/site') !== false) ? '../' : '';
@@ -42,10 +42,10 @@
               <img src="<?php echo $base_path; ?>image/oxxa_gear_logo.png" alt="OXXA GEAR" class="h-8 sm:h-12 w-auto object-contain filter brightness-0 invert transform group-hover:scale-105 transition-transform duration-300">
             </a>
           </div>
-          <p class="text-gray-400 text-xs sm:text-sm leading-relaxed sm:leading-loose max-w-xs">
+          <p class="text-gray-400 text-xs sm:text-sm leading-relaxed sm:leading-loose max-w-xs m-0">
             OXXA GEAR - Sri Lanka's ultimate destination for premium sports wear, footwear, fitness gear and nutrition. Gear Up. Train Hard.
           </p>
-          <div class="flex space-x-3 pt-2">
+          <div class="flex space-x-3 pt-2 justify-start">
             <a href="#" class="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:border-primary hover:bg-primary transition-all duration-300">
               <i class="fab fa-facebook-f text-sm sm:text-base"></i>
             </a>
@@ -62,7 +62,7 @@
         </div>
 
         <!-- Col 2 - Quick Links -->
-        <div class="space-y-4 text-center sm:text-left">
+        <div class="space-y-4 text-left flex flex-col items-start w-full">
           <h4 class="text-sm sm:text-lg font-bold font-space text-white tracking-widest uppercase">Quick Links</h4>
           <ul class="space-y-2 sm:space-y-3">
             <?php
@@ -82,7 +82,7 @@
         </div>
 
         <!-- Col 3 - Categories -->
-        <div class="space-y-4 text-center sm:text-left">
+        <div class="space-y-4 text-left flex flex-col items-start w-full">
           <h4 class="text-sm sm:text-lg font-bold font-space text-white tracking-widest uppercase">Categories</h4>
           <ul class="space-y-2 sm:space-y-3">
             <li><a href="<?php echo $base_path; ?>site/shop.php?category=Sports+Wear" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">SPORTS WEAR</a></li>
@@ -95,23 +95,23 @@
         </div>
 
         <!-- Col 4 - Newsletter & Contact -->
-        <div class="space-y-4 sm:space-y-6 text-center sm:text-left border-t border-[#222222] sm:border-0 pt-6 sm:pt-0">
+        <div class="space-y-4 sm:space-y-6 text-left border-t border-[#222222] sm:border-0 pt-6 sm:pt-0 flex flex-col items-start w-full">
           <h4 class="text-sm sm:text-lg font-bold font-space text-white tracking-widest uppercase">Stay In The Game</h4>
-          <form class="flex border border-gray-700 rounded-full overflow-hidden focus-within:border-primary transition-colors max-w-sm mx-auto sm:mx-0">
+          <form class="flex border border-gray-700 rounded-full overflow-hidden focus-within:border-primary transition-colors w-full max-w-sm m-0">
             <input type="email" placeholder="Enter your email" class="w-full bg-transparent px-4 py-2 sm:py-3 text-xs sm:text-sm text-white focus:outline-none placeholder-gray-500" required>
             <button type="submit" class="bg-primary hover:bg-primary-hover text-white px-4 sm:px-5 py-2 sm:py-3 text-xs sm:text-sm font-bold uppercase transition-colors">JOIN</button>
           </form>
           
-          <div class="space-y-2 sm:space-y-3 pt-2 sm:pt-4 inline-block text-left mx-auto">
-            <div class="flex items-start space-x-3 group cursor-default">
+          <div class="space-y-2 sm:space-y-3 pt-2 sm:pt-4 flex flex-col items-start w-full max-w-sm m-0">
+            <div class="flex items-start space-x-3 group cursor-default text-left">
               <i class="fas fa-map-marker-alt text-primary mt-1 text-xs sm:text-sm"></i>
               <p class="text-gray-400 text-xs sm:text-sm">123 Main Street,<br>Colombo 07, Sri Lanka</p>
             </div>
-            <div class="flex items-center space-x-3 group cursor-default">
+            <div class="flex items-center space-x-3 group cursor-default text-left">
               <i class="fas fa-phone-alt text-primary text-xs sm:text-sm"></i>
               <p class="text-gray-400 text-xs sm:text-sm">+94 77 123 4567</p>
             </div>
-            <div class="flex items-center space-x-3 group cursor-pointer">
+            <div class="flex items-center space-x-3 group cursor-pointer text-left">
               <i class="fas fa-envelope text-primary text-xs sm:text-sm"></i>
               <a href="mailto:support@oxxagear.lk" class="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">support@oxxagear.lk</a>
             </div>

@@ -46,6 +46,7 @@ try {
             SELECT c.product_id, c.variant_id, c.quantity,
                    p.name, p.base_price, p.cost_price, p.seller_id,
                    p.is_hot_deal, p.sale_price, p.original_price, p.hot_deal_status, p.hot_deal_expiry,
+                   p.is_free_shipping, p.shipping_cost,
                    cs.size, cs.selling_price as variant_price,
                    COALESCE(
                        (SELECT ci.image_path FROM color_images ci WHERE ci.color_id = cs.color_id ORDER BY ci.is_primary DESC, ci.sort_order ASC LIMIT 1),
@@ -81,7 +82,18 @@ try {
             $subtotal += $item['total_price'];
         }
         
-        $deliveryFee = 450.00;
+        $allFreeShipping = true;
+        foreach ($cartItems as $item) {
+            if (empty($item['is_free_shipping'])) {
+                $allFreeShipping = false;
+                break;
+            }
+        }
+        
+        $freeShippingThreshold = 5000.00;
+        $isFreeShipping = ($subtotal >= $freeShippingThreshold || ($allFreeShipping && count($cartItems) > 0));
+        $deliveryFee = ($subtotal > 0 && !$isFreeShipping) ? 300.00 : 0.00;
+
         $totalAmount = ($subtotal + $deliveryFee) - $couponDiscount;
 
         // DB Transaction

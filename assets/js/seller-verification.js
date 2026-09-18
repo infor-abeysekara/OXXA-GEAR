@@ -16,9 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
         business_email: document.getElementById('business_email'),
         address_line1: document.getElementById('address_line1'),
         address_line2: document.getElementById('address_line2'),
+        province: document.getElementById('province'),
+        district: document.getElementById('district'),
         city: document.getElementById('city'),
         postal_code: document.getElementById('postal_code'),
-        province: document.getElementById('province'),
         bank_name: document.getElementById('bank_name'),
         branch_name: document.getElementById('branch_name'),
         account_number: document.getElementById('account_number'),
@@ -128,8 +129,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
             case 'owner_nic':
-                if (val && !rules.nic.test(val)) {
+                el.value = val.toUpperCase();
+                const cleanNic = el.value.trim();
+                if (cleanNic && !rules.nic.test(cleanNic)) {
                     showError(id, 'Invalid NIC format. Use 9 digits+V/X or 12 digits.');
+                    isValid = false;
+                }
+                break;
+            case 'district':
+                if (el.hasAttribute('required') && (!val || el.disabled)) {
+                    showError(id, 'Please select a district.');
                     isValid = false;
                 }
                 break;
@@ -142,7 +151,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
             case 'business_phone':
-                el.value = val.replace(/\D/g, '').slice(0,10);
+                // Strip +94 or 94 prefix and replace with 0
+                let bpVal = val.replace(/\D/g, '');
+                if (bpVal.startsWith('94') && bpVal.length === 11) bpVal = '0' + bpVal.slice(2);
+                el.value = bpVal.slice(0, 10);
                 if (el.value && !rules.business_phone.test(el.value)) {
                     showError(id, 'Invalid phone format. E.g. 011XXXXXXX or 07XXXXXXXX');
                     isValid = false;
@@ -162,21 +174,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'address_line1':
                 if (val && val.length < 5) {
-                    showError(id, 'Address must be at least 5 characters long.');
+                    showError(id, 'Address too short (min 5 chars).');
                     isValid = false;
                 }
                 break;
             case 'postal_code':
-                if (val && !rules.postal_code.test(val)) {
-                    showError(id, 'Postal code must be exactly 5 digits.');
+                el.value = val.replace(/\D/g, '').slice(0,5);
+                if (el.value && !rules.postal_code.test(el.value)) {
+                    showError(id, 'Invalid postal code. Must be 5 digits.');
                     isValid = false;
                 }
                 break;
             case 'account_number':
-                el.value = val.replace(/\D/g, '').slice(0,16);
+                el.value = val.replace(/\D/g, '');
                 if (el.value && !rules.account_number.test(el.value)) {
                     showError(id, 'Account number must be 10-16 digits.');
                     isValid = false;
+                }
+                break;
+            case 'estimated_products':
+                if (val) {
+                    const num = parseInt(val);
+                    if (num < 1) {
+                        showError(id, 'Must be at least 1.');
+                        isValid = false;
+                    } else if (num > 1000) {
+                        const errSpan = document.getElementById(`err_${id}`);
+                        if(errSpan) {
+                            errSpan.textContent = 'High volume sellers (>1,000) will receive dedicated onboarding support.';
+                            errSpan.classList.remove('hidden');
+                            errSpan.classList.add('text-orange-500');
+                        }
+                    } else {
+                        const errSpan = document.getElementById(`err_${id}`);
+                        if(errSpan) {
+                            errSpan.classList.remove('text-orange-500');
+                        }
+                    }
                 }
                 break;
             case 'account_holder_name':
@@ -212,16 +246,57 @@ document.addEventListener('DOMContentLoaded', () => {
         return isValid;
     };
 
+    // Async NIC duplicate check
+    let nicAbortCtrl = null;
+    const checkNicAvailability = async () => {
+        const el = inputs.owner_nic;
+        if (!el) return;
+        const nic = el.value.trim().toUpperCase();
+        if (!nic || !rules.nic.test(nic)) return;
+
+        if (nicAbortCtrl) nicAbortCtrl.abort();
+        nicAbortCtrl = new AbortController();
+
+        try {
+            const res = await fetch(`../Backend/check-nic.php?nic=${encodeURIComponent(nic)}`, {
+                signal: nicAbortCtrl.signal
+            });
+            const data = await res.json();
+            if (!data.available) {
+                showError('owner_nic', data.message || 'This NIC number has already been registered.');
+                checkFormValidity();
+            } else {
+                const errSpan = document.getElementById('err_owner_nic');
+                if (errSpan && errSpan.textContent.includes('already registered')) {
+                    clearError('owner_nic');
+                    checkFormValidity();
+                }
+            }
+        } catch (e) {
+            if (e.name !== 'AbortError') console.error('NIC check error', e);
+        }
+    };
+
     // Attach listeners to text/select inputs
     Object.keys(inputs).forEach(key => {
         if(inputs[key]) {
-            inputs[key].addEventListener('blur', () => validateField(key));
+            inputs[key].addEventListener('blur', () => {
+                validateField(key);
+                if (key === 'owner_nic') checkNicAvailability();
+            });
             inputs[key].addEventListener('input', () => {
                 if(inputs[key].classList.contains('border-red-500')) {
                     validateField(key);
+                    if (key === 'owner_nic' && rules.nic.test(inputs.owner_nic.value.trim())) {
+                        checkNicAvailability();
+                    }
                 } else {
                     checkFormValidity();
                 }
+            });
+            inputs[key].addEventListener('change', () => {
+                validateField(key);
+                checkFormValidity();
             });
         }
     });
@@ -371,10 +446,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!el) return;
             if (el.hasAttribute('required')) {
                 if (key === 'declaration' && !el.checked) valid = false;
+                else if (el.disabled) valid = false;
                 else if (el.type !== 'checkbox' && !el.value.trim()) valid = false;
             }
             if (el.classList.contains('border-red-500')) valid = false;
         });
+
+        const nicErr = document.getElementById('err_owner_nic');
+        if (nicErr && !nicErr.classList.contains('hidden') && nicErr.textContent.trim() !== '') {
+            valid = false;
+        }
 
         if (!validateCategories()) valid = false;
 
@@ -386,6 +467,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         submitBtn.disabled = !valid;
     };
+
+    window.checkSellerFormValidity = checkFormValidity;
 
     // AJAX Form Submission
     form.addEventListener('submit', async (e) => {

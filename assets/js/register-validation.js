@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Regex Rules
     const nameRegex = /^[A-Za-z ]{2,50}$/;
-    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    const usernameRegex = /^[a-z0-9]{3,20}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^(?:\+94|0)?7[0-9]{8}$/;
     
@@ -280,8 +280,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (!usernameRegex.test(val)) {
-            showError('Username', '3-20 chars, letters/numbers/_ only');
+        // Auto-lowercase
+        username.value = val.toLowerCase();
+        const lowerVal = username.value.trim();
+
+        if (!usernameRegex.test(lowerVal)) {
+            showError('Username', '3-20 chars, lowercase letters & numbers only');
             icon.classList.add('hidden');
             validState.username = false;
             validateForm();

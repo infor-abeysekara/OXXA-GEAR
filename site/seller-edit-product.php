@@ -205,6 +205,50 @@ if ($latestHotDealRequest && $latestHotDealRequest['status'] === 'rejected' && !
                 <p class="text-xs text-gray-400 mt-4 font-bold"><i class="fas fa-info-circle me-1"></i> Entering prices here and clicking "Apply All" will automatically set the price for all generated variants below. You can then individually adjust variant prices.</p>
             </div>
 
+            <!-- CARD 2.5: SHIPPING OPTIONS -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                <h2 class="text-lg font-black text-navy uppercase tracking-wide mb-6 pb-2 border-b border-gray-100"><i class="fas fa-truck text-emerald-500 me-2"></i> Shipping Options</h2>
+                
+                <div class="mb-4">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" name="is_free_shipping" id="is_free_shipping" value="1" <?= (isset($product['is_free_shipping']) && $product['is_free_shipping'] == 1) ? 'checked' : '' ?> class="w-5 h-5 rounded text-[#0066FF] border-gray-300 focus:ring-[#0066FF] cursor-pointer">
+                        <span class="text-sm font-bold text-navy uppercase tracking-wide group-hover:text-[#0066FF] transition-colors">🚚 Free Shipping - Offer free delivery for this product</span>
+                    </label>
+                    <p id="freeShippingHelp" class="text-xs text-gray-400 mt-2 ml-8 font-medium">Customer ta delivery free. <span class="text-emerald-500 font-bold <?= (isset($product['is_free_shipping']) && $product['is_free_shipping'] == 1) ? '' : 'hidden' ?>" id="freeShippingSuccessMsg">Free delivery will be shown on product page</span></p>
+                </div>
+
+                <div id="shippingCostContainer">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Shipping Cost (Rs) *</label>
+                    <div class="relative max-w-xs">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">Rs.</span>
+                        <input type="number" name="shipping_cost" id="shippingCost" value="<?= (isset($product['shipping_cost']) && $product['shipping_cost'] > 0) ? $product['shipping_cost'] : '300' ?>" <?= (isset($product['is_free_shipping']) && $product['is_free_shipping'] == 1) ? 'disabled' : '' ?> class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-9 pr-4 text-sm font-bold text-navy focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all disabled:opacity-50 disabled:bg-gray-100" step="0.01">
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2 font-medium">Leave 300 for standard islandwide delivery</p>
+                </div>
+            </div>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const freeShippingCheckbox = document.getElementById('is_free_shipping');
+                    const shippingCostInput = document.getElementById('shippingCost');
+                    const freeShippingSuccessMsg = document.getElementById('freeShippingSuccessMsg');
+                    
+                    if (freeShippingCheckbox && shippingCostInput) {
+                        freeShippingCheckbox.addEventListener('change', function() {
+                            if (this.checked) {
+                                shippingCostInput.disabled = true;
+                                shippingCostInput.value = '0';
+                                freeShippingSuccessMsg.classList.remove('hidden');
+                            } else {
+                                shippingCostInput.disabled = false;
+                                shippingCostInput.value = '300';
+                                freeShippingSuccessMsg.classList.add('hidden');
+                            }
+                        });
+                    }
+                });
+            </script>
+
             <!-- HOT DEALS Promotion Section -->
             <?php
             $origPriceValue = !empty($product['original_price']) && $product['original_price'] > 0 ? (float)$product['original_price'] : (float)$product['base_price'];

@@ -192,6 +192,11 @@ if (isset($_SESSION['userid'])) {
             <button class="md:hidden absolute top-4 right-4 z-10 w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-gray-400 shadow-sm">
                 <i class="far fa-heart"></i>
             </button>
+            <?php if(isset($product['is_free_shipping']) && $product['is_free_shipping'] == 1): ?>
+                <div class="absolute top-[70px] left-4 md:top-6 md:left-6 z-10 bg-[#D4FF00] text-black text-[10px] font-black px-3 py-1.5 rounded-md uppercase tracking-wider shadow-sm">
+                    Free Delivery
+                </div>
+            <?php endif; ?>
 
             <!-- Swiper -->
             <div class="swiper productSwiper w-full aspect-square md:aspect-auto md:h-auto object-cover bg-[#F8F9FA] md:rounded-[2rem]">
@@ -425,6 +430,33 @@ if (isset($_SESSION['userid'])) {
             <?php endif; ?>
 
 
+
+            <?php endif; ?>
+
+            <!-- Shipping Information Badge -->
+            <div class="mb-8 mt-2">
+                <?php if (isset($product['is_free_shipping']) && $product['is_free_shipping'] == 1): ?>
+                    <div class="inline-block p-1 bg-green-50 rounded-xl border border-green-100">
+                        <div class="flex items-center gap-2 bg-[#D4FF00] text-black px-4 py-2 rounded-lg font-black text-xs uppercase tracking-wide shadow-sm">
+                            <i class="fas fa-truck text-sm"></i> FREE Shipping - Islandwide Delivery
+                        </div>
+                    </div>
+                    <p class="text-[10px] font-bold text-gray-500 mt-2 flex items-center gap-2 uppercase tracking-wide">
+                        <i class="fas fa-bolt text-yellow-400"></i> Delivered in 2-3 days <span class="w-1 h-1 bg-gray-300 rounded-full mx-1"></span> <i class="fas fa-shield-alt text-[#0066FF]"></i> 100% Authentic
+                    </p>
+                <?php else: ?>
+                    <?php $shippingCost = isset($product['shipping_cost']) ? (float)$product['shipping_cost'] : 300; ?>
+                    <div class="inline-block p-1 bg-gray-50 rounded-xl border border-gray-200">
+                        <div class="flex items-center gap-2 bg-white text-navy px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wide shadow-sm">
+                            <i class="fas fa-truck text-gray-400 text-sm"></i> Delivery: Rs. <?php echo number_format($shippingCost, 0); ?> - Islandwide
+                        </div>
+                    </div>
+                    <p class="text-[10px] font-bold text-gray-500 mt-2 uppercase tracking-wide flex items-center gap-1.5">
+                        <i class="fas fa-box text-gray-400"></i> Free delivery over Rs.5000 
+                        <span class="text-[#0066FF]">Add Rs. <?php echo number_format(max(0, 5000 - $lowestPrice), 0); ?> more for free!</span>
+                    </p>
+                <?php endif; ?>
+            </div>
 
             <!-- Variants Selection -->
             <?php if(!empty($variants)): ?>

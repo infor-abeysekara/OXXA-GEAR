@@ -19,6 +19,20 @@ $stmt = $pdo->prepare("SELECT * FROM seller_profiles WHERE user_id = ?");
 $stmt->execute([$_SESSION['userid']]);
 $business = $stmt->fetch(PDO::FETCH_ASSOC);
 
+// Fetch User Details for Autofill
+$userStmt = $pdo->prepare("SELECT first_name, last_name, phone, email FROM users WHERE id = ?");
+$userStmt->execute([$_SESSION['userid']]);
+$currentUser = $userStmt->fetch(PDO::FETCH_ASSOC);
+$autoFullName = $currentUser ? trim($currentUser['first_name'] . ' ' . $currentUser['last_name']) : '';
+$autoPhone = $currentUser['phone'] ?? '';
+if (strpos($autoPhone, '+94') === 0) {
+    $autoPhone = '0' . substr($autoPhone, 3);
+} elseif (strpos($autoPhone, '94') === 0) {
+    $autoPhone = '0' . substr($autoPhone, 2);
+}
+$autoEmail = $currentUser['email'] ?? '';
+
+
 ?>
 
 <div class="bg-gray-50 min-h-[90vh] py-12">
@@ -381,7 +395,7 @@ $business = $stmt->fetch(PDO::FETCH_ASSOC);
                                         <li class="flex items-start gap-4">
                                             <div class="w-8 h-8 rounded-full bg-white text-[#0066FF] flex items-center justify-center font-black shadow-sm shrink-0 border border-blue-100 mt-0.5">1</div>
                                             <div>
-                                                <h4 class="font-bold text-navy text-[15px]">Add Your First Product</h4>
+                                                <h4 class="font-bold text-navy text-[15px]">Add Product</h4>
                                                 <p class="text-[13px] font-medium text-slate mt-1 leading-snug">Include buying and selling price for profit calculation.</p>
                                             </div>
                                         </li>
@@ -403,7 +417,7 @@ $business = $stmt->fetch(PDO::FETCH_ASSOC);
                                     
                                     <div class="mt-8 space-y-3 relative z-10 pt-6 border-t border-blue-200/50">
                                         <a href="seller-add-product.php" class="block w-full bg-[#0066FF] hover:bg-blue-700 text-white text-center py-3.5 rounded-xl font-bold uppercase tracking-wide transition-all shadow-lg shadow-blue-500/30">
-                                            Add First Product
+                                            Add Product
                                         </a>
                                         <a href="seller-dashboard.php" class="block w-full bg-white hover:bg-gray-50 border border-blue-200 text-[#0066FF] hover:text-navy text-center py-3.5 rounded-xl font-bold uppercase tracking-wide transition-all shadow-sm">
                                             View My Store
@@ -536,27 +550,27 @@ $business = $stmt->fetch(PDO::FETCH_ASSOC);
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Owner Full Name <span class="text-red-500">*</span></label>
-                                <input type="text" id="owner_name" name="owner_name" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="owner_name" name="owner_name" value="<?php echo htmlspecialchars($autoFullName); ?>" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_owner_name"></span>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">NIC Number <span class="text-red-500">*</span></label>
-                                <input type="text" id="owner_nic" name="owner_nic" required placeholder="e.g. 199012345678 or 901234567V" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="owner_nic" name="owner_nic" required placeholder="e.g. 199012345678 or 901234567V" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF] uppercase">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_owner_nic"></span>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Personal Phone <span class="text-red-500">*</span></label>
-                                <input type="text" id="personal_phone" name="personal_phone" required placeholder="07XXXXXXXX" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="personal_phone" name="personal_phone" value="<?php echo htmlspecialchars($autoPhone); ?>" required placeholder="07XXXXXXXX" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)" inputmode="numeric" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_personal_phone"></span>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Personal Email <span class="text-red-500">*</span></label>
-                                <input type="email" id="personal_email" name="personal_email" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="email" id="personal_email" name="personal_email" value="<?php echo htmlspecialchars($autoEmail); ?>" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_personal_email"></span>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Business Phone <span class="text-red-500">*</span></label>
-                                <input type="text" id="business_phone" name="business_phone" required placeholder="011XXXXXXX" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="business_phone" name="business_phone" required placeholder="011XXXXXXX" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)" inputmode="numeric" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_business_phone"></span>
                             </div>
                             <div>
@@ -584,17 +598,9 @@ $business = $stmt->fetch(PDO::FETCH_ASSOC);
                                 <input type="text" id="address_line2" name="address_line2" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_address_line2"></span>
                             </div>
+
+                            <!-- Province -->
                             <div>
-                                <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">City <span class="text-red-500">*</span></label>
-                                <input type="text" id="city" name="city" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
-                                <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_city"></span>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Postal Code <span class="text-red-500">*</span></label>
-                                <input type="text" id="postal_code" name="postal_code" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
-                                <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_postal_code"></span>
-                            </div>
-                            <div class="md:col-span-2">
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Province <span class="text-red-500">*</span></label>
                                 <select id="province" name="province" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                     <option value="" disabled selected>Select Province</option>
@@ -604,8 +610,108 @@ $business = $stmt->fetch(PDO::FETCH_ASSOC);
                                 </select>
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_province"></span>
                             </div>
+
+                            <!-- District -->
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">District <span class="text-red-500">*</span></label>
+                                <select id="district" name="district" required disabled class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF] disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <option value="" disabled selected>Select District</option>
+                                </select>
+                                <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_district"></span>
+                            </div>
+
+                            <!-- City -->
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">City <span class="text-red-500">*</span></label>
+                                <select id="city" name="city" required disabled class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF] disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <option value="" disabled selected>Select City</option>
+                                </select>
+                                <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_city"></span>
+                            </div>
+
+                            <!-- Postal Code -->
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Postal Code <span class="text-red-500">*</span></label>
+                                <input type="text" id="postal_code" name="postal_code" required maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,5)" inputmode="numeric" placeholder="e.g. 00500" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_postal_code"></span>
+                            </div>
                         </div>
                     </section>
+
+                    <script>
+                    (function() {
+                        const basePath = '../';
+                        const provinceEl = document.getElementById('province');
+                        const districtEl = document.getElementById('district');
+                        const cityEl     = document.getElementById('city');
+
+                        function resetSelect(el, placeholder) {
+                            if (!el) return;
+                            el.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
+                            el.disabled = true;
+                        }
+
+                        async function loadDistricts(province) {
+                            resetSelect(districtEl, 'Select District');
+                            resetSelect(cityEl, 'Select City');
+
+                            if (!province) return;
+
+                            try {
+                                const res = await fetch(`${basePath}Backend/get-location-data.php?action=districts&province=${encodeURIComponent(province)}`);
+                                const data = await res.json();
+                                if (data.success && Array.isArray(data.districts) && data.districts.length) {
+                                    districtEl.innerHTML = '<option value="" disabled selected>Select District</option>';
+                                    data.districts.forEach(d => {
+                                        districtEl.innerHTML += `<option value="${d}">${d}</option>`;
+                                    });
+                                    districtEl.disabled = false;
+                                    if (typeof window.checkSellerFormValidity === 'function') {
+                                        window.checkSellerFormValidity();
+                                    }
+                                }
+                            } catch(e) { console.error('District load failed', e); }
+                        }
+
+                        async function loadCities(district) {
+                            const province = provinceEl ? provinceEl.value : '';
+                            resetSelect(cityEl, 'Select City');
+
+                            if (!district) return;
+
+                            try {
+                                const res = await fetch(`${basePath}Backend/get-location-data.php?action=cities&province=${encodeURIComponent(province)}&district=${encodeURIComponent(district)}`);
+                                const data = await res.json();
+                                if (data.success && Array.isArray(data.cities) && data.cities.length) {
+                                    cityEl.innerHTML = '<option value="" disabled selected>Select City</option>';
+                                    data.cities.forEach(c => {
+                                        cityEl.innerHTML += `<option value="${c}">${c}</option>`;
+                                    });
+                                    cityEl.disabled = false;
+                                    if (typeof window.checkSellerFormValidity === 'function') {
+                                        window.checkSellerFormValidity();
+                                    }
+                                }
+                            } catch(e) { console.error('City load failed', e); }
+                        }
+
+                        if (provinceEl) {
+                            provinceEl.addEventListener('change', function() {
+                                loadDistricts(this.value);
+                            });
+                            // If province is already selected (e.g. browser cache or reload), load immediately
+                            if (provinceEl.value) {
+                                loadDistricts(provinceEl.value);
+                            }
+                        }
+
+                        if (districtEl) {
+                            districtEl.addEventListener('change', function() {
+                                loadCities(this.value);
+                            });
+                        }
+                    })();
+                    </script>
 
                     <!-- 4. Documents Upload -->
                     <section>
@@ -613,7 +719,7 @@ $business = $stmt->fetch(PDO::FETCH_ASSOC);
                             <span class="w-8 h-8 rounded-full bg-blue-100 text-[#0066FF] flex items-center justify-center text-sm">4</span>
                             Documents Upload
                         </h3>
-                        <p class="text-sm text-gray-500 mb-6">Supported formats: JPG, PNG, PDF. Maximum size: 5MB per file (Logo: 2MB).</p>
+                        <p class="text-sm text-gray-500 mb-6">Supported formats: PDF (for BR and NIC), JPG/PNG (for Photos). Maximum size: 5MB per file (Logo: 2MB).</p>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
                             <!-- BR Certificate -->
@@ -621,10 +727,10 @@ $business = $stmt->fetch(PDO::FETCH_ASSOC);
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">BR Certificate <span class="text-red-500">*</span></label>
                                 <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[#0066FF]/50 rounded-xl cursor-pointer bg-blue-50/30 hover:bg-blue-50 transition-colors">
                                     <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                                        <i class="fas fa-cloud-upload-alt text-2xl text-[#0066FF] mb-2"></i>
-                                        <p class="text-sm text-gray-500 font-semibold file-name-display">Click to upload BR Certificate</p>
+                                        <i class="fas fa-file-pdf text-2xl text-[#0066FF] mb-2"></i>
+                                        <p class="text-sm text-gray-500 font-semibold file-name-display">Click to upload BR Certificate (PDF)</p>
                                     </div>
-                                    <input type="file" id="certificate_file" name="certificate_file" required accept=".jpg,.jpeg,.png,.pdf" class="hidden file-input" data-max-size="5" />
+                                    <input type="file" id="certificate_file" name="certificate_file" required accept=".pdf" class="hidden file-input" data-max-size="5" />
                                 </label>
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_certificate_file"></span>
                             </div>
@@ -634,10 +740,10 @@ $business = $stmt->fetch(PDO::FETCH_ASSOC);
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Owner NIC (Front & Back) <span class="text-red-500">*</span></label>
                                 <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[#0066FF]/50 rounded-xl cursor-pointer bg-blue-50/30 hover:bg-blue-50 transition-colors">
                                     <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                                        <i class="fas fa-id-card text-2xl text-[#0066FF] mb-2"></i>
-                                        <p class="text-sm text-gray-500 font-semibold file-name-display">Click to upload NIC Copy</p>
+                                        <i class="fas fa-file-pdf text-2xl text-[#0066FF] mb-2"></i>
+                                        <p class="text-sm text-gray-500 font-semibold file-name-display">Click to upload NIC Copy (PDF)</p>
                                     </div>
-                                    <input type="file" id="nic_file" name="nic_file" required accept=".jpg,.jpeg,.png,.pdf" class="hidden file-input" data-max-size="5" />
+                                    <input type="file" id="nic_file" name="nic_file" required accept=".pdf" class="hidden file-input" data-max-size="5" />
                                 </label>
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_nic_file"></span>
                             </div>
@@ -702,7 +808,7 @@ $business = $stmt->fetch(PDO::FETCH_ASSOC);
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Account Number <span class="text-red-500">*</span></label>
-                                <input type="text" id="account_number" name="account_number" required placeholder="Digits only (10-16 digits)" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="account_number" name="account_number" required placeholder="Digits only (10-16 digits)" maxlength="16" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,16)" inputmode="numeric" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_account_number"></span>
                             </div>
                             <div>

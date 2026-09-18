@@ -715,7 +715,11 @@ const CartManager = {
 
         // Update Totals
         document.getElementById('drawerSubtotal').innerText = 'Rs. ' + Number(data.subtotal).toLocaleString();
-        document.getElementById('drawerShipping').innerText = data.is_free_shipping ? 'FREE' : ('Rs. ' + Number(data.shipping_fee).toLocaleString());
+        if (data.is_free_shipping || data.shipping_fee === 0) {
+            document.getElementById('drawerShipping').innerHTML = '<span class="text-[#CCFF00] font-black uppercase text-xs px-2 py-0.5 bg-navy rounded shadow-sm">FREE</span> <span class="text-gray-400 line-through text-[10px] ml-1">Rs. 300</span>';
+        } else {
+            document.getElementById('drawerShipping').innerText = 'Rs. ' + Number(data.shipping_fee).toLocaleString();
+        }
         
         const discRow = document.getElementById('drawerDiscountRow');
         if (data.coupon_discount > 0) {

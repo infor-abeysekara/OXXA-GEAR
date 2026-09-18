@@ -26,6 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
     $description = trim($_POST['description']);
     $cost_price = (float)$_POST['cost_price'];
     $selling_price = (float)$_POST['selling_price'];
+    $is_free_shipping = isset($_POST['is_free_shipping']) ? 1 : 0;
+    $shipping_cost = $is_free_shipping ? 0 : (isset($_POST['shipping_cost']) ? (float)$_POST['shipping_cost'] : 300.00);
 
     // Generate product code (e.g. PRD-1052)
     $stmt = $pdo->query("SELECT MAX(id) FROM products");
@@ -54,8 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
         $pdo->beginTransaction();
 
         // 1. Insert Product
-        $insertProd = $pdo->prepare("INSERT INTO products (product_code, seller_id, name, slug, brand_id, category_id, description, cost_price, base_price, total_qty, is_approved, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'active')");
-        $insertProd->execute([$product_code, $seller_id, $name, $slug, $brand_id, $category_id, $description, $cost_price, $selling_price, $total_qty]);
+        $insertProd = $pdo->prepare("INSERT INTO products (product_code, seller_id, name, slug, brand_id, category_id, description, cost_price, base_price, total_qty, is_approved, status, is_free_shipping, shipping_cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'active', ?, ?)");
+        $insertProd->execute([$product_code, $seller_id, $name, $slug, $brand_id, $category_id, $description, $cost_price, $selling_price, $total_qty, $is_free_shipping, $shipping_cost]);
         
         $product_id = $pdo->lastInsertId();
 
@@ -147,6 +149,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
     $description = trim($_POST['description']);
     $cost_price = (float)$_POST['cost_price'];
     $selling_price = (float)$_POST['selling_price'];
+    $is_free_shipping = isset($_POST['is_free_shipping']) ? 1 : 0;
+    $shipping_cost = $is_free_shipping ? 0 : (isset($_POST['shipping_cost']) ? (float)$_POST['shipping_cost'] : 300.00);
 
     // Verify ownership
     $checkStmt = $pdo->prepare("SELECT id FROM products WHERE id = ? AND seller_id = ?");
@@ -170,8 +174,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
         $pdo->beginTransaction();
 
         // 1. Update Product
-        $updateProd = $pdo->prepare("UPDATE products SET name = ?, brand_id = ?, category_id = ?, description = ?, cost_price = ?, base_price = ?, total_qty = ?, is_approved = 0 WHERE id = ?");
-        $updateProd->execute([$name, $brand_id, $category_id, $description, $cost_price, $selling_price, $total_qty, $product_id]);
+        $updateProd = $pdo->prepare("UPDATE products SET name = ?, brand_id = ?, category_id = ?, description = ?, cost_price = ?, base_price = ?, total_qty = ?, is_approved = 0, is_free_shipping = ?, shipping_cost = ? WHERE id = ?");
+        $updateProd->execute([$name, $brand_id, $category_id, $description, $cost_price, $selling_price, $total_qty, $is_free_shipping, $shipping_cost, $product_id]);
 
         // 2. Update Variants (Delete old, Insert new)
         $pdo->prepare("DELETE FROM product_variants WHERE product_id = ?")->execute([$product_id]);

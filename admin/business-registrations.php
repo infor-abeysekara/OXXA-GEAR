@@ -1125,10 +1125,39 @@ function resolveDocUrl($filename, $type = 'cert') {
                                                         <!-- LEFT COLUMN: Business Profile & Documents (7 cols) -->
                                                         <div class="col-12 col-lg-7">
                                                             
-                                                            <!-- Business & Owner Overview -->
+                                                             <!-- Business Information -->
                                                             <div class="modal-card-box">
                                                                 <div class="modal-box-title">
-                                                                    <i class="fas fa-building text-primary"></i> Business & Owner Information
+                                                                    <i class="fas fa-building text-primary"></i> Business Information
+                                                                </div>
+                                                                <div class="row g-3">
+                                                                    <div class="col-sm-6">
+                                                                        <label class="text-muted small d-block">Business Name</label>
+                                                                        <strong class="text-dark"><?php echo $biz_name; ?></strong>
+                                                                    </div>
+                                                                    <div class="col-sm-6">
+                                                                        <label class="text-muted small d-block">Business Type</label>
+                                                                        <span class="type-pill"><?php echo $biz_type; ?></span>
+                                                                    </div>
+                                                                    <div class="col-sm-6">
+                                                                        <label class="text-muted small d-block">BR Registration Number</label>
+                                                                        <span class="font-monospace fw-bold text-dark"><?php echo $reg_id; ?></span>
+                                                                    </div>
+                                                                    <div class="col-sm-6">
+                                                                        <label class="text-muted small d-block">Date of Incorporation</label>
+                                                                        <strong class="text-dark"><?php echo !empty($row['date_of_incorporation']) ? date('d M Y', strtotime($row['date_of_incorporation'])) : 'N/A'; ?></strong>
+                                                                    </div>
+                                                                    <div class="col-12">
+                                                                        <label class="text-muted small d-block">Nature of Business</label>
+                                                                        <span class="text-dark"><?php echo htmlspecialchars($row['nature_of_business'] ?? 'N/A'); ?></span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- Owner & Contact Information -->
+                                                            <div class="modal-card-box">
+                                                                <div class="modal-box-title">
+                                                                    <i class="fas fa-user text-primary"></i> Owner & Contact Information
                                                                 </div>
                                                                 <div class="row g-3">
                                                                     <div class="col-sm-6">
@@ -1153,21 +1182,42 @@ function resolveDocUrl($filename, $type = 'cert') {
                                                                     </div>
                                                                     <div class="col-sm-6">
                                                                         <label class="text-muted small d-block">Business Email</label>
-                                                                        <span class="text-dark"><?php echo htmlspecialchars($row['business_email'] ?? $seller_email); ?></span>
+                                                                        <span class="text-dark"><?php echo !empty($row['business_email']) ? htmlspecialchars($row['business_email']) : '<span class="text-muted fst-italic">Not provided</span>'; ?></span>
                                                                     </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- Business Address -->
+                                                            <div class="modal-card-box">
+                                                                <div class="modal-box-title">
+                                                                    <i class="fas fa-map-marker-alt text-danger"></i> Business Address
+                                                                </div>
+                                                                <div class="row g-3">
                                                                     <div class="col-12">
-                                                                        <label class="text-muted small d-block">Physical Business Address</label>
-                                                                        <span class="text-dark">
-                                                                            <?php 
-                                                                            $addr = [];
-                                                                            if(!empty($row['address_line1'])) $addr[] = $row['address_line1'];
-                                                                            if(!empty($row['address_line2'])) $addr[] = $row['address_line2'];
-                                                                            if(!empty($row['city'])) $addr[] = $row['city'];
-                                                                            if(!empty($row['province'])) $addr[] = $row['province'];
-                                                                            if(!empty($row['postal_code'])) $addr[] = $row['postal_code'];
-                                                                            echo !empty($addr) ? htmlspecialchars(implode(', ', $addr)) : 'Address on file';
-                                                                            ?>
-                                                                        </span>
+                                                                        <label class="text-muted small d-block">Address Line 1</label>
+                                                                        <span class="text-dark"><?php echo htmlspecialchars($row['address_line1'] ?? 'N/A'); ?></span>
+                                                                    </div>
+                                                                    <?php if(!empty($row['address_line2'])): ?>
+                                                                    <div class="col-12">
+                                                                        <label class="text-muted small d-block">Address Line 2</label>
+                                                                        <span class="text-dark"><?php echo htmlspecialchars($row['address_line2']); ?></span>
+                                                                    </div>
+                                                                    <?php endif; ?>
+                                                                    <div class="col-sm-4">
+                                                                        <label class="text-muted small d-block">City</label>
+                                                                        <strong class="text-dark"><?php echo htmlspecialchars($row['city'] ?? 'N/A'); ?></strong>
+                                                                    </div>
+                                                                    <div class="col-sm-4">
+                                                                        <label class="text-muted small d-block">District</label>
+                                                                        <strong class="text-dark"><?php echo htmlspecialchars($row['district'] ?? 'N/A'); ?></strong>
+                                                                    </div>
+                                                                    <div class="col-sm-4">
+                                                                        <label class="text-muted small d-block">Province</label>
+                                                                        <strong class="text-dark"><?php echo htmlspecialchars($row['province'] ?? 'N/A'); ?></strong>
+                                                                    </div>
+                                                                    <div class="col-sm-4">
+                                                                        <label class="text-muted small d-block">Postal Code</label>
+                                                                        <span class="font-monospace fw-bold text-dark"><?php echo htmlspecialchars($row['postal_code'] ?? 'N/A'); ?></span>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -1180,19 +1230,56 @@ function resolveDocUrl($filename, $type = 'cert') {
                                                                 <div class="row g-3">
                                                                     <div class="col-sm-6">
                                                                         <label class="text-muted small d-block">Bank Name</label>
-                                                                        <strong class="text-dark"><?php echo htmlspecialchars($row['bank_name'] ?? 'Bank of Ceylon'); ?></strong>
+                                                                        <strong class="text-dark"><?php echo htmlspecialchars($row['bank_name'] ?? 'N/A'); ?></strong>
                                                                     </div>
                                                                     <div class="col-sm-6">
                                                                         <label class="text-muted small d-block">Branch</label>
-                                                                        <strong class="text-dark"><?php echo htmlspecialchars($row['branch_name'] ?? 'Main Branch'); ?></strong>
+                                                                        <strong class="text-dark"><?php echo htmlspecialchars($row['branch_name'] ?? 'N/A'); ?></strong>
                                                                     </div>
                                                                     <div class="col-sm-6">
                                                                         <label class="text-muted small d-block">Account Number</label>
-                                                                        <span class="font-monospace fw-bold text-dark"><?php echo htmlspecialchars($row['account_number'] ?? 'XXXX-XXXX-XXXX'); ?></span>
+                                                                        <span class="font-monospace fw-bold text-dark"><?php echo htmlspecialchars($row['account_number'] ?? 'N/A'); ?></span>
                                                                     </div>
                                                                     <div class="col-sm-6">
                                                                         <label class="text-muted small d-block">Account Holder</label>
                                                                         <strong class="text-dark"><?php echo htmlspecialchars($row['account_holder_name'] ?? $seller_name); ?></strong>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- Selling Information -->
+                                                            <div class="modal-card-box">
+                                                                <div class="modal-box-title">
+                                                                    <i class="fas fa-tags text-info"></i> Selling Information
+                                                                </div>
+                                                                <div class="row g-3">
+                                                                    <div class="col-12">
+                                                                        <label class="text-muted small d-block">Product Categories</label>
+                                                                        <div class="d-flex flex-wrap gap-1 mt-1">
+                                                                            <?php 
+                                                                            $cats = array_filter(array_map('trim', explode(',', $row['selling_categories'] ?? '')));
+                                                                            if(!empty($cats)):
+                                                                                foreach($cats as $cat):
+                                                                            ?>
+                                                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1" style="font-size:11px;"><?php echo htmlspecialchars($cat); ?></span>
+                                                                            <?php endforeach; else: ?>
+                                                                                <span class="text-muted fst-italic">Not specified</span>
+                                                                            <?php endif; ?>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-sm-6">
+                                                                        <label class="text-muted small d-block">Estimated Monthly Products</label>
+                                                                        <strong class="text-dark"><?php echo htmlspecialchars($row['estimated_products'] ?? 'N/A'); ?></strong>
+                                                                    </div>
+                                                                    <div class="col-sm-6">
+                                                                        <label class="text-muted small d-block">Website / Social Page</label>
+                                                                        <?php if(!empty($row['social_website'])): ?>
+                                                                            <a href="<?php echo htmlspecialchars($row['social_website']); ?>" target="_blank" class="text-primary text-decoration-none small">
+                                                                                <i class="fas fa-external-link-alt me-1"></i><?php echo htmlspecialchars($row['social_website']); ?>
+                                                                            </a>
+                                                                        <?php else: ?>
+                                                                            <span class="text-muted fst-italic">Not provided</span>
+                                                                        <?php endif; ?>
                                                                     </div>
                                                                 </div>
                                                             </div>

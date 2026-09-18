@@ -125,13 +125,13 @@ $dealsCount = count($deals);
 
         <div class="max-w-6xl mx-auto relative z-10 text-center">
             <!-- Badge -->
-            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#CCFF00]/10 border border-[#CCFF00]/40 text-[#CCFF00] text-xs font-black uppercase tracking-widest mb-5 shadow-[0_0_20px_rgba(204,255,0,0.15)]">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0A6CFF]/10 border border-[#0A6CFF]/40 text-[#0A6CFF] text-xs font-black uppercase tracking-widest mb-5 shadow-[0_0_20px_rgba(10,108,255,0.15)]">
                 <i class="fas fa-bolt animate-pulse"></i> Limited Time Flash Clearance
             </div>
 
             <!-- Main Heading -->
             <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black font-space uppercase tracking-tight text-white mb-5 leading-none">
-                HOT DEALS <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#CCFF00] via-lime-300 to-emerald-400">ZONE</span>
+                HOT DEALS <span class="text-white">ZONE</span>
             </h1>
 
             <!-- Subtitle -->
@@ -142,7 +142,7 @@ $dealsCount = count($deals);
             <!-- Stats Ribbon with dynamic Lime count -->
             <div class="mt-8 inline-flex flex-wrap items-center justify-center gap-6 sm:gap-10 md:gap-14 px-8 py-4 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-xl shadow-2xl">
                 <div class="text-center">
-                    <div id="heroActiveDealsCount" class="text-2xl sm:text-3xl md:text-4xl font-black text-[#CCFF00] tracking-tight">
+                    <div id="heroActiveDealsCount" class="text-2xl sm:text-3xl md:text-4xl font-black text-[#0A6CFF] tracking-tight">
                         <?php echo $totalActiveDeals; ?>
                     </div>
                     <div class="text-[11px] sm:text-xs text-gray-300 uppercase tracking-widest font-bold mt-0.5">Active Deals</div>
@@ -158,22 +158,22 @@ $dealsCount = count($deals);
                 <div class="w-px h-10 bg-white/15 hidden sm:block"></div>
 
                 <div class="text-center">
-                    <div class="text-2xl sm:text-3xl md:text-4xl font-black text-primary tracking-tight">7-Day</div>
+                    <div class="text-2xl sm:text-3xl md:text-4xl font-black text-[#0A6CFF] tracking-tight">7-Day</div>
                     <div class="text-[11px] sm:text-xs text-gray-300 uppercase tracking-widest font-bold mt-0.5">Deal Expiries</div>
                 </div>
             </div>
 
             <!-- Small Countdown Timer for Hype -->
             <div class="mt-6 flex items-center justify-center">
-                <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-black/60 border border-white/15 backdrop-blur-md text-xs sm:text-sm shadow-inner">
+                <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full border border-white bg-transparent text-xs sm:text-sm shadow-inner">
                     <span class="flex h-2.5 w-2.5 relative">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                         <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
                     </span>
-                    <span class="text-gray-300 font-medium">
+                    <span class="text-white font-medium">
                         <i class="fas fa-fire-flame-curved text-amber-400 mr-1"></i> Next flash drop in:
                     </span>
-                    <span id="flashDropCountdown" class="font-mono font-black text-[#CCFF00] bg-white/10 px-2.5 py-0.5 rounded tracking-widest text-xs sm:text-sm">
+                    <span id="flashDropCountdown" class="font-mono font-black text-white px-2.5 py-0.5 tracking-widest text-xs sm:text-sm">
                         02:14:33
                     </span>
                 </div>
@@ -196,7 +196,7 @@ $dealsCount = count($deals);
                            id="dealsSearchInput"
                            value="<?php echo htmlspecialchars($search); ?>" 
                            placeholder="Search hot deals, brands..." 
-                           class="w-full pl-11 pr-10 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00] transition-all">
+                           class="w-full pl-11 pr-10 py-3 rounded-xl bg-black/50 border border-white/10 text-white placeholder-gray-400 text-sm focus:outline-none focus:border-[#0A6CFF] focus:ring-1 focus:ring-[#0A6CFF] transition-all">
                     <?php if(!empty($search)): ?>
                         <button type="button" onclick="document.getElementById('dealsSearchInput').value=''; document.getElementById('hotDealsFilterForm').submit();" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-xs p-1">
                             <i class="fas fa-times-circle"></i>
@@ -207,7 +207,7 @@ $dealsCount = count($deals);
                 <!-- Category Dropdown -->
                 <div class="lg:col-span-3">
                     <div class="relative">
-                        <select name="category" onchange="this.form.submit()" class="w-full py-3 pl-4 pr-10 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00] transition-all appearance-none cursor-pointer">
+                        <select name="category" onchange="this.form.submit()" class="w-full py-3 pl-4 pr-10 rounded-xl bg-black/50 border border-white text-white text-sm focus:outline-none focus:border-[#0A6CFF] focus:ring-1 focus:ring-[#0A6CFF] transition-all appearance-none cursor-pointer">
                             <option value="">All Categories</option>
                             <?php foreach($allCategories as $cat): ?>
                                 <option value="<?php echo $cat['id']; ?>" <?php echo $category_id == $cat['id'] ? 'selected' : ''; ?>>
@@ -222,7 +222,7 @@ $dealsCount = count($deals);
                 <!-- Sort Dropdown -->
                 <div class="lg:col-span-3">
                     <div class="relative">
-                        <select name="sort" onchange="this.form.submit()" class="w-full py-3 pl-4 pr-10 rounded-xl bg-black/50 border border-white/10 text-white text-sm focus:outline-none focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00] transition-all appearance-none cursor-pointer">
+                        <select name="sort" onchange="this.form.submit()" class="w-full py-3 pl-4 pr-10 rounded-xl bg-black/50 border border-white text-white text-sm focus:outline-none focus:border-[#0A6CFF] focus:ring-1 focus:ring-[#0A6CFF] transition-all appearance-none cursor-pointer">
                             <option value="highest_discount" <?php echo $sort == 'highest_discount' ? 'selected' : ''; ?>>Highest Discount</option>
                             <option value="ending_soon" <?php echo $sort == 'ending_soon' ? 'selected' : ''; ?>>Ending Soon</option>
                             <option value="price_asc" <?php echo $sort == 'price_asc' ? 'selected' : ''; ?>>Price: Low to High</option>
@@ -243,7 +243,7 @@ $dealsCount = count($deals);
 
                 <!-- Lime Search/Filter Button -->
                 <div class="lg:col-span-1 flex gap-2">
-                    <button type="submit" class="w-full py-3 bg-[#CCFF00] text-[#070D18] font-black rounded-xl text-sm hover:bg-white transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-[0_0_20px_rgba(204,255,0,0.3)] hover:scale-105 active:scale-95" title="Filter Deals">
+                    <button type="submit" class="w-full py-3 bg-[#0A6CFF] text-white font-black rounded-xl text-sm hover:bg-[#0855c9] transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-[0_0_20px_rgba(10,108,255,0.3)] hover:scale-105 active:scale-95" title="Filter Deals">
                         <i class="fas fa-search text-base"></i>
                     </button>
                     <?php if(!empty($search) || $category_id || $sort !== 'highest_discount' || $min_discount || $max_price): ?>
@@ -257,36 +257,36 @@ $dealsCount = count($deals);
             <!-- Popular Quick Chips -->
             <div class="mt-4 pt-4 border-t border-white/10 flex flex-wrap items-center gap-2 text-xs">
                 <span class="text-gray-400 font-bold uppercase tracking-wider text-[11px] mr-1 flex items-center gap-1.5">
-                    <i class="fas fa-tags text-xs text-[#CCFF00]"></i> Popular:
+                    <i class="fas fa-tags text-xs text-white"></i> Popular:
                 </span>
 
                 <!-- Chip 1: Nike -->
                 <a href="<?php echo $base_path; ?>site/hot-deals.php?search=Nike" 
-                   class="px-3.5 py-1.5 rounded-full border transition-all duration-200 <?php echo strtolower($search) === 'nike' ? 'bg-[#CCFF00] text-black border-[#CCFF00] font-black' : 'bg-black/40 border-white/10 text-gray-300 hover:border-[#CCFF00] hover:text-[#CCFF00]'; ?>">
+                   class="px-3.5 py-1.5 rounded-full border transition-all duration-200 <?php echo strtolower($search) === 'nike' ? 'bg-[#0A6CFF] text-white border-[#0A6CFF] font-black' : 'bg-black/40 border border-white text-gray-300 hover:bg-[#0A6CFF] hover:border-[#0A6CFF] hover:text-white'; ?>">
                     Nike
                 </a>
 
                 <!-- Chip 2: Running -->
                 <a href="<?php echo $base_path; ?>site/hot-deals.php?search=Running" 
-                   class="px-3.5 py-1.5 rounded-full border transition-all duration-200 <?php echo strtolower($search) === 'running' ? 'bg-[#CCFF00] text-black border-[#CCFF00] font-black' : 'bg-black/40 border-white/10 text-gray-300 hover:border-[#CCFF00] hover:text-[#CCFF00]'; ?>">
+                   class="px-3.5 py-1.5 rounded-full border transition-all duration-200 <?php echo strtolower($search) === 'running' ? 'bg-[#0A6CFF] text-white border-[#0A6CFF] font-black' : 'bg-black/40 border border-white text-gray-300 hover:bg-[#0A6CFF] hover:border-[#0A6CFF] hover:text-white'; ?>">
                     Running
                 </a>
 
                 <!-- Chip 3: 30% OFF -->
                 <a href="<?php echo $base_path; ?>site/hot-deals.php?min_discount=30" 
-                   class="px-3.5 py-1.5 rounded-full border transition-all duration-200 <?php echo $min_discount == 30 ? 'bg-[#CCFF00] text-black border-[#CCFF00] font-black' : 'bg-black/40 border-white/10 text-gray-300 hover:border-[#CCFF00] hover:text-[#CCFF00]'; ?>">
+                   class="px-3.5 py-1.5 rounded-full border transition-all duration-200 <?php echo $min_discount == 30 ? 'bg-[#0A6CFF] text-white border-[#0A6CFF] font-black' : 'bg-black/40 border border-white text-gray-300 hover:bg-[#0A6CFF] hover:border-[#0A6CFF] hover:text-white'; ?>">
                     🔥 30% OFF
                 </a>
 
                 <!-- Chip 4: Under Rs. 5000 -->
                 <a href="<?php echo $base_path; ?>site/hot-deals.php?max_price=5000" 
-                   class="px-3.5 py-1.5 rounded-full border transition-all duration-200 <?php echo $max_price == 5000 ? 'bg-[#CCFF00] text-black border-[#CCFF00] font-black' : 'bg-black/40 border-white/10 text-gray-300 hover:border-[#CCFF00] hover:text-[#CCFF00]'; ?>">
+                   class="px-3.5 py-1.5 rounded-full border transition-all duration-200 <?php echo $max_price == 5000 ? 'bg-[#0A6CFF] text-white border-[#0A6CFF] font-black' : 'bg-black/40 border border-white text-gray-300 hover:bg-[#0A6CFF] hover:border-[#0A6CFF] hover:text-white'; ?>">
                     Under Rs. 5,000
                 </a>
 
                 <!-- Chip 5: Under Rs. 10000 -->
                 <a href="<?php echo $base_path; ?>site/hot-deals.php?max_price=10000" 
-                   class="px-3.5 py-1.5 rounded-full border transition-all duration-200 <?php echo $max_price == 10000 ? 'bg-[#CCFF00] text-black border-[#CCFF00] font-black' : 'bg-black/40 border-white/10 text-gray-300 hover:border-[#CCFF00] hover:text-[#CCFF00]'; ?>">
+                   class="px-3.5 py-1.5 rounded-full border transition-all duration-200 <?php echo $max_price == 10000 ? 'bg-[#0A6CFF] text-white border-[#0A6CFF] font-black' : 'bg-black/40 border border-white text-gray-300 hover:bg-[#0A6CFF] hover:border-[#0A6CFF] hover:text-white'; ?>">
                     Under Rs. 10,000
                 </a>
 
@@ -349,7 +349,7 @@ $dealsCount = count($deals);
                                         <span class="text-primary font-bold shrink-0"><?php echo htmlspecialchars($deal['category_name'] ?? 'Gear'); ?></span>
                                     </div>
                                     <a href="<?php echo $base_path; ?>site/product-details.php?id=<?php echo $deal['id']; ?>">
-                                        <h3 class="font-bold text-white text-base md:text-lg line-clamp-2 hover:text-[#CCFF00] transition-colors mb-2 leading-snug">
+                                        <h3 class="font-bold text-white text-base md:text-lg line-clamp-2 hover:text-[#0A6CFF] transition-colors mb-2 leading-snug">
                                             <?php echo htmlspecialchars($deal['name']); ?>
                                         </h3>
                                     </a>
@@ -360,7 +360,7 @@ $dealsCount = count($deals);
                                     <div class="flex items-baseline justify-between gap-2 mb-2">
                                         <div class="flex items-baseline gap-2">
                                             <span class="text-gray-400 line-through text-xs font-medium">Rs. <?php echo number_format($origPrice, 0); ?></span>
-                                            <span class="text-[#CCFF00] font-black text-xl sm:text-2xl">Rs. <?php echo number_format($salePrice, 0); ?></span>
+                                            <span class="text-[#0A6CFF] font-black text-xl sm:text-2xl">Rs. <?php echo number_format($salePrice, 0); ?></span>
                                         </div>
                                         <?php if($savings > 0): ?>
                                             <span class="text-[10px] bg-white/10 text-white font-bold px-1.5 py-0.5 rounded">
@@ -392,7 +392,7 @@ $dealsCount = count($deals);
                                             </span>
                                         </div>
                                         <div class="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
-                                            <div class="bg-gradient-to-r from-[#CCFF00] to-emerald-400 h-full rounded-full transition-all duration-500" style="width: <?php echo $claimedPct; ?>%"></div>
+                                            <div class="bg-[#0A6CFF] h-full rounded-full transition-all duration-500" style="width: <?php echo $claimedPct; ?>%"></div>
                                         </div>
                                     </div>
 
@@ -400,12 +400,12 @@ $dealsCount = count($deals);
                                     <div class="mt-4 flex items-center gap-2">
                                         <button type="button" 
                                                 onclick="quickAddToCart(<?php echo $deal['id']; ?>, this)" 
-                                                class="w-10 h-10 rounded-xl bg-[#CCFF00] hover:bg-white text-navy flex items-center justify-center transition-all shadow-md shrink-0 hover:scale-105 active:scale-95" 
+                                                class="w-10 h-10 rounded-xl bg-[#0A6CFF] hover:bg-[#0855c9] text-white flex items-center justify-center transition-all shadow-md shrink-0 hover:scale-105 active:scale-95" 
                                                 title="Quick Add to Cart">
                                             <i class="fas fa-shopping-bag text-sm"></i>
                                         </button>
                                         <a href="<?php echo $base_path; ?>site/product-details.php?id=<?php echo $deal['id']; ?>" 
-                                           class="flex-1 py-2.5 bg-white/10 hover:bg-[#CCFF00] text-white hover:text-navy font-bold rounded-xl text-xs uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 group-hover:bg-[#CCFF00] group-hover:text-navy">
+                                           class="flex-1 py-2.5 bg-white/10 hover:bg-[#0A6CFF] text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 group-hover:bg-[#0A6CFF] group-hover:text-white">
                                             <span>Grab Deal</span>
                                             <i class="fas fa-arrow-right text-[10px]"></i>
                                         </a>
@@ -421,11 +421,11 @@ $dealsCount = count($deals);
                      UPGRADED EMPTY STATE (As Requested)
                      ========================================== -->
                 <div class="text-center py-16 md:py-20 px-6 sm:px-10 rounded-3xl bg-gradient-to-b from-white/[0.05] to-white/[0.02] border border-white/10 max-w-2xl mx-auto my-6 shadow-2xl backdrop-blur-xl relative overflow-hidden">
-                    <div class="absolute -top-16 -left-16 w-36 h-36 bg-[#CCFF00]/10 rounded-full blur-2xl pointer-events-none"></div>
+                    <div class="absolute -top-16 -left-16 w-36 h-36 bg-[#0A6CFF]/10 rounded-full blur-2xl pointer-events-none"></div>
                     <div class="absolute -bottom-16 -right-16 w-36 h-36 bg-primary/10 rounded-full blur-2xl pointer-events-none"></div>
 
                     <!-- Big Glowing Lime Icon -->
-                    <div class="w-20 h-20 rounded-full bg-[#CCFF00]/15 border border-[#CCFF00]/30 text-[#CCFF00] mx-auto flex items-center justify-center mb-6 text-3xl shadow-[0_0_35px_rgba(204,255,0,0.25)]">
+                    <div class="w-20 h-20 rounded-full bg-[#0A6CFF]/15 border border-[#0A6CFF]/30 text-[#0A6CFF] mx-auto flex items-center justify-center mb-6 text-3xl shadow-[0_0_35px_rgba(10,108,255,0.25)]">
                         <i class="fas fa-tags"></i>
                     </div>
 
@@ -443,7 +443,7 @@ $dealsCount = count($deals);
                     <div class="max-w-md mx-auto mb-8">
                         <div class="p-1.5 rounded-2xl bg-black/60 border border-white/15 backdrop-blur-md flex items-center gap-2 shadow-inner focus-within:border-[#CCFF00] transition-colors">
                             <div class="pl-3 text-gray-400">
-                                <i class="fas fa-bell text-[#CCFF00] animate-pulse"></i>
+                                <i class="fas fa-bell text-[#0A6CFF] animate-pulse"></i>
                             </div>
                             <input type="email" 
                                    id="dropNotifyEmail" 
@@ -451,17 +451,17 @@ $dealsCount = count($deals);
                                    class="bg-transparent text-white text-xs sm:text-sm w-full py-2 px-2 focus:outline-none placeholder-gray-500">
                             <button type="button" 
                                     onclick="submitDropNotification()" 
-                                    class="bg-[#CCFF00] hover:bg-white text-navy font-black text-xs px-5 py-2.5 rounded-xl uppercase tracking-wider transition-all duration-200 shadow-md shrink-0 active:scale-95">
+                                    class="bg-[#0A6CFF] hover:bg-[#0855c9] text-white font-black text-xs px-5 py-2.5 rounded-xl uppercase tracking-wider transition-all duration-200 shadow-md shrink-0 active:scale-95">
                                 Join
                             </button>
                         </div>
-                        <p id="notifyFeedbackMsg" class="text-[11px] text-[#CCFF00] mt-2 hidden"></p>
+                        <p id="notifyFeedbackMsg" class="text-[11px] text-[#0A6CFF] mt-2 hidden"></p>
                     </div>
 
                     <!-- Action Buttons -->
                     <div class="flex flex-wrap items-center justify-center gap-3.5 mb-8">
                         <a href="<?php echo $base_path; ?>site/hot-deals.php" 
-                           class="bg-[#CCFF00] text-navy font-extrabold px-6 py-3 rounded-full text-xs uppercase tracking-wider hover:bg-white transition-all shadow-lg hover:shadow-[0_0_20px_rgba(204,255,0,0.3)]">
+                           class="bg-[#0A6CFF] text-white font-extrabold px-6 py-3 rounded-full text-xs uppercase tracking-wider hover:bg-[#0855c9] transition-all shadow-lg hover:shadow-[0_0_20px_rgba(10,108,255,0.3)]">
                             View All Active Deals
                         </a>
                         <a href="<?php echo $base_path; ?>site/shop.php" 
@@ -475,13 +475,13 @@ $dealsCount = count($deals);
                         <div class="text-[11px] text-gray-400 uppercase tracking-widest font-bold mb-3">Why Hot Deals?</div>
                         <div class="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs text-gray-300 font-semibold">
                             <span class="inline-flex items-center gap-1.5 text-white">
-                                <i class="fas fa-check-circle text-[#CCFF00]"></i> 100% Authentic
+                                <i class="fas fa-check-circle text-[#0A6CFF]"></i> 100% Authentic
                             </span>
                             <span class="inline-flex items-center gap-1.5 text-white">
-                                <i class="fas fa-check-circle text-[#CCFF00]"></i> Up to 50% OFF
+                                <i class="fas fa-check-circle text-[#0A6CFF]"></i> Up to 50% OFF
                             </span>
                             <span class="inline-flex items-center gap-1.5 text-white">
-                                <i class="fas fa-check-circle text-[#CCFF00]"></i> 7-Day Return
+                                <i class="fas fa-check-circle text-[#0A6CFF]"></i> 7-Day Return
                             </span>
                         </div>
                     </div>
@@ -494,7 +494,7 @@ $dealsCount = count($deals);
              ========================================== -->
         <section class="mt-20 py-12 px-6 sm:px-10 rounded-3xl bg-gradient-to-b from-white/[0.04] to-white/[0.01] border border-white/10 backdrop-blur-xl relative overflow-hidden">
             <div class="text-center max-w-2xl mx-auto mb-12">
-                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#CCFF00]/10 border border-[#CCFF00]/30 text-[#CCFF00] text-[11px] font-black uppercase tracking-widest mb-3">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0A6CFF]/10 border border-[#0A6CFF]/30 text-[#0A6CFF] text-[11px] font-black uppercase tracking-widest mb-3">
                     <i class="fas fa-shield-alt"></i> Transparency First
                 </div>
                 <h3 class="text-2xl sm:text-3xl font-black font-space uppercase text-white tracking-tight mb-2">
@@ -507,19 +507,19 @@ $dealsCount = count($deals);
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 max-w-5xl mx-auto">
                 <!-- Step 1: Seller Requests -->
-                <div class="relative bg-black/40 border border-white/5 hover:border-[#CCFF00]/30 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between">
+                <div class="relative bg-black/40 border border-white/5 hover:border-[#0A6CFF]/30 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between">
                     <div>
-                        <div class="w-14 h-14 rounded-2xl bg-[#CCFF00]/10 border border-[#CCFF00]/30 text-[#CCFF00] flex items-center justify-center text-2xl mb-4 shadow-[0_0_20px_rgba(204,255,0,0.15)]">
+                        <div class="w-14 h-14 rounded-2xl bg-[#0A6CFF]/10 border border-[#0A6CFF]/30 text-[#0A6CFF] flex items-center justify-center text-2xl mb-4 shadow-[0_0_20px_rgba(10,108,255,0.15)]">
                             <i class="fas fa-store"></i>
                         </div>
-                        <div class="text-[10px] font-black text-[#CCFF00] uppercase tracking-widest mb-1">Step 01</div>
+                        <div class="text-[10px] font-black text-[#0A6CFF] uppercase tracking-widest mb-1">Step 01</div>
                         <h4 class="text-lg font-bold text-white mb-2 font-space">Seller Requests Clearance</h4>
                         <p class="text-gray-400 text-xs leading-relaxed">
                             Verified brand distributors submit seasonal overstock, clearance lines, or bundle discounts with guaranteed authentic retail markdowns.
                         </p>
                     </div>
                     <div class="mt-5 pt-4 border-t border-white/5 flex items-center gap-2 text-[11px] text-gray-300 font-medium">
-                        <i class="fas fa-check-circle text-[#CCFF00]"></i> Verified Sellers Only
+                        <i class="fas fa-check-circle text-[#0A6CFF]"></i> Verified Sellers Only
                     </div>
                 </div>
 
@@ -623,7 +623,7 @@ function submitDropNotification() {
 
     // Success feedback
     msg.innerHTML = '<i class="fas fa-check-circle mr-1"></i> You\'re on the VIP drop list! We\'ll alert you when clearance deals drop.';
-    msg.className = 'text-[11px] text-[#CCFF00] mt-2 block font-bold';
+    msg.className = 'text-[11px] text-[#0A6CFF] mt-2 block font-bold';
     input.value = '';
 
     if (typeof CartManager !== 'undefined' && CartManager.showToast) {

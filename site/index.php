@@ -287,18 +287,18 @@ include(__DIR__ . '/../include/header.php');
     </section>
 
     <!-- Hot Deals Section -->
-    <section class="mb-16 py-12 px-4 rounded-[2rem] bg-navy relative overflow-hidden shadow-2xl">
-        <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
-        <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary rounded-full blur-3xl opacity-20"></div>
+    <section class="mb-16 py-12 px-4 rounded-[2rem] bg-[#F8FAFF] border border-gray-200 relative overflow-hidden shadow-sm">
+        <div class="absolute inset-0 opacity-5 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+        <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary rounded-full blur-3xl opacity-10"></div>
         
         <div class="relative z-10 flex flex-col md:flex-row justify-between items-center mb-10">
             <div>
-                <h2 class="text-3xl md:text-4xl font-extrabold text-white font-space uppercase tracking-widest flex items-center gap-3 mb-2">
-                    <i class="fas fa-bolt text-lime"></i> Hot Deals
+                <h2 class="text-3xl md:text-4xl font-extrabold text-navy font-space uppercase tracking-widest flex items-center gap-3 mb-2">
+                    <i class="fas fa-bolt text-[#D4FF00]"></i> HOT <span class="text-[#0A6CFF]">DEALS</span>
                 </h2>
-                <p class="text-gray-400">Exclusive limited-time discounts on premium performance gear</p>
+                <p class="text-gray-600">Exclusive limited-time discounts on premium performance gear</p>
             </div>
-            <a href="<?php echo $base_path; ?>site/hot-deals.php" class="mt-4 md:mt-0 bg-transparent border border-lime text-lime hover:bg-lime hover:text-navy px-6 py-2 rounded-full font-bold uppercase tracking-wide transition-colors flex items-center gap-2">
+            <a href="<?php echo $base_path; ?>site/hot-deals.php" class="mt-4 md:mt-0 bg-transparent border border-[#0A6CFF] text-[#0A6CFF] hover:bg-[#0A6CFF] hover:text-white px-6 py-2 rounded-full font-bold uppercase tracking-wide transition-colors flex items-center gap-2">
                 <span>View All Deals</span>
                 <i class="fas fa-arrow-right text-xs"></i>
             </a>
@@ -333,38 +333,38 @@ include(__DIR__ . '/../include/header.php');
                     $daysLeft = !empty($deal['hot_deal_expiry']) ? ceil((strtotime($deal['hot_deal_expiry']) - time()) / 86400) : null;
             ?>
             <!-- Dynamic Deal Card -->
-            <div class="group bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/30 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] rounded-2xl overflow-hidden shadow-lg relative transition-all duration-300 flex flex-col justify-between">
-                <div class="absolute top-3 left-3 z-10 bg-lime text-navy font-black text-sm px-2.5 py-1 rounded-md shadow-md transform -rotate-3">
+            <div class="group bg-white border border-gray-200 hover:border-[#0A6CFF]/30 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg relative transition-all duration-300 flex flex-col justify-between">
+                <div class="absolute top-3 left-3 z-10 bg-[#D4FF00] text-black font-black text-sm px-2.5 py-1 rounded-md shadow-sm transform -rotate-3">
                     -<?php echo $discountPct; ?>%
                 </div>
                 
-                <a href="<?php echo $base_path; ?>site/product-details.php?id=<?php echo $deal['id']; ?>" class="aspect-square bg-black/20 p-4 overflow-hidden relative block">
+                <a href="<?php echo $base_path; ?>site/product-details.php?id=<?php echo $deal['id']; ?>" class="aspect-square bg-gray-50 p-4 overflow-hidden relative block">
                     <img src="<?php echo $dealImg; ?>" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 rounded-lg" alt="<?php echo htmlspecialchars($deal['name']); ?>">
-                    <div class="absolute inset-0 bg-gradient-to-t from-navy/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-gray-100/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </a>
                 
                 <div class="p-5 flex-1 flex flex-col justify-between">
                     <div>
                         <?php if(!empty($deal['brand_name'])): ?>
-                            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1"><?php echo htmlspecialchars($deal['brand_name']); ?></div>
+                            <div class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1"><?php echo htmlspecialchars($deal['brand_name']); ?></div>
                         <?php endif; ?>
                         <a href="<?php echo $base_path; ?>site/product-details.php?id=<?php echo $deal['id']; ?>">
-                            <h4 class="font-bold text-white truncate text-lg hover:text-lime transition-colors"><?php echo htmlspecialchars($deal['name']); ?></h4>
+                            <h4 class="font-bold text-navy truncate text-lg hover:text-[#0A6CFF] transition-colors"><?php echo htmlspecialchars($deal['name']); ?></h4>
                         </a>
                     </div>
                     
-                    <div class="mt-4 pt-3 border-t border-white/10">
+                    <div class="mt-4 pt-3 border-t border-gray-100">
                         <div class="flex items-center justify-between">
                             <div class="flex items-baseline gap-2">
                                 <span class="text-gray-400 line-through text-xs font-medium">Rs. <?php echo number_format($origPrice, 0); ?></span>
-                                <span class="text-lime font-bold text-xl">Rs. <?php echo number_format($salePrice, 0); ?></span>
+                                <span class="text-[#0A6CFF] font-bold text-xl">Rs. <?php echo number_format($salePrice, 0); ?></span>
                             </div>
-                            <button type="button" onclick="quickAddToCart(<?php echo $deal['id']; ?>, this)" class="w-9 h-9 rounded-full bg-lime hover:bg-white text-navy flex items-center justify-center transition-all shadow-md hover:scale-105" title="Add to Cart">
+                            <button type="button" onclick="quickAddToCart(<?php echo $deal['id']; ?>, this)" class="w-9 h-9 rounded-full bg-[#0A6CFF] hover:bg-[#0855c9] text-white flex items-center justify-center transition-all shadow-md hover:scale-105" title="Add to Cart">
                                 <i class="fas fa-shopping-bag text-xs"></i>
                             </button>
                         </div>
                         <?php if($daysLeft !== null): ?>
-                            <div class="mt-2 text-[11px] text-lime/80 font-medium flex items-center gap-1.5">
+                            <div class="mt-2 text-[11px] text-[#0A6CFF] font-medium flex items-center gap-1.5">
                                 <i class="fas fa-clock text-xs"></i>
                                 <span><?php echo $daysLeft > 1 ? "Ends in {$daysLeft} days" : ($daysLeft == 1 ? "Ends tomorrow" : "Ends today!"); ?></span>
                             </div>
@@ -377,13 +377,13 @@ include(__DIR__ . '/../include/header.php');
             else:
             ?>
                 <!-- Empty State if no active deals yet -->
-                <div class="col-span-1 sm:col-span-2 md:col-span-4 text-center py-12 px-4 rounded-xl bg-white/5 border border-white/10">
-                    <div class="w-16 h-16 rounded-full bg-lime/10 text-lime mx-auto flex items-center justify-center mb-4 text-2xl">
+                <div class="col-span-1 sm:col-span-2 md:col-span-4 text-center py-12 px-4 rounded-xl bg-white border border-gray-200">
+                    <div class="w-16 h-16 rounded-full bg-[#0A6CFF]/10 text-[#0A6CFF] mx-auto flex items-center justify-center mb-4 text-2xl">
                         <i class="fas fa-bolt"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-white mb-2">Exclusive Deals Dropping Soon!</h3>
-                    <p class="text-gray-400 text-sm max-w-md mx-auto mb-6">Our verified sellers are preparing limited-time clearance deals with up to 50% discount. Check back frequently!</p>
-                    <a href="<?php echo $base_path; ?>site/shop.php" class="inline-flex items-center gap-2 bg-lime text-navy px-6 py-2.5 rounded-full font-bold uppercase text-xs tracking-wider hover:bg-white transition-colors">
+                    <h3 class="text-xl font-bold text-navy mb-2">Exclusive Deals Dropping Soon!</h3>
+                    <p class="text-gray-600 text-sm max-w-md mx-auto mb-6">Our verified sellers are preparing limited-time clearance deals with up to 50% discount. Check back frequently!</p>
+                    <a href="<?php echo $base_path; ?>site/shop.php" class="inline-flex items-center gap-2 bg-[#0A6CFF] text-white px-6 py-2.5 rounded-full font-bold uppercase text-xs tracking-wider hover:bg-[#0855c9] transition-colors">
                         Browse All Products
                     </a>
                 </div>
