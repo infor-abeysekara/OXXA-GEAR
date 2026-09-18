@@ -256,8 +256,8 @@ $admin_image = $_SESSION['profile_image'] ?? '';
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link <?php echo ($current_page == 'manage-reviews.php') ? 'active' : ''; ?>" href="manage-reviews.php">
-                <i class="fas fa-star"></i> <span class="nav-text ms-2">Manage Reviews</span>
+            <a class="nav-link <?php echo ($current_page == 'reported-reviews.php') ? 'active' : ''; ?>" href="reported-reviews.php">
+                <i class="fas fa-flag"></i> <span class="nav-text ms-2">Reported Reviews</span>
             </a>
         </li>
         <li class="nav-item mt-2">

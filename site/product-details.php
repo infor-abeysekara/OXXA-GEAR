@@ -111,10 +111,13 @@ $relatedProducts = $relStmt->fetchAll();
 
 // Fetch Reviews & Stats
 $revStmt = $pdo->prepare("SELECT r.*, u.first_name, u.last_name, u.profile_image, 
-        (SELECT size FROM order_items oi WHERE oi.order_id = r.order_id AND oi.product_id = r.product_id LIMIT 1) as purchased_variant 
+        (SELECT size FROM order_items oi WHERE oi.order_id = r.order_id AND oi.product_id = r.product_id LIMIT 1) as purchased_variant,
+        (SELECT reply_text FROM review_replies rep WHERE rep.review_id = r.id LIMIT 1) as seller_reply,
+        sp.business_name as seller_name
         FROM reviews r 
         JOIN users u ON r.user_id = u.id 
-        WHERE r.product_id = ? AND r.status = 'approved' ORDER BY r.created_at DESC");
+        LEFT JOIN seller_profiles sp ON r.seller_id = sp.user_id
+        WHERE r.product_id = ? AND r.status != 'hidden' ORDER BY r.created_at DESC");
 $revStmt->execute([$product_id]);
 $productReviews = $revStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -135,6 +138,29 @@ if ($totalReviews > 0) {
     $avgRating = round($sumRating / $totalReviews, 1);
 }
 $trueToSizePct = $totalReviews > 0 ? round(($fitCounts['True to Size'] / $totalReviews) * 100) : 0;
+
+// Check if user can review (logged in + verified purchase)
+$canReview = false;
+$purchasedOrderId = null;
+if (isset($_SESSION['userid'])) {
+    $checkStmt = $pdo->prepare("
+        SELECT o.id FROM orders o 
+        JOIN order_items oi ON o.id = oi.order_id 
+        WHERE o.user_id = ? AND oi.product_id = ? AND o.status = 'delivered' 
+        LIMIT 1
+    ");
+    $checkStmt->execute([$_SESSION['userid'], $product_id]);
+    $purchasedOrderId = $checkStmt->fetchColumn();
+    
+    if ($purchasedOrderId) {
+        // Check if already reviewed
+        $revCheckStmt = $pdo->prepare("SELECT id FROM reviews WHERE user_id = ? AND product_id = ?");
+        $revCheckStmt->execute([$_SESSION['userid'], $product_id]);
+        if (!$revCheckStmt->fetchColumn()) {
+            $canReview = true;
+        }
+    }
+}
 ?>
 
 <!-- Swiper CSS -->
@@ -210,7 +236,12 @@ $trueToSizePct = $totalReviews > 0 ? round(($fitCounts['True to Size'] / $totalR
 
             <!-- Reviews Section -->
             <div id="reviewsSection" class="mt-12 mb-8 scroll-mt-24">
-                <h3 class="text-xl font-black text-navy uppercase tracking-wide mb-6">Customer Reviews</h3>
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-black text-navy uppercase tracking-wide">Customer Reviews</h3>
+                    <?php if($canReview): ?>
+                        <button onclick="openReviewModal()" class="bg-[#0066FF] hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-sm transition-colors">Write a Review</button>
+                    <?php endif; ?>
+                </div>
                 <?php if ($totalReviews > 0): ?>
                     <div class="flex items-center gap-6 mb-8">
                         <div class="text-5xl font-black text-navy"><?php echo $avgRating; ?></div>
@@ -273,10 +304,13 @@ $trueToSizePct = $totalReviews > 0 ? round(($fitCounts['True to Size'] / $totalR
                                 <span>Fit: <span class="text-navy"><?php echo htmlspecialchars($rev['fit_feedback']); ?></span></span>
                             </div>
 
-                            <?php if(!empty($rev['admin_reply'])): ?>
-                                <div class="mt-4 p-4 bg-white border border-gray-200 rounded-xl">
-                                    <div class="font-bold text-navy text-xs uppercase tracking-wide mb-1"><i class="fas fa-reply text-[#0066FF] me-1"></i> Response from OXXA GEAR</div>
-                                    <p class="text-sm text-gray-600"><?php echo nl2br(htmlspecialchars($rev['admin_reply'])); ?></p>
+                            <?php if(!empty($rev['seller_reply'])): ?>
+                                <div class="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-xl relative">
+                                    <div class="absolute -top-3 left-4 bg-[#0066FF] text-white text-[10px] font-black px-2 py-0.5 rounded shadow-sm uppercase tracking-wider flex items-center gap-1">
+                                        <i class="fas fa-check-circle"></i> Verified Seller
+                                    </div>
+                                    <div class="font-bold text-navy text-xs uppercase tracking-wide mb-1 mt-1"><i class="fas fa-reply text-[#0066FF] me-1"></i> Response from <?php echo htmlspecialchars($rev['seller_name'] ?? 'Seller'); ?></div>
+                                    <p class="text-sm text-gray-700"><?php echo nl2br(htmlspecialchars($rev['seller_reply'])); ?></p>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -603,6 +637,63 @@ $trueToSizePct = $totalReviews > 0 ? round(($fitCounts['True to Size'] / $totalR
     </div>
 </div>
 
+<?php if($canReview): ?>
+<!-- Write Review Modal -->
+<div id="reviewModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeReviewModal()"></div>
+    <div class="bg-white rounded-[2rem] w-full max-w-xl relative z-10 overflow-hidden shadow-2xl">
+        <div class="flex justify-between items-center p-6 border-b border-gray-100">
+            <h3 class="text-xl font-black text-navy uppercase tracking-widest">Write a Review</h3>
+            <button onclick="closeReviewModal()" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-red-50 transition-colors"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="p-6">
+            <form id="reviewForm" onsubmit="submitReview(event)">
+                <input type="hidden" name="product_id" value="<?php echo $product_id; ?>">
+                <input type="hidden" name="order_id" value="<?php echo $purchasedOrderId; ?>">
+                
+                <div class="mb-4 text-center">
+                    <p class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-2">Overall Rating</p>
+                    <div class="flex justify-center text-gray-300 text-3xl cursor-pointer" id="starRating">
+                        <i class="fas fa-star hover:text-yellow-400" data-val="1"></i>
+                        <i class="fas fa-star hover:text-yellow-400" data-val="2"></i>
+                        <i class="fas fa-star hover:text-yellow-400" data-val="3"></i>
+                        <i class="fas fa-star hover:text-yellow-400" data-val="4"></i>
+                        <i class="fas fa-star hover:text-yellow-400" data-val="5"></i>
+                    </div>
+                    <input type="hidden" name="rating" id="ratingInput" required>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Title (Optional)</label>
+                    <input type="text" name="title" class="w-full text-sm rounded-xl border-gray-300 focus:border-[#0066FF] focus:ring focus:ring-blue-200" placeholder="Summary of your review">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Review</label>
+                    <textarea name="comment" class="w-full text-sm rounded-xl border-gray-300 focus:border-[#0066FF] focus:ring focus:ring-blue-200" rows="4" required placeholder="What did you like or dislike?"></textarea>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">How did it fit?</label>
+                    <select name="fit_feedback" class="w-full text-sm rounded-xl border-gray-300 focus:border-[#0066FF] focus:ring focus:ring-blue-200">
+                        <option value="True to Size">True to Size</option>
+                        <option value="Runs Small">Runs Small</option>
+                        <option value="Runs Large">Runs Large</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center text-sm text-gray-600 font-bold">
+                        <input type="checkbox" name="is_anonymous" value="1" class="rounded text-[#0066FF] focus:ring-[#0066FF] mr-2"> Post anonymously
+                    </label>
+                    <button type="submit" class="bg-[#0066FF] hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold uppercase tracking-widest shadow-md transition-colors" id="submitReviewBtn">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Mobile Sticky Bottom Bar -->
 <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex items-center gap-4">
     <div class="flex-1 min-w-0">
@@ -869,6 +960,104 @@ $trueToSizePct = $totalReviews > 0 ? round(($fitCounts['True to Size'] / $totalR
         
         window.location.href = `checkout.php?buy_now=${selectedVariantId || '0'}&qty=${currentQty}`;
     }
+    // --- Review Form Logic ---
+    function openReviewModal() {
+        document.getElementById('reviewModal').classList.remove('hidden');
+        document.getElementById('reviewModal').classList.add('flex');
+    }
+    
+    function closeReviewModal() {
+        document.getElementById('reviewModal').classList.add('hidden');
+        document.getElementById('reviewModal').classList.remove('flex');
+    }
+
+    // Star Rating UI
+    const stars = document.querySelectorAll('#starRating .fa-star');
+    const ratingInput = document.getElementById('ratingInput');
+    
+    if(stars.length > 0) {
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                const val = this.getAttribute('data-val');
+                ratingInput.value = val;
+                stars.forEach(s => {
+                    if(s.getAttribute('data-val') <= val) {
+                        s.classList.remove('text-gray-300');
+                        s.classList.add('text-yellow-400');
+                    } else {
+                        s.classList.remove('text-yellow-400');
+                        s.classList.add('text-gray-300');
+                    }
+                });
+            });
+        });
+    }
+
+    function submitReview(e) {
+        e.preventDefault();
+        
+        if(!ratingInput.value) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Please select a rating',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+            return;
+        }
+        
+        const btn = document.getElementById('submitReviewBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+        
+        const formData = new FormData(e.target);
+        
+        fetch('../Backend/submit-review.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Review submitted successfully!',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: data.message || 'Error submitting review',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+                btn.disabled = false;
+                btn.innerHTML = 'Submit';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Server error',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+            btn.disabled = false;
+            btn.innerHTML = 'Submit';
+        });
+    }
+
 </script>
 
 <style>

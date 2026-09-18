@@ -128,6 +128,10 @@ $joined_date = $joinStmt->fetchColumn();
                         <a href="business-registration.php" class="flex items-center px-4 py-3 rounded-xl transition-colors text-slate hover:bg-gray-50 hover:text-navy font-medium">
                             <i class="fas fa-id-card w-6"></i> Business Profile
                         </a>
+                        <a href="?tab=reviews" class="flex items-center justify-between px-4 py-3 rounded-xl transition-colors <?= $tab == 'reviews' ? 'bg-blue-50 text-[#0066FF] font-bold shadow-sm border border-blue-100' : 'text-slate hover:bg-gray-50 hover:text-navy font-medium' ?>">
+                            <span><i class="fas fa-star w-6 text-yellow-500"></i> My Reviews</span>
+                            <span class="bg-[#0066FF] text-white text-[9px] font-black px-1.5 py-0.5 rounded-sm uppercase tracking-wider">New</span>
+                        </a>
                     </nav>
                     
                     <div class="p-4 bg-gray-50 border-t border-gray-100 mt-2">
@@ -343,6 +347,8 @@ $joined_date = $joinStmt->fetchColumn();
                     <?php include('components/seller-earnings.php'); ?>
                 <?php elseif ($tab == 'orders'): ?>
                     <?php include('components/seller-orders.php'); ?>
+                <?php elseif ($tab == 'reviews'): ?>
+                    <?php include('components/seller-reviews.php'); ?>
                 <?php endif; ?>
             </div>
         </div>
