@@ -31,9 +31,9 @@ $query = "
     SELECT 
         rr.id as report_id, rr.reason, rr.reported_by_type, rr.created_at as report_date,
         r.id as review_id, r.rating, r.comment, r.status as review_status,
-        p.name as product_name, p.image as product_image,
+        p.name as product_name, (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as product_image,
         u_cust.first_name as customer_name,
-        s.store_name
+        s.business_name as store_name
     FROM review_reports rr
     JOIN reviews r ON rr.review_id = r.id
     JOIN products p ON r.product_id = p.id

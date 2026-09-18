@@ -349,6 +349,12 @@ function resolveDocUrl($filename, $type = 'cert') {
             gap: 24px;
             border-bottom: 2px solid #e2e8f0;
             overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+        }
+        .custom-tabs::-webkit-scrollbar {
+            display: none; /* Chrome/Safari/Opera */
         }
         .custom-tab {
             padding: 12px 6px;
@@ -982,8 +988,8 @@ function resolveDocUrl($filename, $type = 'cert') {
                                         <!-- SELLER -->
                                         <td>
                                             <div class="seller-avatar-container">
-                                                <?php if(!empty($row['profile_image']) && file_exists("../assets/uploads/" . $row['profile_image'])): ?>
-                                                    <img src="../assets/uploads/<?php echo htmlspecialchars($row['profile_image']); ?>" class="seller-avatar" alt="Avatar">
+                                                <?php if(!empty($row['profile_image']) && file_exists("../assets/uploads/profiles/" . $row['profile_image'])): ?>
+                                                    <img src="../assets/uploads/profiles/<?php echo htmlspecialchars($row['profile_image']); ?>" class="seller-avatar" alt="Avatar">
                                                 <?php else: ?>
                                                     <div class="seller-avatar"><?php echo $initials; ?></div>
                                                 <?php endif; ?>
@@ -1000,8 +1006,15 @@ function resolveDocUrl($filename, $type = 'cert') {
                                         <!-- BUSINESS NAME -->
                                         <td>
                                             <div class="biz-entity">
-                                                <div class="biz-icon">
-                                                    <i class="fas fa-building"></i>
+                                                <div class="biz-icon" style="overflow: hidden;">
+                                                    <?php 
+                                                    $logoUrl = resolveDocUrl($row['logo_path'], 'logo');
+                                                    if ($logoUrl): 
+                                                    ?>
+                                                        <img src="<?php echo htmlspecialchars($logoUrl); ?>" alt="Logo" style="width: 100%; height: 100%; object-fit: cover;">
+                                                    <?php else: ?>
+                                                        <i class="fas fa-building"></i>
+                                                    <?php endif; ?>
                                                 </div>
                                                 <div>
                                                     <div class="biz-name"><?php echo $biz_name; ?></div>

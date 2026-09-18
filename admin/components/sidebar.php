@@ -24,6 +24,9 @@ $admin_image = $_SESSION['profile_image'] ?? '';
     body.sidebar-collapsed .main-content {
         margin-left: 80px !important;
     }
+    body:not(.sidebar-collapsed) .main-content {
+        margin-left: 250px !important;
+    }
 
     .sidebar-toggle-btn {
         position: absolute;
@@ -64,6 +67,9 @@ $admin_image = $_SESSION['profile_image'] ?? '';
         color: white;
         border-left: 3px solid #0066FF;
     }
+    
+
+
     .admin-sidebar .nav-link i {
         width: 25px;
         text-align: center;
@@ -127,6 +133,7 @@ $admin_image = $_SESSION['profile_image'] ?? '';
         transition: all 0.3s ease;
         white-space: nowrap;
         overflow: hidden;
+        padding: 24px;
     }
     .admin-sidebar.collapsed .sidebar-logo img {
         width: 40px !important;
@@ -168,6 +175,8 @@ $admin_image = $_SESSION['profile_image'] ?? '';
             min-height: auto;
             border-left: none;
             border-top: 4px solid #0066FF;
+            border-radius: 0;
+            margin: 0;
         }
         .sidebar-toggle-btn {
             display: none;
@@ -180,7 +189,18 @@ $admin_image = $_SESSION['profile_image'] ?? '';
         .admin-sidebar.collapsed .sidebar-logo h5 {
             display: block;
         }
+        .admin-sidebar.collapsed .sidebar-dropdown-menu {
+            position: absolute;
+            left: 80px;
+            top: 50px;
+            width: 200px;
+        }
     }
+    
+    /* Vanilla Dropdown Support (For pages without Bootstrap) */
+    .dropdown { position: relative; }
+    .dropdown-menu { display: none; position: absolute; top: 100%; left: 0; z-index: 1050; min-width: 10rem; }
+    .dropdown-menu.show { display: block; }
 </style>
 
 <nav class="admin-sidebar" id="adminSidebar">
@@ -197,8 +217,8 @@ $admin_image = $_SESSION['profile_image'] ?? '';
     </div>
 
     <!-- Admin Profile Dropdown -->
-    <div class="dropdown">
-        <div class="sidebar-profile" data-bs-toggle="dropdown" aria-expanded="false">
+    <div class="dropdown" id="adminProfileDropdown">
+        <div class="sidebar-profile" aria-expanded="false" id="sidebarProfileBtn">
             <?php if(!empty($admin_image)): ?>
                 <img src="../assets/uploads/profiles/<?php echo htmlspecialchars($admin_image); ?>" alt="Profile">
             <?php else: ?>
@@ -294,6 +314,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('sidebarCollapsed', 'true');
             } else {
                 localStorage.setItem('sidebarCollapsed', 'false');
+            }
+        });
+    }
+
+    // Custom Profile Dropdown Logic (for both Bootstrap and Tailwind pages)
+    const profileBtn = document.getElementById('sidebarProfileBtn');
+    const profileMenu = profileBtn ? profileBtn.nextElementSibling : null;
+    
+    if (profileBtn && profileMenu) {
+        profileBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            profileMenu.classList.toggle('show');
+            const isExpanded = profileMenu.classList.contains('show');
+            profileBtn.setAttribute('aria-expanded', isExpanded);
+        });
+        
+        document.addEventListener('click', function(e) {
+            if (!profileBtn.contains(e.target) && !profileMenu.contains(e.target)) {
+                profileMenu.classList.remove('show');
+                profileBtn.setAttribute('aria-expanded', 'false');
             }
         });
     }
