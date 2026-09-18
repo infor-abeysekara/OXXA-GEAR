@@ -140,7 +140,7 @@ if (empty($products)) {
                         <span class="text-xs text-gray-500 font-bold">Rs.</span>
                         <span class="text-lg font-black text-navy"><?= number_format($p['lowest_price'], 2) ?></span>
                     </div>
-                    <button class="w-9 h-9 bg-navy hover:bg-[#0066FF] text-white rounded-xl flex items-center justify-center transition-colors shadow-md <?php echo $p['var_qty'] <= 0 ? 'opacity-50 cursor-not-allowed' : ''; ?>" <?php echo $p['var_qty'] <= 0 ? 'disabled' : ''; ?>>
+                    <button type="button" onclick="quickAddToCart(<?= $p['id'] ?>, this)" class="w-9 h-9 bg-navy hover:bg-[#0066FF] text-white rounded-xl flex items-center justify-center transition-colors shadow-md <?php echo $p['var_qty'] <= 0 ? 'opacity-50 cursor-not-allowed' : ''; ?>" <?php echo $p['var_qty'] <= 0 ? 'disabled' : ''; ?> title="Add to Cart">
                         <i class="fas fa-cart-plus"></i>
                     </button>
                 </div>

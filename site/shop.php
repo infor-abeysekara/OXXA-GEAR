@@ -311,7 +311,7 @@ function buildFilterUrl($updates) {
 
                                 <!-- Action Buttons Overlay -->
                                 <div class="absolute bottom-4 right-4 flex gap-2">
-                                    <button class="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center shadow-lg hover:bg-[#0066FF] hover:scale-110 transition-all sm:opacity-0 sm:-translate-y-2 group-hover:opacity-100 group-hover:translate-y-0" onclick="quickAdd(<?php echo $p['id']; ?>)">
+                                    <button class="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center shadow-lg hover:bg-[#0066FF] hover:scale-110 transition-all sm:opacity-0 sm:-translate-y-2 group-hover:opacity-100 group-hover:translate-y-0" onclick="quickAddToCart(<?php echo $p['id']; ?>, this)" title="Add to Cart">
                                         <i class="fas fa-plus"></i>
                                     </button>
                                 </div>
@@ -551,9 +551,12 @@ function clearAllFilters() {
 // Call update tags on initial load
 document.addEventListener('DOMContentLoaded', updateActiveTags);
 
-function quickAdd(productId) {
-    // Redirect to PDP for variant selection since Option A (Full Page) is used
-    window.location.href = 'product-details.php?id=' + productId;
+function quickAdd(productId, btn = null) {
+    if (typeof quickAddToCart === 'function') {
+        quickAddToCart(productId, btn);
+    } else {
+        window.location.href = 'product-details.php?id=' + productId;
+    }
 }
 </script>
 

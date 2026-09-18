@@ -38,6 +38,60 @@ if(isset($_POST['action']) && isset($_POST['product_id'])) {
         } else {
             $error_message = "Failed to delete product.";
         }
+    } elseif($action == 'approve_hot_deal') {
+        $update_hd = "UPDATE products SET is_hot_deal = 1, hot_deal_status = 'approved' WHERE id = ?";
+        $stmt = $conn->prepare($update_hd);
+        $stmt->bind_param("i", $product_id);
+        if ($stmt->execute()) {
+            $admin_id = $_SESSION['admin_id'] ?? 1;
+            $stmt_hdr = $conn->prepare("UPDATE hot_deal_requests SET status = 'approved', reviewed_by_admin = ?, reviewed_at = NOW() WHERE product_id = ? AND status = 'pending'");
+            $stmt_hdr->bind_param("ii", $admin_id, $product_id);
+            $stmt_hdr->execute();
+
+            $p_query = "SELECT p.name, u.id as seller_user_id, u.user_code FROM products p JOIN users u ON p.seller_id = u.id WHERE p.id = ?";
+            $p_stmt = $conn->prepare($p_query);
+            $p_stmt->bind_param("i", $product_id);
+            $p_stmt->execute();
+            if ($p_row = $p_stmt->get_result()->fetch_assoc()) {
+                addNotification($conn, $p_row['seller_user_id'], "🔥 Hot Deal Live! - Your product {$p_row['name']} is now featured in Hot Deals on the homepage.", 'success', 'HotDeals', 'site/product-details.php?id=' . $product_id);
+            }
+            $success_message = "Hot deal approved! Product is now LIVE on the homepage Hot Deals section.";
+        }
+    } elseif($action == 'reject_hot_deal') {
+        $reject_reason = trim($_POST['reject_reason'] ?? 'Discount requirements not met');
+        $update_hd = "UPDATE products SET is_hot_deal = 0, hot_deal_status = 'rejected', hot_deal_request_reason = ? WHERE id = ?";
+        $stmt = $conn->prepare($update_hd);
+        $stmt->bind_param("si", $reject_reason, $product_id);
+        if ($stmt->execute()) {
+            $admin_id = $_SESSION['admin_id'] ?? 1;
+            $stmt_hdr = $conn->prepare("UPDATE hot_deal_requests SET status = 'rejected', reject_reason = ?, reviewed_by_admin = ?, reviewed_at = NOW() WHERE product_id = ? AND status = 'pending'");
+            $stmt_hdr->bind_param("sii", $reject_reason, $admin_id, $product_id);
+            $stmt_hdr->execute();
+
+            $p_query = "SELECT p.name, u.id as seller_user_id FROM products p JOIN users u ON p.seller_id = u.id WHERE p.id = ?";
+            $p_stmt = $conn->prepare($p_query);
+            $p_stmt->bind_param("i", $product_id);
+            $p_stmt->execute();
+            if ($p_row = $p_stmt->get_result()->fetch_assoc()) {
+                addNotification($conn, $p_row['seller_user_id'], "Hot Deal Request Rejected - {$p_row['name']}: {$reject_reason}", 'warning', 'HotDeals', 'site/seller-edit-product.php?id=' . $product_id);
+            }
+            $success_message = "Hot deal request rejected.";
+        }
+    } elseif($action == 'deactivate_hot_deal') {
+        $update_hd = "UPDATE products SET is_hot_deal = 0, hot_deal_status = 'expired' WHERE id = ?";
+        $stmt = $conn->prepare($update_hd);
+        $stmt->bind_param("i", $product_id);
+        if ($stmt->execute()) {
+            $success_message = "Hot deal deactivated from homepage.";
+        }
+    } elseif($action == 'update_hot_deal_expiry') {
+        $new_expiry = trim($_POST['new_expiry'] ?? '') . ' 23:59:59';
+        $update_exp = "UPDATE products SET hot_deal_expiry = ? WHERE id = ?";
+        $stmt = $conn->prepare($update_exp);
+        $stmt->bind_param("si", $new_expiry, $product_id);
+        if ($stmt->execute()) {
+            $success_message = "Hot deal expiry updated successfully.";
+        }
     }
     
     if(isset($update_query)) {
@@ -88,6 +142,14 @@ $stats['active_sellers'] = mysqli_fetch_assoc($res)['count'];
 $res = mysqli_query($conn, "SELECT COUNT(*) as count FROM products WHERE is_approved = 0 AND status != 'suspended'");
 $stats['pending_count'] = mysqli_fetch_assoc($res)['count'];
 
+// Pending Hot Deal Requests Count
+$res = mysqli_query($conn, "SELECT COUNT(*) as count FROM hot_deal_requests WHERE status = 'pending'");
+$stats['hot_deal_requests_count'] = $res ? (int)mysqli_fetch_assoc($res)['count'] : 0;
+
+// Active Hot Deals Count
+$res = mysqli_query($conn, "SELECT COUNT(*) as count FROM products WHERE is_hot_deal = 1 AND hot_deal_status = 'approved' AND status = 'active' AND (hot_deal_expiry IS NULL OR hot_deal_expiry >= CURDATE())");
+$stats['active_hot_deals_count'] = $res ? (int)mysqli_fetch_assoc($res)['count'] : 0;
+
 
 // -- TAB LOGIC & PAGINATION --
 $tab = isset($_GET['tab']) ? $_GET['tab'] : 'all';
@@ -113,6 +175,49 @@ if(!empty($search)) {
 }
 
 $where_sql = implode(" AND ", $where_clauses);
+
+// Tab specific queries for hot deals
+$hdr_result = null;
+$hdr_rows = [];
+$active_hd_result = null;
+$active_hd_rows = [];
+
+if($tab == 'hot_deal_requests') {
+    $hdr_query = "
+        SELECT hdr.*, p.name as product_name, p.product_code, p.base_price, p.cost_price, p.total_qty, p.status as product_status,
+               u.first_name, u.last_name, u.email, u.profile_image,
+               sp.business_name, sp.is_approved as seller_verified,
+               b.name as brand, c.name as category_name,
+               (SELECT ci.image_path FROM color_images ci JOIN product_colors pc ON ci.color_id = pc.id WHERE pc.product_id = p.id ORDER BY ci.is_primary DESC, ci.sort_order ASC LIMIT 1) as product_image,
+               (SELECT COUNT(p2.id) FROM products p2 WHERE p2.seller_id = u.id) as seller_total_products
+        FROM hot_deal_requests hdr
+        JOIN products p ON hdr.product_id = p.id
+        JOIN users u ON hdr.seller_id = u.id
+        LEFT JOIN seller_profiles sp ON u.id = sp.user_id
+        LEFT JOIN brands b ON p.brand_id = b.id
+        LEFT JOIN categories c ON p.category_id = c.id
+        WHERE hdr.status = 'pending'
+        ORDER BY hdr.requested_at DESC
+    ";
+    $hdr_result = mysqli_query($conn, $hdr_query);
+} elseif($tab == 'active_hot_deals') {
+    $active_hd_query = "
+        SELECT p.*, 
+               u.first_name, u.last_name, u.email, u.profile_image, 
+               sp.business_name, sp.is_approved as seller_verified,
+               b.name as brand, c.name as category_name,
+               (SELECT ci.image_path FROM color_images ci JOIN product_colors pc ON ci.color_id = pc.id WHERE pc.product_id = p.id ORDER BY ci.is_primary DESC, ci.sort_order ASC LIMIT 1) as product_image,
+               (SELECT SUM(cs.qty) FROM color_sizes cs JOIN product_colors pc ON cs.color_id = pc.id WHERE pc.product_id = p.id) as current_stock
+        FROM products p 
+        JOIN users u ON p.seller_id = u.id 
+        LEFT JOIN seller_profiles sp ON u.id = sp.user_id
+        LEFT JOIN brands b ON p.brand_id = b.id
+        LEFT JOIN categories c ON p.category_id = c.id
+        WHERE p.is_hot_deal = 1 AND p.hot_deal_status = 'approved' AND p.status = 'active'
+        ORDER BY p.discount_percent DESC
+    ";
+    $active_hd_result = mysqli_query($conn, $active_hd_query);
+}
 
 // Total for pagination
 $total_query = "SELECT COUNT(*) as total FROM products p LEFT JOIN brands b ON p.brand_id = b.id LEFT JOIN users u ON p.seller_id = u.id WHERE $where_sql";
@@ -327,6 +432,18 @@ $products_result = mysqli_query($conn, $products_query);
             <div class="custom-tabs">
                 <a href="?tab=all" class="custom-tab <?php echo $tab == 'all' ? 'active' : ''; ?>">All Products</a>
                 <a href="?tab=pending" class="custom-tab <?php echo $tab == 'pending' ? 'active' : ''; ?>">Pending Approval <?php if($stats['pending_count'] > 0) echo "<span class='badge bg-primary ms-1 rounded-pill'>{$stats['pending_count']}</span>"; ?></a>
+                <a href="?tab=hot_deal_requests" class="custom-tab <?php echo $tab == 'hot_deal_requests' ? 'active' : ''; ?>">
+                    <i class="fas fa-bolt text-warning me-1"></i> Hot Deal Requests 
+                    <?php if($stats['hot_deal_requests_count'] > 0): ?>
+                        <span class="badge bg-danger ms-1 rounded-pill animate-pulse"><?php echo $stats['hot_deal_requests_count']; ?></span>
+                    <?php endif; ?>
+                </a>
+                <a href="?tab=active_hot_deals" class="custom-tab <?php echo $tab == 'active_hot_deals' ? 'active' : ''; ?>">
+                    <i class="fas fa-fire text-danger me-1"></i> Active Hot Deals 
+                    <?php if($stats['active_hot_deals_count'] > 0): ?>
+                        <span class="badge bg-success ms-1 rounded-pill"><?php echo $stats['active_hot_deals_count']; ?></span>
+                    <?php endif; ?>
+                </a>
                 <a href="?tab=approved" class="custom-tab <?php echo $tab == 'approved' ? 'active' : ''; ?>">Approved</a>
                 <a href="?tab=suspended" class="custom-tab <?php echo $tab == 'suspended' ? 'active' : ''; ?>">Suspended</a>
                 <a href="?tab=low_stock" class="custom-tab <?php echo $tab == 'low_stock' ? 'active' : ''; ?>">Low Stock</a>
@@ -350,159 +467,417 @@ $products_result = mysqli_query($conn, $products_query);
             </div>
 
             <div class="table-responsive">
-                <table class="premium-table">
-                    <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th>Seller</th>
-                            <th>Category</th>
-                            <th>Inventory Summary</th>
-                            <th>Price Range</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if(mysqli_num_rows($products_result) > 0): ?>
-                            <?php while($row = mysqli_fetch_assoc($products_result)): 
-                                // Calc progress
-                                $totalVariants = (int)$row['variants_count'];
-                                $inStockVariants = (int)$row['variants_in_stock'];
-                                $progress = $totalVariants > 0 ? round(($inStockVariants / $totalVariants) * 100) : 0;
-                                $isLowStock = $progress < 30; // Threshold
-                                
-                                $minPrice = (float)$row['min_price'];
-                                $maxPrice = (float)$row['max_price'];
-                            ?>
+                <?php if($tab == 'hot_deal_requests'): ?>
+                    <!-- HOT DEAL REQUESTS TABLE -->
+                    <table class="premium-table">
+                        <thead>
                             <tr>
-                                <!-- PRODUCT -->
-                                <td>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <?php if(!empty($row['product_image'])): ?>
-                                            <img src="../assets/uploads/products/<?php echo htmlspecialchars($row['product_image']); ?>" class="prod-img" alt="Product">
-                                        <?php else: ?>
-                                            <div class="prod-img bg-light d-flex align-items-center justify-content-center text-muted"><i class="fas fa-box fa-lg"></i></div>
-                                        <?php endif; ?>
-                                        <div>
-                                            <div class="prod-name"><?php echo htmlspecialchars($row['name']); ?></div>
-                                            <div class="prod-meta">SKU: PRD-<?php echo $row['id']; ?> &bull; <?php echo htmlspecialchars($row['brand'] ?? 'Unbranded'); ?></div>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <!-- SELLER -->
-                                <td>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <?php if(!empty($row['profile_image'])): ?>
-                                            <img src="../assets/uploads/profiles/<?php echo htmlspecialchars($row['profile_image']); ?>" class="seller-avatar" alt="Avatar">
-                                        <?php else: ?>
-                                            <div class="seller-avatar bg-primary text-white d-flex align-items-center justify-content-center fw-bold fs-6">
-                                                <?php echo strtoupper(substr($row['first_name'], 0, 1)); ?>
-                                            </div>
-                                        <?php endif; ?>
-                                        <div>
-                                            <div class="seller-name"><?php echo htmlspecialchars($row['business_name'] ?: $row['first_name'].' '.$row['last_name']); ?></div>
-                                            <div class="seller-meta">
-                                                <?php echo htmlspecialchars($row['email']); ?>
-                                                <?php if($row['seller_verified'] == 1): ?>
-                                                    <i class="fas fa-check-circle text-success" title="Verified Seller"></i>
-                                                <?php endif; ?>
+                                <th>Product</th>
+                                <th>Seller</th>
+                                <th>Discount & Pricing</th>
+                                <th>Stock</th>
+                                <th>Clearance Reason</th>
+                                <th>Requested</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if($hdr_result && mysqli_num_rows($hdr_result) > 0): ?>
+                                <?php while($row = mysqli_fetch_assoc($hdr_result)): 
+                                    $orig_price = (float)$row['original_price'];
+                                    $sale_price = (float)$row['sale_price'];
+                                    $base_price = (float)$row['base_price'];
+                                    $is_inflated = ($orig_price > ($base_price * 1.20));
+                                    $markup_pct = ($base_price > 0) ? round((($orig_price - $base_price) / $base_price) * 100) : 0;
+                                ?>
+                                <tr>
+                                    <!-- PRODUCT -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <?php if(!empty($row['product_image'])): ?>
+                                                <img src="../assets/uploads/products/<?php echo htmlspecialchars($row['product_image']); ?>" class="prod-img" alt="Product">
+                                            <?php else: ?>
+                                                <div class="prod-img bg-light d-flex align-items-center justify-content-center text-muted"><i class="fas fa-bolt text-warning fa-lg"></i></div>
+                                            <?php endif; ?>
+                                            <div>
+                                                <div class="prod-name"><?php echo htmlspecialchars($row['product_name']); ?></div>
+                                                <div class="prod-meta">SKU: <?php echo htmlspecialchars($row['product_code']); ?> &bull; <?php echo htmlspecialchars($row['brand'] ?? 'Brand'); ?></div>
                                             </div>
                                         </div>
-                                    </div>
-                                </td>
+                                    </td>
 
-                                <!-- CATEGORY -->
-                                <td>
-                                    <div class="category-pill">
-                                        <i class="fas fa-tag text-muted"></i> <?php echo htmlspecialchars($row['category_name'] ?? 'General'); ?>
-                                    </div>
-                                </td>
-
-                                <!-- INVENTORY -->
-                                <td>
-                                    <div class="inv-summary"><?php echo number_format($totalVariants); ?> Variants <span class="text-muted fw-normal mx-1">|</span> <?php echo number_format((int)$row['total_qty']); ?> Qty</div>
-                                    <div class="progress-bar-container">
-                                        <div class="progress-bar-fill <?php echo $isLowStock ? 'low' : 'good'; ?>" style="width: <?php echo max(5, $progress); ?>%;"></div>
-                                    </div>
-                                    <div class="inv-meta <?php echo $isLowStock ? 'low' : 'good'; ?>">
-                                        <?php echo $progress; ?>% in stock <?php if($isLowStock) echo '&bull; Low stock'; ?>
-                                    </div>
-                                </td>
-
-                                <!-- PRICE -->
-                                <td>
-                                    <div class="price-range">
-                                        <?php 
-                                        if($minPrice == $maxPrice || $maxPrice == 0) {
-                                            echo "Rs. " . number_format($minPrice > 0 ? $minPrice : $row['base_price'], 2);
-                                        } else {
-                                            echo "Rs. " . number_format($minPrice, 2) . " - " . number_format($maxPrice, 2);
-                                        }
-                                        ?>
-                                    </div>
-                                    <div class="price-meta">
-                                        <?php echo ($minPrice != $maxPrice) ? '<span class="text-primary fw-medium">Different price per size</span>' : 'Fixed price'; ?>
-                                    </div>
-                                </td>
-
-                                <!-- STATUS -->
-                                <td>
-                                    <?php if($row['is_approved'] == 0): ?>
-                                        <div class="status-pill pending"><span class="status-dot pending"></span> Pending</div>
-                                    <?php elseif($row['status'] == 'suspended'): ?>
-                                        <div class="status-pill suspended"><span class="status-dot suspended"></span> Suspended</div>
-                                    <?php else: ?>
-                                        <div class="status-pill active"><span class="status-dot active"></span> Active</div>
-                                    <?php endif; ?>
-                                </td>
-
-                                <!-- ACTIONS -->
-                                <td>
-                                    <div class="actions-cell">
-                                        <button class="btn-manage-variants" onclick="openVariantsModal(<?php echo $row['id']; ?>)">
-                                            Manage Variants <i class="fas fa-chevron-down ms-1" style="font-size: 10px;"></i>
-                                        </button>
-                                        
-                                        <div class="dropdown action-dropdown">
-                                            <button class="btn-dots" data-bs-toggle="dropdown">
-                                                <i class="fas fa-ellipsis-h"></i>
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end">
-                                                <form method="POST">
-                                                    <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
-                                                    
-                                                    <?php if($row['is_approved'] == 0): ?>
-                                                        <li><button type="submit" name="action" value="approve" class="dropdown-item text-success"><i class="fas fa-check w-20px"></i> Approve Product</button></li>
-                                                        <li><button type="submit" name="action" value="reject" class="dropdown-item text-warning"><i class="fas fa-times w-20px"></i> Reject Product</button></li>
-                                                    <?php else: ?>
-                                                        <?php if($row['status'] == 'suspended'): ?>
-                                                            <li><button type="submit" name="action" value="restore" class="dropdown-item text-success"><i class="fas fa-undo w-20px"></i> Restore Product</button></li>
-                                                        <?php else: ?>
-                                                            <li><button type="submit" name="action" value="suspend" class="dropdown-item text-warning"><i class="fas fa-pause w-20px"></i> Suspend Product</button></li>
-                                                        <?php endif; ?>
+                                    <!-- SELLER -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <?php if(!empty($row['profile_image'])): ?>
+                                                <img src="../assets/uploads/profiles/<?php echo htmlspecialchars($row['profile_image']); ?>" class="seller-avatar" alt="Avatar">
+                                            <?php else: ?>
+                                                <div class="seller-avatar bg-primary text-white d-flex align-items-center justify-content-center fw-bold fs-6">
+                                                    <?php echo strtoupper(substr($row['first_name'], 0, 1)); ?>
+                                                </div>
+                                            <?php endif; ?>
+                                            <div>
+                                                <div class="seller-name"><?php echo htmlspecialchars($row['business_name'] ?: $row['first_name'].' '.$row['last_name']); ?></div>
+                                                <div class="seller-meta">
+                                                    <?php echo htmlspecialchars($row['email']); ?>
+                                                    <?php if($row['seller_verified'] == 1): ?>
+                                                        <i class="fas fa-check-circle text-success" title="Verified Seller"></i>
                                                     <?php endif; ?>
-                                                    
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    <li><button type="submit" name="action" value="delete" class="dropdown-item text-danger" onclick="return confirm('Delete this product permanently?')"><i class="fas fa-trash-alt w-20px"></i> Delete Product</button></li>
-                                                </form>
-                                            </ul>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </td>
-                            </tr>
-                            <?php endwhile; ?>
-                        <?php else: ?>
+                                    </td>
+
+                                    <!-- DISCOUNT & PRICING -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <span class="badge px-2.5 py-1 text-dark fw-bold rounded-3" style="background-color: #CCFF00; font-size: 13px;">
+                                                -<?php echo $row['requested_discount']; ?>%
+                                            </span>
+                                            <?php if($is_inflated): ?>
+                                                <span class="badge bg-warning text-dark" title="Price inflated by +<?php echo $markup_pct; ?>% over base price">
+                                                    <i class="fas fa-exclamation-triangle"></i> Fake Warning
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted text-decoration-line-through small">Rs. <?php echo number_format($orig_price, 2); ?></span>
+                                            <span class="fw-bold text-success">Rs. <?php echo number_format($sale_price, 2); ?></span>
+                                        </div>
+                                    </td>
+
+                                    <!-- STOCK -->
+                                    <td>
+                                        <div class="fw-bold text-dark fs-6"><?php echo number_format($row['total_qty']); ?> units</div>
+                                        <div class="small <?php echo ($row['total_qty'] < 10) ? 'text-danger fw-bold' : 'text-muted'; ?>">
+                                            <?php echo ($row['total_qty'] < 10) ? '⚠️ Under 10 min' : 'Adequate stock'; ?>
+                                        </div>
+                                    </td>
+
+                                    <!-- REASON -->
+                                    <td>
+                                        <div class="p-2 rounded-2 bg-light border text-dark small" style="max-width: 220px;">
+                                            <i class="fas fa-quote-left text-muted me-1"></i> <?php echo htmlspecialchars($row['reason'] ?: 'Clearance stock'); ?>
+                                        </div>
+                                    </td>
+
+                                    <!-- REQUESTED -->
+                                    <td>
+                                        <div class="small text-dark fw-medium"><?php echo date('M d, Y', strtotime($row['requested_at'])); ?></div>
+                                        <div class="text-muted" style="font-size: 11px;"><?php echo date('h:i A', strtotime($row['requested_at'])); ?></div>
+                                    </td>
+
+                                    <!-- ACTIONS -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <button class="btn btn-sm btn-outline-primary fw-bold px-2.5 py-1.5 rounded-2" data-bs-toggle="modal" data-bs-target="#viewHdrModal_<?php echo $row['id']; ?>" title="View & Fake Price Check">
+                                                <i class="fas fa-eye me-1"></i> View
+                                            </button>
+                                            
+                                            <form method="POST" class="d-inline">
+                                                <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
+                                                <input type="hidden" name="action" value="approve_hot_deal">
+                                                <button type="submit" class="btn btn-sm btn-success fw-bold px-2.5 py-1.5 rounded-2" title="Approve and feature on homepage">
+                                                    <i class="fas fa-check me-1"></i> Approve
+                                                </button>
+                                            </form>
+
+                                            <button class="btn btn-sm btn-outline-danger fw-bold px-2.5 py-1.5 rounded-2" data-bs-toggle="modal" data-bs-target="#rejectHdrModal_<?php echo $row['id']; ?>" title="Reject Request">
+                                                <i class="fas fa-times me-1"></i> Reject
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">
+                                        <div class="text-muted mb-3"><i class="fas fa-bolt fa-3x text-warning"></i></div>
+                                        <h5 class="fw-bold text-dark">No Pending Hot Deal Requests</h5>
+                                        <p class="text-muted mb-0">When sellers submit clearance deals, they will appear here for review.</p>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+
+                <?php elseif($tab == 'active_hot_deals'): ?>
+                    <!-- ACTIVE HOT DEALS TABLE -->
+                    <table class="premium-table">
+                        <thead>
                             <tr>
-                                <td colspan="7" class="text-center py-5">
-                                    <div class="text-muted mb-3"><i class="fas fa-box-open fa-3x"></i></div>
-                                    <h5 class="fw-bold text-dark">No products found</h5>
-                                    <p class="text-muted mb-0">Try adjusting your filters or search query.</p>
-                                </td>
+                                <th>Product</th>
+                                <th>Seller</th>
+                                <th>Active Deal Pricing</th>
+                                <th>Stock</th>
+                                <th>Expiry Countdown</th>
+                                <th>Actions</th>
                             </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php if($active_hd_result && mysqli_num_rows($active_hd_result) > 0): ?>
+                                <?php while($row = mysqli_fetch_assoc($active_hd_result)): 
+                                    $orig_price = (float)$row['original_price'];
+                                    $sale_price = (float)$row['sale_price'];
+                                    $days_left = !empty($row['hot_deal_expiry']) ? ceil((strtotime($row['hot_deal_expiry']) - time()) / 86400) : null;
+                                ?>
+                                <tr>
+                                    <!-- PRODUCT -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <?php if(!empty($row['product_image'])): ?>
+                                                <img src="../assets/uploads/products/<?php echo htmlspecialchars($row['product_image']); ?>" class="prod-img" alt="Product">
+                                            <?php else: ?>
+                                                <div class="prod-img bg-light d-flex align-items-center justify-content-center text-muted"><i class="fas fa-fire text-danger fa-lg"></i></div>
+                                            <?php endif; ?>
+                                            <div>
+                                                <div class="prod-name"><?php echo htmlspecialchars($row['name']); ?></div>
+                                                <div class="prod-meta">SKU: <?php echo htmlspecialchars($row['product_code']); ?> &bull; <?php echo htmlspecialchars($row['brand'] ?? 'Brand'); ?></div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- SELLER -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div>
+                                                <div class="seller-name"><?php echo htmlspecialchars($row['business_name'] ?: $row['first_name'].' '.$row['last_name']); ?></div>
+                                                <div class="seller-meta"><?php echo htmlspecialchars($row['email']); ?></div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- ACTIVE DEAL PRICING -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <span class="badge px-2.5 py-1 text-dark fw-bold rounded-3" style="background-color: #CCFF00; font-size: 13px;">
+                                                -<?php echo $row['discount_percent']; ?>% LIVE
+                                            </span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="text-muted text-decoration-line-through small">Rs. <?php echo number_format($orig_price, 2); ?></span>
+                                            <span class="fw-bold text-success">Rs. <?php echo number_format($sale_price, 2); ?></span>
+                                        </div>
+                                    </td>
+
+                                    <!-- STOCK -->
+                                    <td>
+                                        <div class="fw-bold text-dark"><?php echo number_format($row['current_stock'] ?? $row['total_qty']); ?> units</div>
+                                        <div class="small text-muted">Active stock</div>
+                                    </td>
+
+                                    <!-- EXPIRY -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-1.5 fw-bold text-dark">
+                                            <i class="fas fa-clock text-warning"></i>
+                                            <span>
+                                                <?php 
+                                                if($days_left === null) {
+                                                    echo 'No expiry set';
+                                                } elseif($days_left > 1) {
+                                                    echo "Ends in {$days_left} days";
+                                                } elseif($days_left == 1) {
+                                                    echo "Ends tomorrow";
+                                                } elseif($days_left == 0) {
+                                                    echo "Ends today";
+                                                } else {
+                                                    echo "Expired";
+                                                }
+                                                ?>
+                                            </span>
+                                        </div>
+                                        <div class="text-muted" style="font-size: 11px;">
+                                            <?php echo !empty($row['hot_deal_expiry']) ? date('M d, Y', strtotime($row['hot_deal_expiry'])) : ''; ?>
+                                        </div>
+                                    </td>
+
+                                    <!-- ACTIONS -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <button class="btn btn-sm btn-outline-secondary fw-bold px-2 py-1 rounded-2" data-bs-toggle="modal" data-bs-target="#editExpiryModal_<?php echo $row['id']; ?>" title="Edit Expiry Date">
+                                                <i class="fas fa-calendar-alt me-1"></i> Edit Expiry
+                                            </button>
+                                            
+                                            <form method="POST" class="d-inline" onsubmit="return confirm('Deactivate this deal from the homepage?')">
+                                                <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
+                                                <input type="hidden" name="action" value="deactivate_hot_deal">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger fw-bold px-2 py-1 rounded-2">
+                                                    <i class="fas fa-ban me-1"></i> Deactivate
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="6" class="text-center py-5">
+                                        <div class="text-muted mb-3"><i class="fas fa-fire fa-3x text-muted"></i></div>
+                                        <h5 class="fw-bold text-dark">No Active Hot Deals Currently Running</h5>
+                                        <p class="text-muted mb-0">Approve pending Hot Deal requests to feature products on the homepage.</p>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+
+                <?php else: ?>
+                    <!-- CATALOG PRODUCTS TABLE -->
+                    <table class="premium-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Seller</th>
+                                <th>Category</th>
+                                <th>Inventory Summary</th>
+                                <th>Price Range</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if(mysqli_num_rows($products_result) > 0): ?>
+                                <?php while($row = mysqli_fetch_assoc($products_result)): 
+                                    // Calc progress
+                                    $totalVariants = (int)$row['variants_count'];
+                                    $inStockVariants = (int)$row['variants_in_stock'];
+                                    $progress = $totalVariants > 0 ? round(($inStockVariants / $totalVariants) * 100) : 0;
+                                    $isLowStock = $progress < 30; // Threshold
+                                    
+                                    $minPrice = (float)$row['min_price'];
+                                    $maxPrice = (float)$row['max_price'];
+                                ?>
+                                <tr>
+                                    <!-- PRODUCT -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <?php if(!empty($row['product_image'])): ?>
+                                                <img src="../assets/uploads/products/<?php echo htmlspecialchars($row['product_image']); ?>" class="prod-img" alt="Product">
+                                            <?php else: ?>
+                                                <div class="prod-img bg-light d-flex align-items-center justify-content-center text-muted"><i class="fas fa-box fa-lg"></i></div>
+                                            <?php endif; ?>
+                                            <div>
+                                                <div class="prod-name"><?php echo htmlspecialchars($row['name']); ?></div>
+                                                <div class="prod-meta">SKU: PRD-<?php echo $row['id']; ?> &bull; <?php echo htmlspecialchars($row['brand'] ?? 'Unbranded'); ?></div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- SELLER -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <?php if(!empty($row['profile_image'])): ?>
+                                                <img src="../assets/uploads/profiles/<?php echo htmlspecialchars($row['profile_image']); ?>" class="seller-avatar" alt="Avatar">
+                                            <?php else: ?>
+                                                <div class="seller-avatar bg-primary text-white d-flex align-items-center justify-content-center fw-bold fs-6">
+                                                    <?php echo strtoupper(substr($row['first_name'], 0, 1)); ?>
+                                                </div>
+                                            <?php endif; ?>
+                                            <div>
+                                                <div class="seller-name"><?php echo htmlspecialchars($row['business_name'] ?: $row['first_name'].' '.$row['last_name']); ?></div>
+                                                <div class="seller-meta">
+                                                    <?php echo htmlspecialchars($row['email']); ?>
+                                                    <?php if($row['seller_verified'] == 1): ?>
+                                                        <i class="fas fa-check-circle text-success" title="Verified Seller"></i>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- CATEGORY -->
+                                    <td>
+                                        <div class="category-pill">
+                                            <i class="fas fa-tag text-muted"></i> <?php echo htmlspecialchars($row['category_name'] ?? 'General'); ?>
+                                        </div>
+                                    </td>
+
+                                    <!-- INVENTORY -->
+                                    <td>
+                                        <div class="inv-summary"><?php echo number_format($totalVariants); ?> Variants <span class="text-muted fw-normal mx-1">|</span> <?php echo number_format((int)$row['total_qty']); ?> Qty</div>
+                                        <div class="progress-bar-container">
+                                            <div class="progress-bar-fill <?php echo $isLowStock ? 'low' : 'good'; ?>" style="width: <?php echo max(5, $progress); ?>%;"></div>
+                                        </div>
+                                        <div class="inv-meta <?php echo $isLowStock ? 'low' : 'good'; ?>">
+                                            <?php echo $progress; ?>% in stock <?php if($isLowStock) echo '&bull; Low stock'; ?>
+                                        </div>
+                                    </td>
+
+                                    <!-- PRICE -->
+                                    <td>
+                                        <div class="price-range">
+                                            <?php 
+                                            if($minPrice == $maxPrice || $maxPrice == 0) {
+                                                echo "Rs. " . number_format($minPrice > 0 ? $minPrice : $row['base_price'], 2);
+                                            } else {
+                                                echo "Rs. " . number_format($minPrice, 2) . " - " . number_format($maxPrice, 2);
+                                            }
+                                            ?>
+                                        </div>
+                                        <div class="price-meta">
+                                            <?php echo ($minPrice != $maxPrice) ? '<span class="text-primary fw-medium">Different price per size</span>' : 'Fixed price'; ?>
+                                        </div>
+                                    </td>
+
+                                    <!-- STATUS -->
+                                    <td>
+                                        <?php if($row['is_approved'] == 0): ?>
+                                            <div class="status-pill pending"><span class="status-dot pending"></span> Pending</div>
+                                        <?php elseif($row['status'] == 'suspended'): ?>
+                                            <div class="status-pill suspended"><span class="status-dot suspended"></span> Suspended</div>
+                                        <?php else: ?>
+                                            <div class="status-pill active"><span class="status-dot active"></span> Active</div>
+                                        <?php endif; ?>
+                                    </td>
+
+                                    <!-- ACTIONS -->
+                                    <td>
+                                        <div class="actions-cell">
+                                            <button class="btn-manage-variants" onclick="openVariantsModal(<?php echo $row['id']; ?>)">
+                                                Manage Variants <i class="fas fa-chevron-down ms-1" style="font-size: 10px;"></i>
+                                            </button>
+                                            
+                                            <div class="dropdown action-dropdown">
+                                                <button class="btn-dots" data-bs-toggle="dropdown">
+                                                    <i class="fas fa-ellipsis-h"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <form method="POST">
+                                                        <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
+                                                        
+                                                        <?php if($row['is_approved'] == 0): ?>
+                                                            <li><button type="submit" name="action" value="approve" class="dropdown-item text-success"><i class="fas fa-check w-20px"></i> Approve Product</button></li>
+                                                            <li><button type="submit" name="action" value="reject" class="dropdown-item text-warning"><i class="fas fa-times w-20px"></i> Reject Product</button></li>
+                                                        <?php else: ?>
+                                                            <?php if($row['status'] == 'suspended'): ?>
+                                                                <li><button type="submit" name="action" value="restore" class="dropdown-item text-success"><i class="fas fa-undo w-20px"></i> Restore Product</button></li>
+                                                            <?php else: ?>
+                                                                <li><button type="submit" name="action" value="suspend" class="dropdown-item text-warning"><i class="fas fa-pause w-20px"></i> Suspend Product</button></li>
+                                                            <?php endif; ?>
+                                                        <?php endif; ?>
+                                                        
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li><button type="submit" name="action" value="delete" class="dropdown-item text-danger" onclick="return confirm('Delete this product permanently?')"><i class="fas fa-trash-alt w-20px"></i> Delete Product</button></li>
+                                                    </form>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <?php endwhile; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">
+                                        <div class="text-muted mb-3"><i class="fas fa-box-open fa-3x"></i></div>
+                                        <h5 class="fw-bold text-dark">No products found</h5>
+                                        <p class="text-muted mb-0">Try adjusting your filters or search query.</p>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+            </div>
             </div>
             
             <!-- Pagination Footer -->
@@ -551,6 +926,219 @@ $products_result = mysqli_query($conn, $products_query);
             </div>
         </div>
     </div>
+
+    <!-- Hot Deals Modals -->
+    <?php if(!empty($hdr_rows)): ?>
+        <?php foreach($hdr_rows as $row): 
+            $orig_price = (float)$row['original_price'];
+            $sale_price = (float)$row['sale_price'];
+            $base_price = (float)$row['base_price'];
+            $is_inflated = ($orig_price > ($base_price * 1.20));
+            $markup_pct = ($base_price > 0) ? round((($orig_price - $base_price) / $base_price) * 100) : 0;
+            $modal_id = "viewHdrModal_" . $row['id'];
+            $reject_modal_id = "rejectHdrModal_" . $row['id'];
+        ?>
+        <!-- View & Fake Price Check Modal -->
+        <div class="modal fade" id="<?php echo $modal_id; ?>" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15);">
+                    <div class="modal-header border-bottom px-4 pt-4 pb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge px-3 py-1.5 rounded-pill text-dark fw-bold" style="background-color: #CCFF00; font-size: 13px;">
+                                <i class="fas fa-bolt me-1"></i> Hot Deal Request
+                            </span>
+                            <span class="text-muted small">Submitted <?php echo date('M d, Y h:i A', strtotime($row['requested_at'])); ?></span>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <!-- Product and Seller info row -->
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-5 text-center">
+                                <div class="bg-light p-3 rounded-4 border position-relative">
+                                    <?php if(!empty($row['product_image'])): ?>
+                                        <img src="../assets/uploads/products/<?php echo htmlspecialchars($row['product_image']); ?>" class="img-fluid rounded-3" style="max-height: 200px; object-fit: contain;" alt="Product">
+                                    <?php else: ?>
+                                        <div class="d-flex align-items-center justify-content-center bg-white rounded-3" style="height: 180px;">
+                                            <i class="fas fa-box text-muted fa-3x"></i>
+                                        </div>
+                                    <?php endif; ?>
+                                    <span class="position-absolute top-2 start-2 badge text-dark fw-bold" style="background: #CCFF00; font-size: 14px;">
+                                        -<?php echo $row['requested_discount']; ?>%
+                                    </span>
+                                </div>
+                                <h5 class="fw-bold text-dark mt-3 mb-1"><?php echo htmlspecialchars($row['product_name']); ?></h5>
+                                <div class="text-muted small">SKU: <?php echo htmlspecialchars($row['product_code']); ?> &bull; <?php echo htmlspecialchars($row['brand'] ?? 'Unbranded'); ?></div>
+                            </div>
+                            <div class="col-md-7">
+                                <!-- Price terms card -->
+                                <div class="p-3 bg-light rounded-3 border mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                        <span class="text-muted small text-uppercase fw-bold">Seller's Original Price</span>
+                                        <span class="text-muted text-decoration-line-through fw-bold">Rs. <?php echo number_format($orig_price, 2); ?></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                        <span class="text-dark small text-uppercase fw-bold">Catalog Base Price</span>
+                                        <span class="fw-bold text-dark">Rs. <?php echo number_format($base_price, 2); ?></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                        <span class="text-dark small text-uppercase fw-bold">Requested Sale Price</span>
+                                        <span class="fw-bold text-success fs-5">Rs. <?php echo number_format($sale_price, 2); ?></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-dark small text-uppercase fw-bold">Total Stock Available</span>
+                                        <span class="fw-bold <?php echo ($row['total_qty'] < 10) ? 'text-danger' : 'text-primary'; ?>">
+                                            <?php echo number_format($row['total_qty']); ?> units <?php if($row['total_qty'] < 10) echo '(Low Stock Warning)'; ?>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Seller History -->
+                                <div class="p-3 bg-white rounded-3 border">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="seller-avatar bg-primary text-white d-flex align-items-center justify-content-center fw-bold">
+                                            <?php echo strtoupper(substr($row['first_name'], 0, 1)); ?>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold text-dark"><?php echo htmlspecialchars($row['business_name'] ?: $row['first_name'].' '.$row['last_name']); ?></div>
+                                            <div class="text-muted small"><?php echo htmlspecialchars($row['email']); ?> &bull; Total Products: <?php echo $row['seller_total_products']; ?></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Seller Clearance Reason -->
+                        <div class="mb-4">
+                            <label class="form-label text-muted small text-uppercase fw-bold">Seller's Clearance Reason</label>
+                            <div class="p-3 rounded-3 bg-light border-start border-4 border-primary">
+                                <i class="fas fa-quote-left text-muted me-1"></i>
+                                <span class="text-dark fw-medium">"<?php echo htmlspecialchars($row['reason'] ?: 'Clearance sale'); ?>"</span>
+                            </div>
+                        </div>
+
+                        <!-- FAKE PRICE CHECK ALERT -->
+                        <div class="mb-2">
+                            <?php if($is_inflated): ?>
+                                <div class="alert alert-warning border border-warning d-flex align-items-start gap-3 p-3 rounded-3 shadow-xs">
+                                    <i class="fas fa-exclamation-triangle text-warning fs-3 mt-1"></i>
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-1">⚠️ Potential Fake Discount Detected!</h6>
+                                        <p class="mb-2 small text-dark">
+                                            The seller listed an Original Price of <strong>Rs. <?php echo number_format($orig_price, 2); ?></strong>, but this product's regular catalog Base Price is <strong>Rs. <?php echo number_format($base_price, 2); ?></strong>.
+                                            This represents an artificial price inflation of <span class="badge bg-danger text-white">+<?php echo $markup_pct; ?>%</span>.
+                                        </p>
+                                        <div class="small text-muted fst-italic">
+                                            Recommendation: Check whether the seller artificially bumped the original price to make the -<?php echo $row['requested_discount']; ?>% deal appear larger than it actually is.
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php else: ?>
+                                <div class="alert alert-success border border-success d-flex align-items-center gap-3 p-3 rounded-3 shadow-xs">
+                                    <i class="fas fa-check-circle text-success fs-4"></i>
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-0">✅ Price Integrity Verified</h6>
+                                        <div class="small text-muted">Original price Rs. <?php echo number_format($orig_price, 2); ?> matches regular catalog pricing (No artificial inflation detected).</div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top px-4 pb-4">
+                        <button type="button" class="btn btn-outline-secondary fw-bold rounded-2 px-3" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-outline-danger fw-bold rounded-2 px-3" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#<?php echo $reject_modal_id; ?>">
+                            <i class="fas fa-times me-1"></i> Reject Deal...
+                        </button>
+                        <form method="POST" class="d-inline">
+                            <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
+                            <input type="hidden" name="action" value="approve_hot_deal">
+                            <button type="submit" class="btn btn-success fw-bold rounded-2 px-4">
+                                <i class="fas fa-check me-1"></i> Approve & Put Live on Homepage
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reject Modal -->
+        <div class="modal fade" id="<?php echo $reject_modal_id; ?>" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15);">
+                    <form method="POST">
+                        <input type="hidden" name="product_id" value="<?php echo $row['product_id']; ?>">
+                        <input type="hidden" name="action" value="reject_hot_deal">
+                        <div class="modal-header border-bottom px-4 pt-4 pb-3">
+                            <h5 class="modal-title fw-bold text-danger">
+                                <i class="fas fa-times-circle me-1"></i> Reject Hot Deal Request
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <p class="text-muted small mb-3">
+                                Rejecting this request for <strong><?php echo htmlspecialchars($row['product_name']); ?></strong> will notify the seller. Please provide a constructive reason:
+                            </p>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-dark small">Rejection Reason *</label>
+                                <textarea name="reject_reason" id="reject_reason_<?= $row['id'] ?>" rows="3" class="form-control" required><?php echo $is_inflated ? 'Original price appears artificially inflated compared to regular catalog price.' : 'Discount too low, need 15% min'; ?></textarea>
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                <span class="small text-muted w-100 mb-1">Quick presets:</span>
+                                <button type="button" class="btn btn-sm btn-light border small text-muted" onclick="document.getElementById('reject_reason_<?= $row['id'] ?>').value = 'Discount too low, need 15% min';">Discount Too Low</button>
+                                <button type="button" class="btn btn-sm btn-light border small text-muted" onclick="document.getElementById('reject_reason_<?= $row['id'] ?>').value = 'Original price artificially inflated over regular catalog price.';">Inflated Price</button>
+                                <button type="button" class="btn btn-sm btn-light border small text-muted" onclick="document.getElementById('reject_reason_<?= $row['id'] ?>').value = 'Insufficient stock (minimum 10 units required for homepage feature).';">Low Stock</button>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top px-4 pb-4">
+                            <button type="button" class="btn btn-outline-secondary fw-bold rounded-2 px-3" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-danger fw-bold rounded-2 px-4">
+                                Confirm Rejection & Notify Seller
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+
+    <!-- Active Deals Expiry Edit Modals -->
+    <?php if(!empty($active_hd_rows)): ?>
+        <?php foreach($active_hd_rows as $row): 
+            $modal_id = "editExpiryModal_" . $row['id'];
+            $current_expiry = !empty($row['hot_deal_expiry']) ? date('Y-m-d', strtotime($row['hot_deal_expiry'])) : date('Y-m-d', strtotime('+3 days'));
+        ?>
+        <div class="modal fade" id="<?php echo $modal_id; ?>" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15);">
+                    <form method="POST">
+                        <input type="hidden" name="product_id" value="<?php echo $row['id']; ?>">
+                        <input type="hidden" name="action" value="update_hot_deal_expiry">
+                        <div class="modal-header border-bottom px-4 pt-4 pb-3">
+                            <h5 class="modal-title fw-bold text-dark">
+                                <i class="fas fa-calendar-alt text-primary me-2"></i> Update Hot Deal Expiry
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <p class="text-muted small mb-3">Adjust homepage feature expiration for <strong><?php echo htmlspecialchars($row['name']); ?></strong>.</p>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-dark small">New Expiration Date</label>
+                                <input type="date" name="new_expiry" value="<?php echo $current_expiry; ?>" min="<?php echo date('Y-m-d'); ?>" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top px-4 pb-4">
+                            <button type="button" class="btn btn-outline-secondary fw-bold rounded-2 px-3" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary fw-bold rounded-2 px-4">Save Expiry Date</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
 
     <style>
         .w-20px { width: 20px; text-align: center; }

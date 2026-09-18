@@ -44,6 +44,18 @@ $lowestPrice = $product['base_price'];
 $highestPrice = $product['base_price'];
 $totalStock = $product['total_qty'];
 
+$isHotDealProduct = ($product['is_hot_deal'] == 1 && $product['hot_deal_status'] === 'approved' && 
+                     (empty($product['hot_deal_expiry']) || strtotime($product['hot_deal_expiry']) >= time()));
+
+if ($isHotDealProduct && !empty($product['sale_price']) && (float)$product['sale_price'] > 0) {
+    $hotDealSalePrice = (float)$product['sale_price'];
+    $hotDealOrigPrice = (float)($product['original_price'] > 0 ? $product['original_price'] : $product['base_price']);
+    $hotDealDiscount = (int)($product['discount_percent'] > 0 ? $product['discount_percent'] : round((($hotDealOrigPrice - $hotDealSalePrice) / $hotDealOrigPrice) * 100));
+    $hotDealDaysLeft = !empty($product['hot_deal_expiry']) ? ceil((strtotime($product['hot_deal_expiry']) - time()) / 86400) : null;
+} else {
+    $isHotDealProduct = false;
+}
+
 if (!empty($variants)) {
     $prices = [];
     $totalStock = 0;
@@ -330,25 +342,53 @@ $trueToSizePct = $totalReviews > 0 ? round(($fitCounts['True to Size'] / $totalR
             </div>
 
             <!-- Price -->
-            <div class="mb-6 flex flex-col gap-1">
-                <div class="flex items-end gap-3">
-                    <span class="text-3xl md:text-4xl font-black text-navy tracking-tight" id="displayPrice">
-                        <?php if ($lowestPrice != $highestPrice): ?>
-                            Rs. <?php echo number_format($lowestPrice, 0); ?> - <?php echo number_format($highestPrice, 0); ?>
-                        <?php else: ?>
-                            Rs. <?php echo number_format($lowestPrice, 0); ?>
+            <?php if ($isHotDealProduct): ?>
+                <div class="mb-6 p-4 rounded-2xl bg-[#0A1222] border border-[#CCFF00]/40 shadow-lg text-white">
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#CCFF00] text-black font-black text-xs uppercase tracking-wider">
+                            <i class="fas fa-bolt animate-pulse"></i> -<?php echo $hotDealDiscount; ?>% HOT DEAL
+                        </span>
+                        <?php if($hotDealDaysLeft !== null): ?>
+                            <span class="text-xs text-[#CCFF00] font-bold flex items-center gap-1">
+                                <i class="fas fa-clock text-[10px]"></i>
+                                <?php echo $hotDealDaysLeft > 1 ? "Ends in {$hotDealDaysLeft} days" : ($hotDealDaysLeft == 1 ? "Ends tomorrow" : "Ends today!"); ?>
+                            </span>
                         <?php endif; ?>
-                    </span>
-                    <?php if(!empty($product['cost_price']) && $product['cost_price'] > $lowestPrice): ?>
-                    <span class="text-lg font-bold text-gray-400 line-through mb-1">Rs. <?php echo number_format($product['cost_price'], 0); ?></span>
-                    <?php endif; ?>
+                    </div>
+                    <div class="flex items-baseline gap-3">
+                        <span class="text-3xl md:text-4xl font-black text-[#CCFF00] tracking-tight" id="displayPrice">
+                            Rs. <?php echo number_format($hotDealSalePrice, 0); ?>
+                        </span>
+                        <span class="text-lg font-bold text-gray-400 line-through">
+                            Rs. <?php echo number_format($hotDealOrigPrice, 0); ?>
+                        </span>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-400 flex items-center gap-2 border-t border-white/10 pt-2">
+                        <span>Pay in 3 installments of Rs. <?php echo number_format($hotDealSalePrice / 3, 0); ?> with</span>
+                        <img src="../image/KOKO_logo.png" class="h-3.5 w-auto rounded" alt="KOKO">
+                    </div>
                 </div>
-                <!-- KOKO Pay -->
-                <div class="text-sm font-bold text-gray-500 flex items-center gap-2">
-                    <span id="kokoText">Pay in 3 installments of Rs. <?php echo number_format($lowestPrice / 3, 0); ?> with</span>
-                    <img src="../image/KOKO_logo.png" class="h-4 w-auto rounded" alt="KOKO">
+            <?php else: ?>
+                <div class="mb-6 flex flex-col gap-1">
+                    <div class="flex items-end gap-3">
+                        <span class="text-3xl md:text-4xl font-black text-navy tracking-tight" id="displayPrice">
+                            <?php if ($lowestPrice != $highestPrice): ?>
+                                Rs. <?php echo number_format($lowestPrice, 0); ?> - <?php echo number_format($highestPrice, 0); ?>
+                            <?php else: ?>
+                                Rs. <?php echo number_format($lowestPrice, 0); ?>
+                            <?php endif; ?>
+                        </span>
+                        <?php if(!empty($product['cost_price']) && $product['cost_price'] > $lowestPrice): ?>
+                        <span class="text-lg font-bold text-gray-400 line-through mb-1">Rs. <?php echo number_format($product['cost_price'], 0); ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <!-- KOKO Pay -->
+                    <div class="text-sm font-bold text-gray-500 flex items-center gap-2">
+                        <span id="kokoText">Pay in 3 installments of Rs. <?php echo number_format($lowestPrice / 3, 0); ?> with</span>
+                        <img src="../image/KOKO_logo.png" class="h-4 w-auto rounded" alt="KOKO">
+                    </div>
                 </div>
-            </div>
+            <?php endif; ?>
 
 
 
@@ -797,63 +837,17 @@ $trueToSizePct = $totalReviews > 0 ? round(($fitCounts['True to Size'] / $totalR
         }
 
         const productId = <?php echo $product_id; ?>;
-        
-        // Button loading state
         const originalHtml = btn.innerHTML;
-        const originalClass = btn.className;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>ADDING...</span>';
         btn.disabled = true;
 
-        const formData = new FormData();
-        formData.append('product_id', productId);
-        formData.append('variant_id', selectedVariantId || '');
-        formData.append('quantity', currentQty);
-
-        // Call the backend API
-        fetch('../Backend/add_to_cart.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.success) {
-                // Success state
-                btn.innerHTML = '<i class="fas fa-check"></i> <span>ADDED</span>';
-                btn.className = btn.className.replace('bg-navy', 'bg-green-500').replace('hover:bg-black', 'hover:bg-green-600');
-                
-                // Update badge with animation
-                const badges = document.querySelectorAll('.cart-badge');
-                badges.forEach(b => {
-                    b.innerText = data.cart_count;
-                    b.classList.remove('hidden');
-                    b.classList.add('animate__animated', 'animate__bounceIn');
-                    setTimeout(() => b.classList.remove('animate__animated', 'animate__bounceIn'), 1000);
-                });
-                
-                showToast(`Added to cart - ${selectedSize || 'Standard'}`, 'success');
-                
-                // Refresh and show mini cart if available
-                if(typeof toggleCartSidebar === 'function') {
-                    // Ideally we'd refresh the sidebar content here via fetch
-                    toggleCartSidebar();
-                }
-                
-                setTimeout(() => {
-                    btn.innerHTML = originalHtml;
-                    btn.className = originalClass;
-                    btn.disabled = false;
-                }, 1000);
-            } else {
-                showToast(data.message || 'Error adding to cart', 'error');
+        if (typeof CartManager !== 'undefined' && CartManager.addToCart) {
+            CartManager.addToCart(productId, selectedVariantId || null, currentQty, btn).finally(() => {
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
-            }
-        })
-        .catch(err => {
-            showToast('Network error', 'error');
-            btn.innerHTML = originalHtml;
-            btn.disabled = false;
-        });
+            });
+            return;
+        }
     }
 
     function buyNow(btn) {

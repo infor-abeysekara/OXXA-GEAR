@@ -192,43 +192,10 @@
       transition: transform 0.2s ease;
     }
   </style>
-
-  <!-- Slide-in Cart Drawer -->
-  <div id="cartSidebar" class="fixed inset-y-0 right-0 w-full md:w-[400px] bg-white shadow-2xl z-[1050] transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
-    <!-- Header -->
-    <div class="px-6 py-4 border-b flex justify-between items-center bg-navy text-white">
-      <h3 class="font-bold text-lg uppercase tracking-wide flex items-center">
-        <i class="fas fa-shopping-bag me-3 text-primary"></i> Your Cart
-      </h3>
-      <button onclick="toggleCartSidebar()" class="text-gray-300 hover:text-white transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10">
-        <i class="fas fa-times text-xl"></i>
-      </button>
-    </div>
-    
-    <!-- Body -->
-    <div class="flex-grow overflow-y-auto p-6" id="cartSidebarItems">
-      <div class="flex justify-center items-center h-full">
-         <i class="fas fa-spinner fa-spin text-3xl text-navy"></i>
-      </div>
-    </div>
-    
-    <!-- Footer -->
-    <div class="border-t bg-gray-50 p-6" id="cartSidebarFooter">
-      <div class="flex justify-between items-center mb-4 text-navy">
-        <span class="font-medium">Subtotal</span>
-        <span class="font-extrabold text-xl" id="cartSidebarSubtotal">Rs. 0</span>
-      </div>
-      <a href="<?php echo $base_path; ?>site/checkout.php" class="block w-full bg-primary hover:bg-primary-hover text-white text-center font-bold py-3.5 rounded-xl uppercase tracking-wide transition-colors shadow-md">
-        Proceed to Checkout
-      </a>
-      <button onclick="toggleCartSidebar()" class="block w-full text-center text-slate font-medium mt-3 hover:text-navy transition-colors text-sm">
-        Continue Shopping
-      </button>
-    </div>
-  </div>
-
-  <!-- Cart Sidebar Overlay -->
-  <div id="cartOverlay" class="fixed inset-0 bg-navy/60 backdrop-blur-sm z-[1040] hidden opacity-0 transition-opacity duration-300" onclick="toggleCartSidebar()"></div>
+  <!-- Premium Slide-in Cart Drawer & Quick Add Modal -->
+  <?php include(__DIR__ . '/../site/components/cart-drawer.php'); ?>
+  <?php include(__DIR__ . '/../site/components/quick-add-modal.php'); ?>
+  <script src="<?php echo $base_path; ?>site/js/cart-manager.js"></script>
 
   <!-- Global Custom JS Functions -->
   <script>
@@ -276,112 +243,15 @@
       }
     }
 
-    // 3. Cart Drawer Toggle & Load
-    function loadCartSidebar() {
-      const itemsContainer = document.getElementById('cartSidebarItems');
-      
-      const basePath = window.location.pathname.includes('/site/') ? '../' : './';
-      fetch(basePath + 'Backend/get_cart.php')
-      .then(r => r.json())
-      .then(data => {
-         if (!data.success) {
-            itemsContainer.innerHTML = `<div class="text-center text-gray-500 mt-10">Please login to view cart</div>`;
-            return;
-         }
-         
-         // Update badges
-         document.querySelectorAll('.cart-badge').forEach(b => {
-             b.innerText = data.count;
-             b.classList.remove('hidden');
-         });
-         
-         document.getElementById('cartSidebarSubtotal').innerText = 'Rs. ' + Number(data.subtotal).toLocaleString('en-US');
-         
-         if (data.items.length === 0) {
-            itemsContainer.innerHTML = `
-              <div class="text-center mt-20">
-                 <i class="fas fa-shopping-bag text-5xl text-gray-200 mb-4"></i>
-                 <h4 class="font-bold text-navy">Your cart is empty</h4>
-                 <p class="text-sm text-gray-500 mt-2">Looks like you haven't added anything yet.</p>
-              </div>`;
-            document.getElementById('cartSidebarFooter').classList.add('hidden');
-         } else {
-            document.getElementById('cartSidebarFooter').classList.remove('hidden');
-            let html = '';
-            data.items.forEach(item => {
-               html += `
-               <div class="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100 relative group">
-                 <button onclick="updateCartSidebarItem(${item.cart_id}, 0)" class="absolute top-0 right-0 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-trash-alt"></i></button>
-                 <a href="${basePath}site/product-details.php?id=${item.product_id}"><img src="${item.image}" alt="${item.name}" class="w-20 h-20 object-contain rounded-lg bg-gray-50 border border-gray-100 mix-blend-multiply p-1"></a>
-                 <div class="flex-grow">
-                   <h4 class="font-bold text-navy text-sm mb-1 leading-tight line-clamp-1"><a href="${basePath}site/product-details.php?id=${item.product_id}">${item.name}</a></h4>
-                   <p class="text-gray-500 text-xs mb-2 font-bold">${item.variant_label}</p>
-                   <div class="flex justify-between items-center">
-                     <span class="font-bold text-navy">Rs. ${Number(item.price).toLocaleString('en-US')}</span>
-                     <div class="flex items-center border border-gray-200 rounded-lg overflow-hidden h-8 bg-white">
-                       <button onclick="updateCartSidebarItem(${item.cart_id}, ${item.quantity - 1})" class="w-8 text-gray-500 hover:bg-gray-100 transition-colors flex items-center justify-center font-bold text-lg"><i class="fas fa-minus text-[10px]"></i></button>
-                       <span class="w-8 text-center text-sm font-black text-navy border-x border-gray-200 leading-8">${item.quantity}</span>
-                       <button onclick="updateCartSidebarItem(${item.cart_id}, ${item.quantity + 1})" class="w-8 text-gray-500 hover:bg-gray-100 transition-colors flex items-center justify-center font-bold text-lg"><i class="fas fa-plus text-[10px]"></i></button>
-                     </div>
-                   </div>
-                 </div>
-               </div>`;
-            });
-            itemsContainer.innerHTML = html;
-         }
-      })
-      .catch(err => {
-         itemsContainer.innerHTML = `<div class="text-center text-red-500 mt-10">Error loading cart</div>`;
-      });
-    }
-
-    function updateCartSidebarItem(cartId, newQty) {
-      const basePath = window.location.pathname.includes('/site/') ? '../' : './';
-      fetch(basePath + 'Backend/update_cart.php', {
-         method: 'POST',
-         headers: {'Content-Type': 'application/json'},
-         body: JSON.stringify({
-            action: newQty === 0 ? 'remove' : 'update',
-            cart_id: cartId,
-            qty: newQty
-         })
-      })
-      .then(r => r.json())
-      .then(data => {
-         if (data.success) {
-            loadCartSidebar();
-            if (typeof loadCartPage === 'function') loadCartPage(); // Sync if on cart.php
-         } else {
-            showToast(data.message || 'Failed to update', 'warning');
-         }
-      })
-      .catch(err => showToast('Network Error', 'error'));
-    }
-
+    // 3. Cart Drawer Toggle & Legacy Aliases
     function toggleCartSidebar() {
-      const sidebar = document.getElementById('cartSidebar');
-      const overlay = document.getElementById('cartOverlay');
-      const isClosed = sidebar.classList.contains('translate-x-full');
-
-      if (isClosed) {
-        // Open
-        loadCartSidebar();
-        overlay.classList.remove('hidden');
-        setTimeout(() => {
-          overlay.classList.remove('opacity-0');
-          overlay.classList.add('opacity-100');
-          sidebar.classList.remove('translate-x-full');
-        }, 10);
-        document.body.style.overflow = 'hidden'; 
-      } else {
-        // Close
-        sidebar.classList.add('translate-x-full');
-        overlay.classList.remove('opacity-100');
-        overlay.classList.add('opacity-0');
-        setTimeout(() => {
-          overlay.classList.add('hidden');
-        }, 300);
-        document.body.style.overflow = '';
+      if (typeof CartManager !== 'undefined' && CartManager.openDrawer) {
+        const drawer = document.getElementById('cartDrawer');
+        if (drawer && drawer.classList.contains('translate-x-0')) {
+          CartManager.closeDrawer();
+        } else {
+          CartManager.openDrawer();
+        }
       }
     }
 

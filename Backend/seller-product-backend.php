@@ -220,13 +220,99 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
             }
         }
 
+        // 4. Handle Hot Deal Request / Pricing
+        $is_hot_deal_requested = isset($_POST['request_hot_deal']) && $_POST['request_hot_deal'] == '1';
+        $hot_deal_orig = isset($_POST['hot_deal_original_price']) ? (float)$_POST['hot_deal_original_price'] : 0;
+        $hot_deal_sale = isset($_POST['hot_deal_sale_price']) ? (float)$_POST['hot_deal_sale_price'] : 0;
+
+        if ($hot_deal_orig > 0 && $hot_deal_sale > 0 && $hot_deal_sale < $hot_deal_orig) {
+            $discount_pct = (int)round((($hot_deal_orig - $hot_deal_sale) / $hot_deal_orig) * 100);
+            
+            if ($is_hot_deal_requested) {
+                // Rule 1: Min 15% discount
+                if ($discount_pct < 15) {
+                    $pdo->rollBack();
+                    header('Location: ../site/seller-edit-product.php?id=' . $product_id . '&error=Hot+Deal+discount+must+be+at+least+15%25');
+                    exit();
+                }
+
+                // Rule 2: Min stock 10
+                if ($total_qty < 10) {
+                    $pdo->rollBack();
+                    header('Location: ../site/seller-edit-product.php?id=' . $product_id . '&error=Hot+Deals+require+at+least+10+items+in+stock');
+                    exit();
+                }
+
+                // Rule 3: Max 2 active deals per seller
+                $activeDealsCountStmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE seller_id = ? AND is_hot_deal = 1 AND hot_deal_status = 'approved' AND id != ?");
+                $activeDealsCountStmt->execute([$seller_id, $product_id]);
+                if ((int)$activeDealsCountStmt->fetchColumn() >= 2) {
+                    $pdo->rollBack();
+                    header('Location: ../site/seller-edit-product.php?id=' . $product_id . '&error=Maximum+2+active+Hot+Deals+allowed+per+seller');
+                    exit();
+                }
+
+                // Rule 4: 7-day cooldown after rejection
+                $cooldownStmt = $pdo->prepare("SELECT reviewed_at FROM hot_deal_requests WHERE product_id = ? AND status = 'rejected' ORDER BY id DESC LIMIT 1");
+                $cooldownStmt->execute([$product_id]);
+                $lastRejection = $cooldownStmt->fetchColumn();
+                if ($lastRejection && strtotime($lastRejection) > strtotime('-7 days')) {
+                    $pdo->rollBack();
+                    header('Location: ../site/seller-edit-product.php?id=' . $product_id . '&error=Cooldown+active:+Cannot+re-request+for+7+days+after+rejection');
+                    exit();
+                }
+
+                // Rule 5: Expiry max 7 days
+                $expiry_date = trim($_POST['hot_deal_expiry'] ?? '');
+                if (empty($expiry_date) || strtotime($expiry_date) < strtotime('today') || strtotime($expiry_date) > strtotime('+7 days 23:59:59')) {
+                    $expiry_date = date('Y-m-d', strtotime('+7 days'));
+                }
+                $expiry_datetime = $expiry_date . ' 23:59:59';
+
+                // Rule 6: Reason
+                $reason = trim($_POST['hot_deal_reason'] ?? 'Clearance Stock');
+
+                // Update product table
+                $updateHd = $pdo->prepare("UPDATE products SET 
+                    original_price = ?, 
+                    sale_price = ?, 
+                    discount_percent = ?, 
+                    hot_deal_status = 'pending', 
+                    hot_deal_expiry = ?, 
+                    hot_deal_request_reason = ? 
+                    WHERE id = ?");
+                $updateHd->execute([$hot_deal_orig, $hot_deal_sale, $discount_pct, $expiry_datetime, $reason, $product_id]);
+
+                // Insert into hot_deal_requests
+                $insertHdr = $pdo->prepare("INSERT INTO hot_deal_requests 
+                    (product_id, seller_id, requested_discount, original_price, sale_price, reason, status, requested_at) 
+                    VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())");
+                $insertHdr->execute([$product_id, $seller_id, $discount_pct, $hot_deal_orig, $hot_deal_sale, $reason]);
+
+                // Notify Admins
+                $adminStmt = $pdo->query("SELECT id FROM users WHERE user_type = 'admin'");
+                $adminIds = $adminStmt->fetchAll(PDO::FETCH_COLUMN);
+                foreach ($adminIds as $adminId) {
+                    addNotification($conn, $adminId, "New Hot Deal Request: " . $name . " (-" . $discount_pct . "%)", 'warning', 'HotDeals', "admin/manage-products.php?tab=hot_deal_requests");
+                }
+
+                $pdo->commit();
+                header('Location: ../site/seller-edit-product.php?id=' . $product_id . '&success=hot_deal_requested');
+                exit();
+            } else {
+                // Just save the price reference without requesting approval
+                $pdo->prepare("UPDATE products SET original_price = ?, sale_price = ?, discount_percent = ? WHERE id = ?")
+                    ->execute([$hot_deal_orig, $hot_deal_sale, $discount_pct, $product_id]);
+            }
+        }
+
         $pdo->commit();
         header('Location: ../site/seller-dashboard.php?tab=products&success=product_updated');
         exit();
 
     } catch (Exception $e) {
         $pdo->rollBack();
-        header('Location: ../site/seller-edit-product.php?id=' . $product_id . '&error=database');
+        header('Location: ../site/seller-edit-product.php?id=' . $product_id . '&error=' . urlencode($e->getMessage()));
         exit();
     }
 

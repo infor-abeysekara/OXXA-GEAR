@@ -267,10 +267,13 @@ include(__DIR__ . '/../include/header.php');
                     <div class="text-[9px] sm:text-[10px] text-slate font-bold uppercase tracking-widest mb-1 truncate"><?php echo htmlspecialchars($p['category_name'] ?? 'General'); ?></div>
                     <a href="product-details.php?id=<?php echo $p['id']; ?>"><h3 class="text-navy font-bold text-sm sm:text-lg mb-1 leading-tight hover:text-primary transition-colors line-clamp-2"><?php echo htmlspecialchars($p['name']); ?></h3></a>
                     
-                    <div class="mt-auto pt-2 flex flex-col sm:flex-row sm:items-end justify-between">
+                    <div class="mt-auto pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
                             <span class="text-navy font-black text-sm sm:text-lg">Rs. <?php echo number_format($p['lowest_price'], 0); ?></span>
                         </div>
+                        <button type="button" onclick="quickAddToCart(<?php echo $p['id']; ?>, this)" class="w-8 h-8 rounded-full bg-navy hover:bg-primary text-white flex items-center justify-center transition-all shadow-sm hover:scale-105" title="Add to Cart">
+                            <i class="fas fa-shopping-bag text-xs"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -293,77 +296,98 @@ include(__DIR__ . '/../include/header.php');
                 <h2 class="text-3xl md:text-4xl font-extrabold text-white font-space uppercase tracking-widest flex items-center gap-3 mb-2">
                     <i class="fas fa-bolt text-lime"></i> Hot Deals
                 </h2>
-                <p class="text-gray-400">Up to 30% OFF on premium performance gear</p>
+                <p class="text-gray-400">Exclusive limited-time discounts on premium performance gear</p>
             </div>
-            <a href="products.php?offer=sale" class="mt-4 md:mt-0 bg-transparent border border-lime text-lime hover:bg-lime hover:text-navy px-6 py-2 rounded-full font-bold uppercase tracking-wide transition-colors">
-                View All Deals
+            <a href="<?php echo $base_path; ?>site/hot-deals.php" class="mt-4 md:mt-0 bg-transparent border border-lime text-lime hover:bg-lime hover:text-navy px-6 py-2 rounded-full font-bold uppercase tracking-wide transition-colors flex items-center gap-2">
+                <span>View All Deals</span>
+                <i class="fas fa-arrow-right text-xs"></i>
             </a>
         </div>
         
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 relative z-10">
-            <!-- Deal 1 -->
-            <div class="group bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/30 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] rounded-2xl overflow-hidden shadow-lg relative transition-all duration-300">
-                <div class="absolute top-3 left-3 z-10 bg-lime text-navy font-black text-sm px-2 py-1 rounded-md shadow-md transform -rotate-3">-25%</div>
-                <div class="aspect-square bg-black/20 p-4 overflow-hidden relative">
-                    <img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Nike Shoe">
-                    <div class="absolute inset-0 bg-gradient-to-t from-navy/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </div>
-                <div class="p-5">
-                    <h4 class="font-bold text-white truncate text-lg">Nike Air Zoom</h4>
-                    <div class="flex items-end gap-2 mt-2">
-                        <span class="text-gray-400 line-through text-xs">Rs. 25,000</span>
-                        <span class="text-lime font-bold text-xl">Rs. 18,750</span>
-                    </div>
-                </div>
-            </div>
+            <?php
+            $hotDealsQuery = "SELECT p.*, 
+                (SELECT b.name FROM brands b WHERE b.id = p.brand_id) as brand_name,
+                COALESCE(
+                    (SELECT ci.image_path FROM color_images ci JOIN product_colors pc ON ci.color_id = pc.id WHERE pc.product_id = p.id ORDER BY ci.is_primary DESC, ci.sort_order ASC LIMIT 1),
+                    (SELECT pi.image_path FROM product_images pi WHERE pi.product_id = p.id ORDER BY pi.is_primary DESC, pi.sort_order ASC LIMIT 1)
+                ) as image
+            FROM products p 
+            WHERE p.is_hot_deal = 1 
+              AND p.hot_deal_status = 'approved' 
+              AND p.status = 'active'
+              AND (p.hot_deal_expiry IS NULL OR p.hot_deal_expiry >= NOW())
+            ORDER BY p.discount_percent DESC 
+            LIMIT 4";
             
-            <!-- Deal 2 -->
-            <div class="group bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/30 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] rounded-2xl overflow-hidden shadow-lg relative transition-all duration-300">
-                <div class="absolute top-3 left-3 z-10 bg-lime text-navy font-black text-sm px-2 py-1 rounded-md shadow-md transform -rotate-3">-15%</div>
-                <div class="aspect-square bg-black/20 p-4 overflow-hidden relative">
-                    <img src="https://images.unsplash.com/photo-1581404917879-53e19259f56e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Smart Watch">
-                    <div class="absolute inset-0 bg-gradient-to-t from-navy/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            $hotDealsStmt = $pdo->query($hotDealsQuery);
+            $hotDeals = $hotDealsStmt ? $hotDealsStmt->fetchAll(PDO::FETCH_ASSOC) : [];
+
+            if(!empty($hotDeals)):
+                foreach($hotDeals as $deal):
+                    $dealImg = !empty($deal['image']) ? $base_path . 'assets/uploads/products/' . htmlspecialchars($deal['image']) : 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80';
+                    $origPrice = (float)($deal['original_price'] > 0 ? $deal['original_price'] : $deal['base_price']);
+                    $salePrice = (float)($deal['sale_price'] > 0 ? $deal['sale_price'] : ($origPrice * (1 - ($deal['discount_percent']/100))));
+                    $discountPct = (int)($deal['discount_percent'] > 0 ? $deal['discount_percent'] : round((($origPrice - $salePrice) / $origPrice) * 100));
+                    
+                    $daysLeft = !empty($deal['hot_deal_expiry']) ? ceil((strtotime($deal['hot_deal_expiry']) - time()) / 86400) : null;
+            ?>
+            <!-- Dynamic Deal Card -->
+            <div class="group bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/30 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] rounded-2xl overflow-hidden shadow-lg relative transition-all duration-300 flex flex-col justify-between">
+                <div class="absolute top-3 left-3 z-10 bg-lime text-navy font-black text-sm px-2.5 py-1 rounded-md shadow-md transform -rotate-3">
+                    -<?php echo $discountPct; ?>%
                 </div>
-                <div class="p-5">
-                    <h4 class="font-bold text-white truncate text-lg">Garmin Forerunner</h4>
-                    <div class="flex items-end gap-2 mt-2">
-                        <span class="text-gray-400 line-through text-xs">Rs. 45,000</span>
-                        <span class="text-lime font-bold text-xl">Rs. 38,250</span>
+                
+                <a href="<?php echo $base_path; ?>site/product-details.php?id=<?php echo $deal['id']; ?>" class="aspect-square bg-black/20 p-4 overflow-hidden relative block">
+                    <img src="<?php echo $dealImg; ?>" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 rounded-lg" alt="<?php echo htmlspecialchars($deal['name']); ?>">
+                    <div class="absolute inset-0 bg-gradient-to-t from-navy/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </a>
+                
+                <div class="p-5 flex-1 flex flex-col justify-between">
+                    <div>
+                        <?php if(!empty($deal['brand_name'])): ?>
+                            <div class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1"><?php echo htmlspecialchars($deal['brand_name']); ?></div>
+                        <?php endif; ?>
+                        <a href="<?php echo $base_path; ?>site/product-details.php?id=<?php echo $deal['id']; ?>">
+                            <h4 class="font-bold text-white truncate text-lg hover:text-lime transition-colors"><?php echo htmlspecialchars($deal['name']); ?></h4>
+                        </a>
+                    </div>
+                    
+                    <div class="mt-4 pt-3 border-t border-white/10">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-baseline gap-2">
+                                <span class="text-gray-400 line-through text-xs font-medium">Rs. <?php echo number_format($origPrice, 0); ?></span>
+                                <span class="text-lime font-bold text-xl">Rs. <?php echo number_format($salePrice, 0); ?></span>
+                            </div>
+                            <button type="button" onclick="quickAddToCart(<?php echo $deal['id']; ?>, this)" class="w-9 h-9 rounded-full bg-lime hover:bg-white text-navy flex items-center justify-center transition-all shadow-md hover:scale-105" title="Add to Cart">
+                                <i class="fas fa-shopping-bag text-xs"></i>
+                            </button>
+                        </div>
+                        <?php if($daysLeft !== null): ?>
+                            <div class="mt-2 text-[11px] text-lime/80 font-medium flex items-center gap-1.5">
+                                <i class="fas fa-clock text-xs"></i>
+                                <span><?php echo $daysLeft > 1 ? "Ends in {$daysLeft} days" : ($daysLeft == 1 ? "Ends tomorrow" : "Ends today!"); ?></span>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
-            
-            <!-- Deal 3 -->
-            <div class="group bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/30 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] rounded-2xl overflow-hidden shadow-lg relative transition-all duration-300">
-                <div class="absolute top-3 left-3 z-10 bg-lime text-navy font-black text-sm px-2 py-1 rounded-md shadow-md transform -rotate-3">-30%</div>
-                <div class="aspect-square bg-black/20 p-4 overflow-hidden relative">
-                    <img src="https://images.unsplash.com/photo-1593477004927-89c6dda7c4c9?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Whey Isolate">
-                    <div class="absolute inset-0 bg-gradient-to-t from-navy/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </div>
-                <div class="p-5">
-                    <h4 class="font-bold text-white truncate text-lg">Optimum Nutrition Isolate</h4>
-                    <div class="flex items-end gap-2 mt-2">
-                        <span class="text-gray-400 line-through text-xs">Rs. 18,000</span>
-                        <span class="text-lime font-bold text-xl">Rs. 12,600</span>
+            <?php 
+                endforeach;
+            else:
+            ?>
+                <!-- Empty State if no active deals yet -->
+                <div class="col-span-1 sm:col-span-2 md:col-span-4 text-center py-12 px-4 rounded-xl bg-white/5 border border-white/10">
+                    <div class="w-16 h-16 rounded-full bg-lime/10 text-lime mx-auto flex items-center justify-center mb-4 text-2xl">
+                        <i class="fas fa-bolt"></i>
                     </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Exclusive Deals Dropping Soon!</h3>
+                    <p class="text-gray-400 text-sm max-w-md mx-auto mb-6">Our verified sellers are preparing limited-time clearance deals with up to 50% discount. Check back frequently!</p>
+                    <a href="<?php echo $base_path; ?>site/shop.php" class="inline-flex items-center gap-2 bg-lime text-navy px-6 py-2.5 rounded-full font-bold uppercase text-xs tracking-wider hover:bg-white transition-colors">
+                        Browse All Products
+                    </a>
                 </div>
-            </div>
-            
-            <!-- Deal 4 -->
-            <div class="group bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/30 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] rounded-2xl overflow-hidden shadow-lg relative transition-all duration-300">
-                <div class="absolute top-3 left-3 z-10 bg-lime text-navy font-black text-sm px-2 py-1 rounded-md shadow-md transform -rotate-3">-20%</div>
-                <div class="aspect-square bg-black/20 p-4 overflow-hidden relative">
-                    <img src="https://images.unsplash.com/photo-1571744384915-d222d02a6f25?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="Resistance Bands">
-                    <div class="absolute inset-0 bg-gradient-to-t from-navy/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </div>
-                <div class="p-5">
-                    <h4 class="font-bold text-white truncate text-lg">Pro Resistance Band Set</h4>
-                    <div class="flex items-end gap-2 mt-2">
-                        <span class="text-gray-400 line-through text-xs">Rs. 4,500</span>
-                        <span class="text-lime font-bold text-xl">Rs. 3,600</span>
-                    </div>
-                </div>
-            </div>
+            <?php endif; ?>
         </div>
     </section>
 

@@ -171,6 +171,12 @@ if (isset($_SESSION['userid'])) {
             <span class="text-[13px] font-space font-bold uppercase tracking-[0.5px] text-black group-hover:text-primary transition-colors whitespace-nowrap">Equipment</span>
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
           </a>
+          <a href="<?php echo $base_path; ?>site/hot-deals.php" class="relative group">
+            <span class="text-[13px] font-space font-bold uppercase tracking-[0.5px] text-red-600 group-hover:text-red-700 transition-colors whitespace-nowrap flex items-center gap-1">
+              <i class="fas fa-fire animate-pulse"></i> Hot Deals
+            </span>
+            <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-red-600 transition-all duration-300 group-hover:w-full"></span>
+          </a>
           
         </nav>
         
@@ -272,22 +278,22 @@ if (isset($_SESSION['userid'])) {
             </div>
 
             <!-- Cart (Hidden on mobile, visible on desktop) -->
-            <button onclick="toggleCartSidebar()" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
+            <?php 
+            $cartCount = 0;
+            if (isset($_SESSION['userid'])) {
+                try {
+                    $stmt = $pdo->prepare("SELECT SUM(quantity) FROM cart WHERE user_id = ?");
+                    $stmt->execute([$_SESSION['userid']]);
+                    $cartCount = (int)($stmt->fetchColumn() ?: 0);
+                } catch (PDOException $e) {
+                    $cartCount = 0;
+                }
+            }
+            ?>
+            <button onclick="openCartDrawer()" id="headerCartIcon" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group" aria-label="Cart">
               <i class="fas fa-shopping-bag text-lg group-hover:text-primary transition-colors"></i>
-              <?php 
-              $cartCount = 0;
-              if (isset($_SESSION['userid'])) {
-                  try {
-                      $stmt = $pdo->prepare("SELECT SUM(quantity) FROM cart WHERE user_id = ?");
-                      $stmt->execute([$_SESSION['userid']]);
-                      $cartCount = $stmt->fetchColumn() ?: 0;
-                  } catch (PDOException $e) {
-                      $cartCount = 0;
-                  }
-              }
-              ?>
-              <span class="cart-badge absolute top-0 right-0 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white" id="cartBadge">
-                <?php echo $cartCount; ?>
+              <span class="cart-badge absolute top-0 right-0 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white <?php echo $cartCount <= 0 ? 'hidden' : ''; ?>" id="cartBadge">
+                <?php echo $cartCount > 9 ? '9+' : $cartCount; ?>
               </span>
             </button>
 
@@ -299,9 +305,12 @@ if (isset($_SESSION['userid'])) {
             <button onclick="openAuthModal('login')" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
               <i class="far fa-bell text-lg group-hover:text-primary transition-colors"></i>
             </button>
-            <!-- Cart (Hidden on mobile, visible on desktop) -->
-            <button onclick="openAuthModal('login')" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
+            <!-- Cart (Hidden on mobile, visible on desktop - Guest supported!) -->
+            <button onclick="openCartDrawer()" id="headerCartIconGuest" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group" aria-label="Cart">
               <i class="fas fa-shopping-bag text-lg group-hover:text-primary transition-colors"></i>
+              <span class="cart-badge absolute top-0 right-0 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white hidden" id="cartBadge">
+                0
+              </span>
             </button>
           <?php endif; ?>
           
@@ -326,6 +335,7 @@ if (isset($_SESSION['userid'])) {
       </button>
     </div>
     <div class="p-6 overflow-y-auto flex-grow flex flex-col gap-2 font-space font-bold uppercase tracking-wider text-sm">
+      <a href="<?php echo $base_path; ?>site/hot-deals.php" class="flex items-center text-red-600 font-extrabold hover:text-red-700 transition-colors py-3 border-b border-gray-100"><i class="fas fa-fire w-6 text-center me-3 text-red-500 animate-pulse"></i> 🔥 Hot Deals</a>
       <div class="text-gray-400 text-xs mb-2 mt-2">Categories</div>
       <a href="<?php echo $base_path; ?>site/products.php?category=Sports+Wear" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="fas fa-tshirt w-6 text-center me-3"></i> Sports Wear</a>
       <a href="<?php echo $base_path; ?>site/products.php?category=Footwear" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="fas fa-shoe-prints w-6 text-center me-3"></i> Footwear</a>
@@ -400,35 +410,13 @@ if (isset($_SESSION['userid'])) {
           </a>
           
           <!-- Cart -->
-          <button onclick="<?php echo isset($_SESSION['userid']) ? 'toggleCartSidebar()' : 'openAuthModal(\'login\')'; ?>" class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 relative">
+          <button onclick="openCartDrawer()" class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 relative" aria-label="Cart">
               <i class="fas fa-shopping-bag text-xl mb-1"></i>
-              <span class="cart-badge absolute top-1 right-2 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white" id="mobileCartBadge">
-                <?php echo $cartCount ?? 0; ?>
+              <span class="cart-badge absolute top-1 right-2 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white <?php echo ($cartCount ?? 0) <= 0 ? 'hidden' : ''; ?>" id="mobileCartBadge">
+                <?php echo ($cartCount ?? 0) > 9 ? '9+' : ($cartCount ?? 0); ?>
               </span>
           </button>
       </div>
-  </div>
-
-  <!-- Cart Overlay -->
-  <div class="cart-overlay" id="cartOverlay" onclick="toggleCartSidebar()"></div>
-
-  <!-- Cart Sidebar -->
-  <div class="cart-sidebar" id="cartSidebar">
-    <div class="p-4 border-b border-gray-700">
-      <div class="flex justify-between items-center">
-        <h3 class="text-lg font-semibold text-white">Shopping Cart</h3>
-        <button onclick="toggleCartSidebar()" class="text-gray-400 hover:text-white">
-          <i class="fas fa-times text-xl"></i>
-        </button>
-      </div>
-    </div>
-    <div id="cartContent" class="p-4">
-      <!-- Cart content will be loaded here -->
-      <div class="text-center py-8">
-        <i class="fas fa-spinner fa-spin text-2xl text-gray-400"></i>
-        <p class="text-gray-400 mt-2">Loading cart...</p>
-      </div>
-    </div>
   </div>
 
   <!-- Content Spacer for Fixed Header -->
@@ -508,8 +496,6 @@ if (isset($_SESSION['userid'])) {
             }
         });
 
-        // Load cart content on page load
-        loadCartContent();
       });
 
       // Mobile Menu Drawer Functions
@@ -529,39 +515,19 @@ if (isset($_SESSION['userid'])) {
         }
       }
 
-      // Cart sidebar functions
+      // Backward-compatible Cart Sidebar aliases
       function toggleCartSidebar() {
-        const sidebar = document.getElementById('cartSidebar');
-        const overlay = document.getElementById('cartOverlay');
-        
-        sidebar.classList.toggle('open');
-        overlay.classList.toggle('open');
-        
-        if (sidebar.classList.contains('open')) {
-          loadCartContent();
+        if (typeof openCartDrawer === 'function') {
+          openCartDrawer();
         }
       }
 
-      function loadCartContent() {
-        <?php if(isset($_SESSION['userid'])): ?>
-        fetch('<?php echo $base_path; ?>site/get_cart_content.php')
-          .then(response => response.text())
-          .then(data => {
-            document.getElementById('cartContent').innerHTML = data;
-          })
-          .catch(error => {
-            console.error('Error loading cart:', error);
-            document.getElementById('cartContent').innerHTML = 
-              '<div class="text-center py-8"><p class="text-red-400">Error loading cart</p></div>';
-          });
-        <?php else: ?>
-        document.getElementById('cartContent').innerHTML = 
-          '<div class="text-center py-8"><p class="text-gray-400">Please login to view cart</p></div>';
-        <?php endif; ?>
-      }
-
       function updateCartBadge(count) {
-        document.getElementById('cartBadge').textContent = count;
+        document.querySelectorAll('.cart-badge, #cartBadge, #mobileCartBadge').forEach(b => {
+          b.textContent = count > 9 ? '9+' : count;
+          if (count > 0) b.classList.remove('hidden');
+          else b.classList.add('hidden');
+        });
       }
 
       // Real-time Notification Polling

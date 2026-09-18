@@ -68,6 +68,27 @@ $imgStmt = $pdo->prepare("SELECT * FROM product_images WHERE product_id = ? ORDE
 $imgStmt->execute([$product_id]);
 $existingImages = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Fetch latest hot deal request for this product
+$hdrStmt = $pdo->prepare("SELECT * FROM hot_deal_requests WHERE product_id = ? ORDER BY id DESC LIMIT 1");
+$hdrStmt->execute([$product_id]);
+$latestHotDealRequest = $hdrStmt->fetch(PDO::FETCH_ASSOC);
+
+// Count active hot deals for this seller
+$activeDealsCountStmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE seller_id = ? AND is_hot_deal = 1 AND hot_deal_status = 'approved' AND id != ?");
+$activeDealsCountStmt->execute([$_SESSION['userid'], $product_id]);
+$sellerActiveDealsCount = (int)$activeDealsCountStmt->fetchColumn();
+
+// Check 7-day cooldown after rejection
+$hasCooldown = false;
+$daysLeftCooldown = 0;
+if ($latestHotDealRequest && $latestHotDealRequest['status'] === 'rejected' && !empty($latestHotDealRequest['reviewed_at'])) {
+    $reviewedTime = strtotime($latestHotDealRequest['reviewed_at']);
+    if ($reviewedTime > strtotime('-7 days')) {
+        $hasCooldown = true;
+        $daysLeftCooldown = ceil(($reviewedTime + (7 * 86400) - time()) / 86400);
+    }
+}
+
 ?>
 <script>
     const categoryVariants = <?= json_encode($masterVariants) ?>;
@@ -85,6 +106,21 @@ $existingImages = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
                 <p class="text-sm text-slate">Update details for <?= htmlspecialchars($product['name']) ?></p>
             </div>
         </div>
+
+        <?php if (isset($_GET['success']) && $_GET['success'] === 'hot_deal_requested'): ?>
+            <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-6 py-4 rounded-xl mb-8 flex items-center shadow-sm">
+                <i class="fas fa-check-circle text-emerald-500 text-xl me-3"></i>
+                <div>
+                    <h4 class="font-bold text-sm">Request Sent for Review!</h4>
+                    <p class="text-xs text-emerald-700 mt-0.5">Your Hot Deal promotion request has been sent to our administrators. You will be notified once reviewed.</p>
+                </div>
+            </div>
+        <?php elseif (isset($_GET['success'])): ?>
+            <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-6 py-4 rounded-xl mb-8 flex items-center shadow-sm">
+                <i class="fas fa-check-circle text-emerald-500 text-xl me-3"></i>
+                <span class="font-bold text-sm">Product updated successfully!</span>
+            </div>
+        <?php endif; ?>
 
         <?php if (isset($_GET['error'])): ?>
             <div class="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-8 flex items-center">
@@ -169,7 +205,182 @@ $existingImages = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
                 <p class="text-xs text-gray-400 mt-4 font-bold"><i class="fas fa-info-circle me-1"></i> Entering prices here and clicking "Apply All" will automatically set the price for all generated variants below. You can then individually adjust variant prices.</p>
             </div>
 
-                        <!-- Images & Variants -->
+            <!-- HOT DEALS Promotion Section -->
+            <?php
+            $origPriceValue = !empty($product['original_price']) && $product['original_price'] > 0 ? (float)$product['original_price'] : (float)$product['base_price'];
+            $salePriceValue = !empty($product['sale_price']) && $product['sale_price'] > 0 ? (float)$product['sale_price'] : ($origPriceValue > 0 ? round($origPriceValue * 0.75, 2) : '');
+            $currentDiscountPct = ($origPriceValue > 0 && $salePriceValue > 0 && $salePriceValue < $origPriceValue) ? round((($origPriceValue - $salePriceValue) / $origPriceValue) * 100) : 0;
+            $isHotDealActive = ($product['is_hot_deal'] == 1 && $product['hot_deal_status'] === 'approved');
+            $isHotDealPending = ($product['hot_deal_status'] === 'pending');
+            $isHotDealRejected = ($product['hot_deal_status'] === 'rejected');
+            $isHotDealExpired = ($product['hot_deal_status'] === 'expired');
+            $stockCount = (int)$product['total_qty'];
+            ?>
+            <div class="bg-gradient-to-br from-[#0B0F19] to-[#161F30] text-white rounded-2xl shadow-xl p-8 relative overflow-hidden border border-white/10 mb-8">
+                <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-[#CCFF00] rounded-full blur-[100px] opacity-10 pointer-events-none"></div>
+                
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-5 border-b border-white/10 relative z-10">
+                    <div>
+                        <div class="flex items-center gap-3">
+                            <span class="w-10 h-10 rounded-xl bg-[#CCFF00]/20 text-[#CCFF00] flex items-center justify-center font-black text-xl shadow-inner">
+                                <i class="fas fa-bolt"></i>
+                            </span>
+                            <div>
+                                <h2 class="text-xl font-black text-white uppercase tracking-wider">Hot Deals Promotion</h2>
+                                <p class="text-xs text-gray-400 mt-0.5">Feature your product on the OXXA GEAR homepage with an exclusive countdown discount badge.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <?php if ($isHotDealActive): ?>
+                            <span class="inline-flex items-center gap-2 bg-[#CCFF00] text-black font-black text-xs px-4 py-2 rounded-full uppercase tracking-wider shadow-lg">
+                                <span class="w-2 h-2 rounded-full bg-black animate-ping"></span> Live in Hot Deals
+                            </span>
+                        <?php elseif ($isHotDealPending): ?>
+                            <span class="inline-flex items-center gap-2 bg-yellow-400 text-black font-black text-xs px-4 py-2 rounded-full uppercase tracking-wider shadow-lg">
+                                <i class="fas fa-clock"></i> Pending Admin Approval
+                            </span>
+                        <?php elseif ($isHotDealRejected): ?>
+                            <span class="inline-flex items-center gap-2 bg-rose-500 text-white font-black text-xs px-4 py-2 rounded-full uppercase tracking-wider shadow-lg">
+                                <i class="fas fa-times-circle"></i> Request Rejected
+                            </span>
+                        <?php elseif ($isHotDealExpired): ?>
+                            <span class="inline-flex items-center gap-2 bg-gray-600 text-gray-200 font-black text-xs px-4 py-2 rounded-full uppercase tracking-wider shadow-lg">
+                                <i class="fas fa-history"></i> Deal Expired
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Status Context Alerts -->
+                <?php if ($isHotDealActive): ?>
+                    <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 mb-6 relative z-10 flex items-start gap-3">
+                        <i class="fas fa-check-circle text-emerald-400 text-xl mt-0.5"></i>
+                        <div class="text-sm">
+                            <p class="text-white font-bold">This product is currently featured in Hot Deals on the homepage!</p>
+                            <p class="text-emerald-300/80 text-xs mt-1">Sale Price: <strong>Rs. <?= number_format($product['sale_price'], 2) ?></strong> (<?= $product['discount_percent'] ?>% OFF) &bull; Deal ends on: <strong><?= !empty($product['hot_deal_expiry']) ? date('M d, Y h:i A', strtotime($product['hot_deal_expiry'])) : 'No expiry' ?></strong></p>
+                        </div>
+                    </div>
+                <?php elseif ($isHotDealPending): ?>
+                    <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6 relative z-10 flex items-start gap-3">
+                        <i class="fas fa-hourglass-half text-yellow-400 text-xl mt-0.5"></i>
+                        <div class="text-sm">
+                            <p class="text-white font-bold">Your Hot Deal request is under review by our admin team.</p>
+                            <p class="text-yellow-200/80 text-xs mt-1">Requested Sale Price: <strong>Rs. <?= number_format($product['sale_price'], 2) ?></strong> (<?= $product['discount_percent'] ?>% OFF) &bull; Reason: "<?= htmlspecialchars($product['hot_deal_request_reason'] ?? 'Clearance') ?>"</p>
+                        </div>
+                    </div>
+                <?php elseif ($isHotDealRejected): ?>
+                    <div class="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 mb-6 relative z-10 flex items-start gap-3">
+                        <i class="fas fa-exclamation-circle text-rose-400 text-xl mt-0.5"></i>
+                        <div class="text-sm">
+                            <p class="text-white font-bold">Your previous Hot Deal request was rejected.</p>
+                            <p class="text-rose-300 text-xs mt-1">Reason: "<?= htmlspecialchars($latestHotDealRequest['reject_reason'] ?? 'Requirements not met') ?>"</p>
+                            <?php if ($hasCooldown): ?>
+                                <p class="text-rose-400 font-bold text-xs mt-2"><i class="fas fa-ban me-1"></i> Anti-Spam Cooldown: You can submit another Hot Deal request for this product in <?= $daysLeftCooldown ?> day(s).</p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Price Fields Row with Live Auto Badge Preview -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center relative z-10 mb-6">
+                    <div class="col-span-1 md:col-span-5">
+                        <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">
+                            Original Price (Rs.) *
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">Rs.</span>
+                            <input type="number" step="0.01" min="1" id="hot_deal_original_price" name="hot_deal_original_price" value="<?= $origPriceValue ?>" class="w-full bg-white/5 border border-white/20 text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00] transition-all font-bold text-lg" oninput="calculateHotDealDiscount()">
+                        </div>
+                    </div>
+
+                    <div class="col-span-1 md:col-span-5">
+                        <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">
+                            Sale Price (Rs.) *
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">Rs.</span>
+                            <input type="number" step="0.01" min="1" id="hot_deal_sale_price" name="hot_deal_sale_price" value="<?= $salePriceValue ?>" class="w-full bg-white/5 border border-white/20 text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00] transition-all font-bold text-lg text-[#CCFF00]" oninput="calculateHotDealDiscount()">
+                        </div>
+                    </div>
+
+                    <div class="col-span-1 md:col-span-2 flex flex-col items-center justify-center pt-2 md:pt-6">
+                        <span class="text-[10px] uppercase font-bold text-gray-400 mb-1">Discount Preview</span>
+                        <div id="hot_deal_badge_preview" class="bg-[#CCFF00] text-black font-black px-4 py-2 rounded-xl text-lg shadow-lg transform -rotate-3 transition-transform duration-300 flex items-center justify-center">
+                            -<?= $currentDiscountPct ?>%
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Rule Feedback -->
+                <div id="hot_deal_validation_msg" class="mb-6 relative z-10 text-xs">
+                    <!-- Dynamic feedback from JS -->
+                </div>
+
+                <!-- Checkbox & Expansion -->
+                <?php 
+                $canRequest = (!$hasCooldown && $sellerActiveDealsCount < 2 && !$isHotDealPending && !$isHotDealActive);
+                ?>
+                <div class="border-t border-white/10 pt-6 relative z-10">
+                    <label class="flex items-start sm:items-center gap-3 cursor-pointer group select-none">
+                        <input type="checkbox" name="request_hot_deal" id="request_hot_deal" value="1" <?= (!$canRequest) ? 'disabled' : '' ?> onchange="toggleHotDealFields()" class="w-5 h-5 rounded border-white/30 text-[#CCFF00] focus:ring-[#CCFF00] bg-white/10 cursor-pointer mt-0.5 sm:mt-0">
+                        <div>
+                            <span class="font-black text-white text-base tracking-wide group-hover:text-[#CCFF00] transition-colors">Request to show in HOT DEALS on homepage</span>
+                            <p class="text-xs text-gray-400">Products are subject to admin clearance review before going live.</p>
+                        </div>
+                    </label>
+
+                    <?php if ($sellerActiveDealsCount >= 2 && !$isHotDealActive): ?>
+                        <div class="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>You already have 2 active Hot Deals running (Anti-Spam Limit). Deactivate an existing deal to submit a new one.</span>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Expandable Form Fields -->
+                    <div id="hot_deal_extra_fields" class="hidden mt-6 pt-6 border-t border-white/10 space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">
+                                    <i class="fas fa-calendar-alt text-[#CCFF00] me-1"></i> Hot Deal Valid Until * (Max 7 Days)
+                                </label>
+                                <input type="date" name="hot_deal_expiry" id="hot_deal_expiry" min="<?= date('Y-m-d', strtotime('+1 day')) ?>" max="<?= date('Y-m-d', strtotime('+7 days')) ?>" value="<?= date('Y-m-d', strtotime('+3 days')) ?>" class="w-full bg-white/5 border border-white/20 text-white rounded-xl py-3 px-4 focus:outline-none focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00] transition-all font-bold">
+                                <p class="text-[11px] text-gray-400 mt-1">Deals automatically expire after this date to keep homepage deals fresh.</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">
+                                    <i class="fas fa-fire text-[#CCFF00] me-1"></i> Why Hot? (Clearance Reason) *
+                                </label>
+                                <textarea name="hot_deal_reason" id="hot_deal_reason" rows="2" placeholder="e.g. Clearance stock, End of season promo, Flash discount..." class="w-full bg-white/5 border border-white/20 text-white rounded-xl py-2 px-4 focus:outline-none focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00] transition-all text-sm"></textarea>
+                                <p class="text-[11px] text-gray-400 mt-1">This explanation helps administrators verify and quickly approve your deal.</p>
+                            </div>
+                        </div>
+
+                        <!-- Anti-Spam Badges Reminder -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                            <div class="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                                <span class="text-[10px] uppercase font-bold text-gray-400 block">Min Discount</span>
+                                <span class="text-sm font-black text-[#CCFF00]">15% OFF</span>
+                            </div>
+                            <div class="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                                <span class="text-[10px] uppercase font-bold text-gray-400 block">Min Stock</span>
+                                <span class="text-sm font-black text-white">10 Units</span>
+                            </div>
+                            <div class="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                                <span class="text-[10px] uppercase font-bold text-gray-400 block">Max Duration</span>
+                                <span class="text-sm font-black text-white">7 Days</span>
+                            </div>
+                            <div class="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                                <span class="text-[10px] uppercase font-bold text-gray-400 block">Max Active Deals</span>
+                                <span class="text-sm font-black text-white">2 per Seller</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Images & Variants -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-8">
                 <h2 class="text-lg font-black text-navy uppercase tracking-wide mb-6 pb-2 border-b border-gray-100"><i class="fas fa-images text-purple-500 me-2"></i> Media & Inventory</h2>
                 
@@ -1042,9 +1253,69 @@ sellInput.addEventListener('input', updateFinancials);
             }
         });
     }
-    
-    // Make sure we attach event to financial calculator submit to not break existing logic
-    // The existing updateFinancials() does not conflict with this new logic.
+
+    // HOT DEALS CALCULATION & TOGGLE
+    function calculateHotDealDiscount() {
+        const origInput = document.getElementById('hot_deal_original_price');
+        const saleInput = document.getElementById('hot_deal_sale_price');
+        const badge = document.getElementById('hot_deal_badge_preview');
+        const msg = document.getElementById('hot_deal_validation_msg');
+        const chk = document.getElementById('request_hot_deal');
+
+        if (!origInput || !saleInput || !badge) return;
+
+        const orig = parseFloat(origInput.value) || 0;
+        const sale = parseFloat(saleInput.value) || 0;
+
+        if (orig <= 0 || sale <= 0 || sale >= orig) {
+            badge.textContent = '0%';
+            badge.className = 'bg-gray-700 text-gray-400 font-black px-4 py-2 rounded-xl text-lg shadow-lg transform -rotate-3 transition-transform duration-300 flex items-center justify-center';
+            if (msg) msg.innerHTML = '<span class="text-amber-400 font-bold"><i class="fas fa-info-circle me-1"></i> Sale price must be lower than original price.</span>';
+            if (chk && !chk.disabled) chk.dataset.discountValid = '0';
+            return;
+        }
+
+        const discount = Math.round(((orig - sale) / orig) * 100);
+        badge.textContent = '-' + discount + '%';
+
+        if (discount < 15) {
+            badge.className = 'bg-rose-500 text-white font-black px-4 py-2 rounded-xl text-lg shadow-lg transform -rotate-3 transition-transform duration-300 flex items-center justify-center';
+            if (msg) msg.innerHTML = '<span class="text-rose-400 font-bold"><i class="fas fa-exclamation-triangle me-1"></i> Current discount is ' + discount + '%. Minimum 15% discount is required for Hot Deals.</span>';
+            if (chk && !chk.disabled) chk.dataset.discountValid = '0';
+        } else {
+            badge.className = 'bg-[#CCFF00] text-black font-black px-4 py-2 rounded-xl text-lg shadow-lg transform -rotate-3 transition-transform duration-300 flex items-center justify-center';
+            if (msg) msg.innerHTML = '<span class="text-emerald-400 font-bold"><i class="fas fa-check-circle me-1"></i> Great deal! ' + discount + '% discount qualifies for homepage Hot Deals.</span>';
+            if (chk && !chk.disabled) chk.dataset.discountValid = '1';
+        }
+    }
+
+    function toggleHotDealFields() {
+        const chk = document.getElementById('request_hot_deal');
+        const extra = document.getElementById('hot_deal_extra_fields');
+        if (!chk || !extra) return;
+
+        if (chk.checked) {
+            calculateHotDealDiscount();
+            if (chk.dataset.discountValid === '0') {
+                alert('Minimum 15% discount is required to request a Hot Deal.');
+                chk.checked = false;
+                extra.classList.add('hidden');
+                return;
+            }
+            extra.classList.remove('hidden');
+            const reasonEl = document.getElementById('hot_deal_reason');
+            if (reasonEl) reasonEl.setAttribute('required', 'required');
+        } else {
+            extra.classList.add('hidden');
+            const reasonEl = document.getElementById('hot_deal_reason');
+            if (reasonEl) reasonEl.removeAttribute('required');
+        }
+    }
+
+    // Initialize discount on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        calculateHotDealDiscount();
+    });
 </script>
 
 

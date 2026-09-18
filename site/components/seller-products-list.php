@@ -52,6 +52,19 @@
                             <div>
                                 <p class="font-bold text-navy"><?= htmlspecialchars($p['name']) ?></p>
                                 <p class="text-xs text-gray-400">Code: <?= htmlspecialchars($p['product_code']) ?></p>
+                                <?php if (!empty($p['is_hot_deal']) && $p['is_hot_deal'] == 1 && $p['hot_deal_status'] === 'approved'): ?>
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-black bg-lime-300 text-black px-2 py-0.5 rounded-md mt-1 shadow-xs">
+                                        <i class="fas fa-bolt text-yellow-600"></i> HOT DEAL (-<?= $p['discount_percent'] ?>%)
+                                    </span>
+                                <?php elseif (!empty($p['hot_deal_status']) && $p['hot_deal_status'] === 'pending'): ?>
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-md mt-1">
+                                        <i class="fas fa-clock"></i> Deal Pending Review
+                                    </span>
+                                <?php elseif (!empty($p['hot_deal_status']) && $p['hot_deal_status'] === 'rejected'): ?>
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold bg-rose-100 text-rose-800 px-2 py-0.5 rounded-md mt-1">
+                                        <i class="fas fa-times"></i> Deal Rejected
+                                    </span>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </td>

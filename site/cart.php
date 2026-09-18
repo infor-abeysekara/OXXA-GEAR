@@ -13,8 +13,12 @@ $user_id = $_SESSION['userid'];
 // Fetch cart items
 $query = "
     SELECT c.id as cart_id, c.quantity, p.id as product_id, p.name, p.base_price, 
+           p.is_hot_deal, p.sale_price, p.original_price, p.discount_percent, p.hot_deal_status, p.hot_deal_expiry,
            cs.id as variant_id, cs.size, pc.color_name as color, cs.selling_price as variant_price, cs.qty as stock,
-           (SELECT image_path FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC LIMIT 1) as image
+           COALESCE(
+               (SELECT ci.image_path FROM color_images ci WHERE ci.color_id = pc.id ORDER BY ci.is_primary DESC, ci.sort_order ASC LIMIT 1),
+               (SELECT image_path FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC LIMIT 1)
+           ) as image
     FROM cart c
     JOIN products p ON c.product_id = p.id
     LEFT JOIN color_sizes cs ON c.variant_id = cs.id
@@ -29,7 +33,20 @@ $result = $stmt->get_result();
 $cart_items = [];
 $subtotal = 0;
 while ($row = $result->fetch_assoc()) {
-    $price = (!empty($row['variant_price']) && $row['variant_price'] > 0) ? $row['variant_price'] : $row['base_price'];
+    $basePrice = (!empty($row['variant_price']) && $row['variant_price'] > 0) ? (float)$row['variant_price'] : (float)$row['base_price'];
+    $isHotDeal = ($row['is_hot_deal'] == 1 && $row['hot_deal_status'] === 'approved' && 
+                  (empty($row['hot_deal_expiry']) || strtotime($row['hot_deal_expiry']) >= time()));
+    
+    if ($isHotDeal && !empty($row['sale_price']) && (float)$row['sale_price'] > 0) {
+        $price = (float)$row['sale_price'];
+        $row['is_hot_deal'] = true;
+        $row['original_price'] = (float)($row['original_price'] > 0 ? $row['original_price'] : $basePrice);
+    } else {
+        $price = $basePrice;
+        $row['is_hot_deal'] = false;
+        $row['original_price'] = $basePrice;
+    }
+
     $row['calculated_price'] = $price;
     $row['item_total'] = $price * $row['quantity'];
     $row['variant_label'] = ($row['size'] || $row['color']) ? trim($row['size'] . ' ' . $row['color']) : 'Standard';
@@ -68,11 +85,21 @@ while ($row = $result->fetch_assoc()) {
                                 </div>
                                 
                                 <div class="flex-grow min-w-0">
-                                    <h3 class="text-sm sm:text-base font-black text-navy uppercase tracking-wide truncate pr-8"><a href="product-details.php?id=<?php echo $item['product_id']; ?>"><?php echo htmlspecialchars($item['name']); ?></a></h3>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <h3 class="text-sm sm:text-base font-black text-navy uppercase tracking-wide truncate pr-8"><a href="product-details.php?id=<?php echo $item['product_id']; ?>"><?php echo htmlspecialchars($item['name']); ?></a></h3>
+                                    </div>
                                     <p class="text-xs sm:text-sm font-bold text-gray-500 mb-2"><?php echo htmlspecialchars($item['variant_label']); ?></p>
                                     
                                     <div class="flex flex-wrap items-center justify-between gap-4 mt-4">
-                                        <div class="text-lg font-black text-navy">Rs. <?php echo number_format($item['calculated_price'], 0); ?></div>
+                                        <div class="flex items-baseline gap-2">
+                                            <?php if(!empty($item['is_hot_deal'])): ?>
+                                                <span class="text-xs text-gray-400 line-through">Rs. <?php echo number_format($item['original_price'], 0); ?></span>
+                                                <span class="text-lg font-black text-emerald-600">Rs. <?php echo number_format($item['calculated_price'], 0); ?></span>
+                                                <span class="bg-red-50 text-red-600 text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">🔥 -<?php echo $item['discount_percent']; ?>%</span>
+                                            <?php else: ?>
+                                                <div class="text-lg font-black text-navy">Rs. <?php echo number_format($item['calculated_price'], 0); ?></div>
+                                            <?php endif; ?>
+                                        </div>
                                         
                                         <div class="flex items-center border border-gray-200 rounded-xl overflow-hidden bg-gray-50 h-10">
                                             <button onclick="updateCartPageItem(<?php echo $item['cart_id']; ?>, <?php echo $item['quantity'] - 1; ?>)" class="w-10 h-full flex items-center justify-center text-gray-500 hover:text-navy hover:bg-gray-100 transition-colors"><i class="fas fa-minus text-xs"></i></button>

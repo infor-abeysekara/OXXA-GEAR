@@ -45,8 +45,12 @@ try {
         $cartStmt = $pdo->prepare("
             SELECT c.product_id, c.variant_id, c.quantity,
                    p.name, p.base_price, p.cost_price, p.seller_id,
+                   p.is_hot_deal, p.sale_price, p.original_price, p.hot_deal_status, p.hot_deal_expiry,
                    cs.size, cs.selling_price as variant_price,
-                   (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image_path
+                   COALESCE(
+                       (SELECT ci.image_path FROM color_images ci WHERE ci.color_id = cs.color_id ORDER BY ci.is_primary DESC, ci.sort_order ASC LIMIT 1),
+                       (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1)
+                   ) as image_path
             FROM cart c
             JOIN products p ON c.product_id = p.id
             LEFT JOIN color_sizes cs ON c.variant_id = cs.id
@@ -63,7 +67,15 @@ try {
         // Calculate Subtotal
         $subtotal = 0;
         foreach ($cartItems as &$item) {
-            $unitPrice = (!empty($item['variant_price']) && $item['variant_price'] > 0) ? $item['variant_price'] : $item['base_price'];
+            $basePrice = (!empty($item['variant_price']) && $item['variant_price'] > 0) ? (float)$item['variant_price'] : (float)$item['base_price'];
+            $isHotDeal = ($item['is_hot_deal'] == 1 && $item['hot_deal_status'] === 'approved' && 
+                          (empty($item['hot_deal_expiry']) || strtotime($item['hot_deal_expiry']) >= time()));
+            
+            if ($isHotDeal && !empty($item['sale_price']) && (float)$item['sale_price'] > 0) {
+                $unitPrice = (float)$item['sale_price'];
+            } else {
+                $unitPrice = $basePrice;
+            }
             $item['unit_price'] = $unitPrice;
             $item['total_price'] = $unitPrice * $item['quantity'];
             $subtotal += $item['total_price'];

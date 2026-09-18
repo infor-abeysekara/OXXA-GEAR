@@ -18,24 +18,50 @@ $stmt->execute();
 $user_result = $stmt->get_result();
 $user = $user_result->fetch_assoc();
 
-// Get cart items
 // Get cart items via PDO
 $cartStmt = $pdo->prepare("
     SELECT c.product_id, c.variant_id, c.quantity as qty,
-           p.name as pname, p.base_price,
+           p.name as pname, p.base_price, p.seller_id,
+           COALESCE(sp.business_name, CONCAT(u.first_name, ' ', u.last_name), 'OXXA Official Store') as seller_name,
+           p.is_hot_deal, p.sale_price, p.original_price, p.hot_deal_status, p.hot_deal_expiry,
            cs.size, cs.selling_price as variant_price,
-           (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as image
+           COALESCE(
+               (SELECT ci.image_path FROM color_images ci WHERE ci.color_id = cs.color_id ORDER BY ci.is_primary DESC, ci.sort_order ASC LIMIT 1),
+               (SELECT image_path FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1)
+           ) as image
     FROM cart c
     JOIN products p ON c.product_id = p.id
+    LEFT JOIN seller_profiles sp ON sp.user_id = p.seller_id
+    LEFT JOIN users u ON u.id = p.seller_id
     LEFT JOIN color_sizes cs ON c.variant_id = cs.id
     WHERE c.user_id = ?
 ");
 $cartStmt->execute([$user_id]);
 $cartItems = $cartStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Normalize price
+// Normalize price and group by seller
+$sellerGroups = [];
 foreach ($cartItems as &$item) {
-    $item['price'] = (!empty($item['variant_price']) && $item['variant_price'] > 0) ? $item['variant_price'] : $item['base_price'];
+    $basePrice = (!empty($item['variant_price']) && $item['variant_price'] > 0) ? (float)$item['variant_price'] : (float)$item['base_price'];
+    $isHotDeal = ($item['is_hot_deal'] == 1 && $item['hot_deal_status'] === 'approved' && 
+                  (empty($item['hot_deal_expiry']) || strtotime($item['hot_deal_expiry']) >= time()));
+    
+    if ($isHotDeal && !empty($item['sale_price']) && (float)$item['sale_price'] > 0) {
+        $item['price'] = (float)$item['sale_price'];
+        $item['is_hot_deal'] = true;
+    } else {
+        $item['price'] = $basePrice;
+        $item['is_hot_deal'] = false;
+    }
+
+    $sId = $item['seller_id'] ?: 0;
+    if (!isset($sellerGroups[$sId])) {
+        $sellerGroups[$sId] = [
+            'seller_name' => $item['seller_name'] ?: 'OXXA Official Store',
+            'items' => []
+        ];
+    }
+    $sellerGroups[$sId]['items'][] = $item;
 }
 
 // If cart is empty, redirect to products page
@@ -92,30 +118,47 @@ include('../include/header.php');
                         <i class="fas fa-shopping-bag text-primary me-3 text-2xl"></i> Order Summary
                     </h4>
                     
-                    <div class="space-y-4 mb-6 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                        <?php foreach ($cartItems as $item): ?>
-                        <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100 transition-all hover:shadow-md">
-                            <div class="shrink-0 w-16 h-16 bg-white rounded-lg p-1 border border-gray-200 flex items-center justify-center overflow-hidden">
-                                <?php if (!empty($item['image'])): ?>
-                                    <img src="<?php echo htmlspecialchars($base_path . $item['image']); ?>" 
-                                         alt="<?php echo htmlspecialchars($item['pname']); ?>" 
-                                         class="w-full h-full object-contain">
-                                <?php else: ?>
-                                    <i class="fas fa-image text-gray-300 text-xl"></i>
-                                <?php endif; ?>
-                            </div>
-                            <div class="flex-grow min-w-0">
-                                <h6 class="font-bold text-navy text-sm mb-1 truncate"><?php echo htmlspecialchars($item['pname']); ?></h6>
-                                <p class="text-xs text-slate mb-1">
-                                    <span class="uppercase tracking-wider">Product</span>
-                                    <?php if ($item['size'] != 'Standard'): ?>
-                                        <span class="mx-1">•</span> <span class="bg-navy text-white px-2 py-0.5 rounded text-[10px]"><?php echo htmlspecialchars($item['size']); ?></span>
-                                    <?php endif; ?>
-                                </p>
-                                <div class="flex justify-between items-center mt-2">
-                                    <span class="text-xs font-medium text-slate bg-gray-200 px-2 py-1 rounded">Qty: <?php echo $item['qty']; ?></span>
-                                    <span class="font-extrabold text-primary">Rs. <?php echo number_format($item['price'] * $item['qty'], 2); ?></span>
+                    <div class="space-y-4 mb-6 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
+                        <?php foreach ($sellerGroups as $group): ?>
+                        <div class="border border-gray-100 rounded-2xl p-4 bg-white shadow-sm mb-3">
+                            <div class="flex items-center justify-between pb-2 mb-3 border-b border-gray-100">
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-store text-primary text-xs"></i>
+                                    <span class="text-xs font-black text-navy uppercase tracking-wider"><?php echo htmlspecialchars($group['seller_name']); ?></span>
                                 </div>
+                                <span class="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">
+                                    <?php echo count($group['items']); ?> <?php echo count($group['items']) === 1 ? 'item' : 'items'; ?>
+                                </span>
+                            </div>
+                            <div class="space-y-3">
+                                <?php foreach ($group['items'] as $item): ?>
+                                <div class="flex items-center gap-3.5 bg-gray-50 p-3 rounded-xl border border-gray-100 transition-all hover:shadow-sm">
+                                    <div class="shrink-0 w-14 h-14 bg-white rounded-lg p-1 border border-gray-200 flex items-center justify-center overflow-hidden">
+                                        <?php if (!empty($item['image'])): ?>
+                                            <img src="<?php echo htmlspecialchars($base_path . 'assets/uploads/products/' . $item['image']); ?>" 
+                                                 alt="<?php echo htmlspecialchars($item['pname']); ?>" 
+                                                 class="w-full h-full object-contain">
+                                        <?php else: ?>
+                                            <i class="fas fa-image text-gray-300 text-xl"></i>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="flex-grow min-w-0">
+                                        <h6 class="font-bold text-navy text-xs mb-0.5 truncate"><?php echo htmlspecialchars($item['pname']); ?></h6>
+                                        <div class="flex items-center gap-2 text-[10px] text-slate mb-1 font-bold">
+                                            <?php if ($item['size'] != 'Standard'): ?>
+                                                <span class="bg-navy text-white px-1.5 py-0.2 rounded"><?php echo htmlspecialchars($item['size']); ?></span>
+                                            <?php endif; ?>
+                                            <?php if ($item['is_hot_deal']): ?>
+                                                <span class="bg-[#CCFF00] text-navy px-1.5 py-0.2 rounded uppercase font-black">HOT DEAL</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="flex justify-between items-center mt-1">
+                                            <span class="text-[11px] font-bold text-slate bg-gray-200 px-2 py-0.5 rounded">Qty: <?php echo $item['qty']; ?></span>
+                                            <span class="font-black text-primary text-xs">Rs. <?php echo number_format($item['price'] * $item['qty'], 2); ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
                             </div>
                         </div>
                         <?php endforeach; ?>
