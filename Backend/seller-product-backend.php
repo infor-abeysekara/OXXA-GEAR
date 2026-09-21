@@ -51,9 +51,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
             }
         }
     }
+    if ($total_qty <= 0) {
+        $total_qty = isset($_POST['total_qty']) && (int)$_POST['total_qty'] > 0 ? (int)$_POST['total_qty'] : 10;
+    }
 
     try {
         $pdo->beginTransaction();
+
+        $uploadDir = '../assets/uploads/products/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $insertProdImg = $pdo->prepare("INSERT INTO product_images (product_id, image_path, is_primary, sort_order) VALUES (?, ?, ?, ?)");
 
         // 1. Insert Product
         $insertProd = $pdo->prepare("INSERT INTO products (product_code, seller_id, name, slug, brand_id, category_id, description, cost_price, base_price, total_qty, is_approved, status, is_free_shipping, shipping_cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'active', ?, ?)");
@@ -62,15 +72,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
         $product_id = $pdo->lastInsertId();
 
         // 2. Insert Colors, Images, and Sizes
-        if (isset($_POST['colors']) && is_array($_POST['colors'])) {
+        $hasColors = false;
+        if (isset($_POST['colors']) && is_array($_POST['colors']) && count($_POST['colors']) > 0) {
             $insertColor = $pdo->prepare("INSERT INTO product_colors (product_id, color_name, color_hex, thumbnail_path) VALUES (?, ?, ?, ?)");
             $insertSize = $pdo->prepare("INSERT INTO color_sizes (color_id, size, qty, cost_price, selling_price, sku) VALUES (?, ?, ?, ?, ?, ?)");
-            $insertProdImg = $pdo->prepare("INSERT INTO product_images (product_id, image_path, is_primary, sort_order) VALUES (?, ?, ?, ?)");
-            
-            $uploadDir = '../assets/uploads/products/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
 
             foreach ($_POST['colors'] as $cId => $colorData) {
                 $colorName = trim($colorData['name'] ?? '');
@@ -81,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
                 $thumbnail_path = null;
                 $thumbKey = "thumbnail_$cId";
                 if (isset($_FILES[$thumbKey]) && $_FILES[$thumbKey]['error'] === UPLOAD_ERR_OK) {
-                    if ($_FILES[$thumbKey]['size'] <= 1048576) {
+                    if ($_FILES[$thumbKey]['size'] <= 5242880) { // 5MB limit
                         $ext = strtolower(pathinfo($_FILES[$thumbKey]['name'], PATHINFO_EXTENSION));
                         $thumb_name = 'thumb_' . uniqid() . '.' . $ext;
                         if (move_uploaded_file($_FILES[$thumbKey]['tmp_name'], $uploadDir . $thumb_name)) {
@@ -92,16 +97,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
 
                 $insertColor->execute([$product_id, $colorName, $colorHex, $thumbnail_path]);
                 $color_id = $pdo->lastInsertId();
+                $hasColors = true;
 
                 // Handle Sizes for this color
                 if (isset($colorData['sizes']) && is_array($colorData['sizes'])) {
                     foreach ($colorData['sizes'] as $sizeName => $sizeData) {
                         if (isset($sizeData['active']) && $sizeData['active'] == '1') {
                             $qty = (int)($sizeData['qty'] ?? 0);
-                            $cost = !empty($sizeData['cost']) ? (float)$sizeData['cost'] : null;
-                            $selling = !empty($sizeData['selling']) ? (float)$sizeData['selling'] : null;
+                            $cost = !empty($sizeData['cost']) ? (float)$sizeData['cost'] : $cost_price;
+                            $selling = !empty($sizeData['selling']) ? (float)$sizeData['selling'] : $selling_price;
                             $sku = trim($sizeData['sku'] ?? '');
-                            $insertSize->execute([$color_id, $sizeName, $qty, $cost, $selling, $sku]);
+                            $cleanSize = trim(urldecode(str_replace('%20', ' ', $sizeName)));
+                            $insertSize->execute([$color_id, $cleanSize, $qty, $cost, $selling, $sku]);
                         }
                     }
                 }
@@ -109,12 +116,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
             }
         }
 
+        // If no custom color variants were created, create a default Standard variant
+        if (!$hasColors) {
+            $insertColor = $pdo->prepare("INSERT INTO product_colors (product_id, color_name) VALUES (?, 'Standard')");
+            $insertColor->execute([$product_id]);
+            $default_color_id = $pdo->lastInsertId();
+
+            $insertSize = $pdo->prepare("INSERT INTO color_sizes (color_id, size, qty, cost_price, selling_price, sku) VALUES (?, 'Standard', ?, ?, ?, ?)");
+            $insertSize->execute([$default_color_id, $total_qty, $cost_price, $selling_price, $product_code]);
+        }
+
         // 3. Handle Global Product Images
         if (isset($_FILES['product_images']) && !empty($_FILES['product_images']['name'][0])) {
             $sort_order = 0;
             for ($i = 0; $i < count($_FILES['product_images']['name']); $i++) {
                 if ($_FILES['product_images']['error'][$i] === UPLOAD_ERR_OK) {
-                    if ($_FILES['product_images']['size'][$i] > 1048576) continue; // Skip files > 1MB
+                    if ($_FILES['product_images']['size'][$i] > 10485760) continue; // Skip files > 10MB
                     
                     $ext = strtolower(pathinfo($_FILES['product_images']['name'][$i], PATHINFO_EXTENSION));
                     $image_name = 'prod_' . $product_id . '_' . uniqid() . '.' . $ext;
@@ -128,6 +145,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
             }
         }
 
+        // Auto sync base_price, cost_price and total_qty from color_sizes to products
+        $syncProd = $pdo->prepare("UPDATE products p SET 
+            p.base_price = COALESCE((SELECT MIN(cs.selling_price) FROM color_sizes cs JOIN product_colors pc ON pc.id = cs.color_id WHERE pc.product_id = p.id AND cs.selling_price > 0), p.base_price),
+            p.cost_price = COALESCE((SELECT MIN(cs.cost_price) FROM color_sizes cs JOIN product_colors pc ON pc.id = cs.color_id WHERE pc.product_id = p.id AND cs.cost_price > 0), p.cost_price),
+            p.total_qty = COALESCE((SELECT SUM(cs.qty) FROM color_sizes cs JOIN product_colors pc ON pc.id = cs.color_id WHERE pc.product_id = p.id), p.total_qty)
+            WHERE p.id = ?");
+        $syncProd->execute([$product_id]);
+
         $pdo->commit();
         header('Location: ../site/seller-dashboard.php?tab=products&success=product_added');
         exit();
@@ -139,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
         exit();
     }
 
-} elseif ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_product_btn'])) {
+} elseif ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['update_product_btn']) || isset($_POST['update_product']))) {
     
     $seller_id = $_SESSION['userid'];
     $product_id = (int)$_POST['product_id'];
@@ -177,50 +202,124 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
         $updateProd = $pdo->prepare("UPDATE products SET name = ?, brand_id = ?, category_id = ?, description = ?, cost_price = ?, base_price = ?, total_qty = ?, is_approved = 0, is_free_shipping = ?, shipping_cost = ? WHERE id = ?");
         $updateProd->execute([$name, $brand_id, $category_id, $description, $cost_price, $selling_price, $total_qty, $is_free_shipping, $shipping_cost, $product_id]);
 
-        // 2. Update Variants (Delete old, Insert new)
-        $pdo->prepare("DELETE FROM product_variants WHERE product_id = ?")->execute([$product_id]);
+        // 2. Update Variants (Delete old sizes, Insert new sizes, preserving color hexes and thumbnails)
+        $pdo->prepare("DELETE FROM color_sizes WHERE color_id IN (SELECT id FROM product_colors WHERE product_id = ?)")->execute([$product_id]);
         
         if (isset($_POST['variant_qty']) && is_array($_POST['variant_qty'])) {
-            $insertVar = $pdo->prepare("INSERT INTO product_variants (product_id, size, color, flavor, weight, fit_type, sku, price, cost_price, qty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $insertSize = $pdo->prepare("INSERT INTO color_sizes (color_id, size, qty, cost_price, selling_price, sku) VALUES (?, ?, ?, ?, ?, ?)");
+            
+            // Map existing colors
+            $colorStmt = $pdo->prepare("SELECT id, color_name FROM product_colors WHERE product_id = ?");
+            $colorStmt->execute([$product_id]);
+            $existingColors = [];
+            foreach($colorStmt->fetchAll(PDO::FETCH_ASSOC) as $c) {
+                $existingColors[$c['color_name']] = $c['id'];
+            }
+
             for ($i = 0; $i < count($_POST['variant_qty']); $i++) {
-                $size = trim($_POST['variant_size'][$i] ?? '');
-                $color = trim($_POST['variant_color'][$i] ?? '');
-                $flavor = trim($_POST['variant_flavor'][$i] ?? '');
-                $weight = trim($_POST['variant_weight'][$i] ?? '');
-                $fit_type = trim($_POST['variant_fit'][$i] ?? '');
+                $size = trim($_POST['variant_size'][$i] ?? $_POST['variant_flavor'][$i] ?? '');
+                $color = trim($_POST['variant_color'][$i] ?? $_POST['variant_weight'][$i] ?? 'Default');
+                if (empty($color)) $color = 'Default';
+                if (empty($size)) $size = 'Standard';
                 $sku = trim($_POST['variant_sku'][$i] ?? '');
                 $var_qty = (int)($_POST['variant_qty'][$i] ?? 0);
                 $var_cost_price = (float)($_POST['variant_cost_price'][$i] ?? 0);
                 $var_price = (float)($_POST['variant_price'][$i] ?? 0);
                 
-                if (!empty($size) || !empty($color) || !empty($flavor) || !empty($weight) || !empty($sku)) {
-                    $insertVar->execute([$product_id, $size, $color, $flavor, $weight, $fit_type, $sku, $var_price, $var_cost_price, $var_qty]);
+                if (!empty($size) || !empty($sku) || !empty($color)) {
+                    // Create color if missing
+                    if (!isset($existingColors[$color])) {
+                        $insC = $pdo->prepare("INSERT INTO product_colors (product_id, color_name) VALUES (?, ?)");
+                        $insC->execute([$product_id, $color]);
+                        $existingColors[$color] = $pdo->lastInsertId();
+                    }
+                    $color_id = $existingColors[$color];
+                    
+                    $insertSize->execute([$color_id, $size, $var_qty, $var_cost_price, $var_price, $sku]);
+                }
+            }
+            
+            // Clean up unused colors
+            $pdo->prepare("DELETE FROM product_colors WHERE product_id = ? AND id NOT IN (SELECT color_id FROM color_sizes)")->execute([$product_id]);
+        }
+
+        // 3. Handle Images (Deletions, Additions, and Primary Selection)
+        $uploadDir = '../assets/uploads/products/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        // 3a. Handle Deleted Images
+        if (isset($_POST['deleted_images']) && is_array($_POST['deleted_images'])) {
+            $delImgStmt = $pdo->prepare("DELETE FROM product_images WHERE product_id = ? AND (image_path = ? OR id = ?)");
+            foreach ($_POST['deleted_images'] as $delImg) {
+                $delImg = trim($delImg);
+                if (!empty($delImg)) {
+                    $delImgStmt->execute([$product_id, $delImg, $delImg]);
+                    if (file_exists($uploadDir . $delImg)) {
+                        @unlink($uploadDir . $delImg);
+                    }
                 }
             }
         }
 
-        // 3. Handle Images Upload (Only if new ones are selected)
+        // 3b. Handle Newly Uploaded Images (Only valid images up to 10MB)
+        $newUploadedFileMap = [];
         if (isset($_FILES['images']) && !empty($_FILES['images']['name'][0])) {
-            $uploadDir = '../assets/uploads/products/';
+            $insertImg = $pdo->prepare("INSERT INTO product_images (product_id, image_path, is_primary, sort_order) VALUES (?, ?, 0, ?)");
             
-            // Delete old images from DB (and optionally disk, but skipping disk for brevity)
-            $pdo->prepare("DELETE FROM product_images WHERE product_id = ?")->execute([$product_id]);
-            
-            $insertImg = $pdo->prepare("INSERT INTO product_images (product_id, image_path, is_primary, sort_order) VALUES (?, ?, ?, ?)");
-            $sort_order = 0;
+            $maxSortStmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order), 0) FROM product_images WHERE product_id = ?");
+            $maxSortStmt->execute([$product_id]);
+            $currentSort = (int)$maxSortStmt->fetchColumn() + 1;
+
             for ($i = 0; $i < count($_FILES['images']['name']); $i++) {
                 if ($_FILES['images']['error'][$i] === UPLOAD_ERR_OK) {
-                    if ($_FILES['images']['size'][$i] > 1048576) {
-                        continue; // Skip files larger than 1MB
+                    if ($_FILES['images']['size'][$i] > 10485760) {
+                        continue; // Skip files larger than 10MB
                     }
                     $ext = strtolower(pathinfo($_FILES['images']['name'][$i], PATHINFO_EXTENSION));
                     $image_name = 'prod_' . $product_id . '_' . uniqid() . '.' . $ext;
                     if (move_uploaded_file($_FILES['images']['tmp_name'][$i], $uploadDir . $image_name)) {
-                        $is_primary = ($i === 0) ? 1 : 0;
-                        $insertImg->execute([$product_id, $image_name, $is_primary, $sort_order]);
-                        $sort_order++;
+                        $insertImg->execute([$product_id, $image_name, $currentSort]);
+                        $newUploadedFileMap[$i] = $image_name;
+                        $currentSort++;
                     }
                 }
+            }
+        }
+
+        // 3c. Sync Primary Image Selection
+        $pdo->prepare("UPDATE product_images SET is_primary = 0 WHERE product_id = ?")->execute([$product_id]);
+
+        $primaryUpdated = false;
+        $primarySelection = trim($_POST['primary_image'] ?? '');
+
+        if (!empty($primarySelection)) {
+            // Check if selected primary is one of the newly uploaded images (e.g. "new_0", "new_1")
+            if (strpos($primarySelection, 'new_') === 0) {
+                $newIdx = (int)substr($primarySelection, 4);
+                if (isset($newUploadedFileMap[$newIdx])) {
+                    $setPrimaryStmt = $pdo->prepare("UPDATE product_images SET is_primary = 1 WHERE product_id = ? AND image_path = ?");
+                    $setPrimaryStmt->execute([$product_id, $newUploadedFileMap[$newIdx]]);
+                    $primaryUpdated = true;
+                }
+            } else {
+                // Existing image path or ID
+                $setPrimaryStmt = $pdo->prepare("UPDATE product_images SET is_primary = 1 WHERE product_id = ? AND (image_path = ? OR id = ?)");
+                $setPrimaryStmt->execute([$product_id, $primarySelection, $primarySelection]);
+                if ($setPrimaryStmt->rowCount() > 0) {
+                    $primaryUpdated = true;
+                }
+            }
+        }
+
+        // Fallback: If no image is marked primary, make the first image primary
+        if (!$primaryUpdated) {
+            $firstImgStmt = $pdo->prepare("SELECT id FROM product_images WHERE product_id = ? ORDER BY sort_order ASC, id ASC LIMIT 1");
+            $firstImgStmt->execute([$product_id]);
+            $firstImgId = $firstImgStmt->fetchColumn();
+            if ($firstImgId) {
+                $pdo->prepare("UPDATE product_images SET is_primary = 1 WHERE id = ?")->execute([$firstImgId]);
             }
         }
 
@@ -308,6 +407,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_product'])) {
                 $pdo->prepare("UPDATE products SET original_price = ?, sale_price = ?, discount_percent = ? WHERE id = ?")
                     ->execute([$hot_deal_orig, $hot_deal_sale, $discount_pct, $product_id]);
             }
+        }
+
+        // Auto sync base_price, cost_price and total_qty from color_sizes to products
+        $syncProd = $pdo->prepare("UPDATE products p SET 
+            p.base_price = COALESCE((SELECT MIN(cs.selling_price) FROM color_sizes cs JOIN product_colors pc ON pc.id = cs.color_id WHERE pc.product_id = p.id AND cs.selling_price > 0), p.base_price),
+            p.cost_price = COALESCE((SELECT MIN(cs.cost_price) FROM color_sizes cs JOIN product_colors pc ON pc.id = cs.color_id WHERE pc.product_id = p.id AND cs.cost_price > 0), p.cost_price),
+            p.total_qty = COALESCE((SELECT SUM(cs.qty) FROM color_sizes cs JOIN product_colors pc ON pc.id = cs.color_id WHERE pc.product_id = p.id), p.total_qty)
+            WHERE p.id = ?");
+        $syncProd->execute([$product_id]);
+
+        // Notify Admins about the product update requiring approval
+        $adminStmt = $pdo->query("SELECT id FROM users WHERE user_type = 'admin'");
+        $adminIds = $adminStmt->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($adminIds as $adminId) {
+            addNotification($conn, $adminId, "Product Updated - Pending Approval: " . $name, 'info', 'Products', "admin/manage-products.php?tab=pending");
         }
 
         $pdo->commit();

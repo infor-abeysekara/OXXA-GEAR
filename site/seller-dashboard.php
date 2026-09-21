@@ -39,10 +39,12 @@ $earningData = $earningStmt->fetch(PDO::FETCH_ASSOC);
 $total_orders = $earningData['total_orders'] ?? 0;
 $total_earned = $earningData['total_earned'] ?? 0.00;
 
-// 3. Pending Payouts (From Wallet)
-$pendingStmt = $pdo->prepare("SELECT pending_balance FROM seller_wallets WHERE seller_id = ?");
+// 3. Pending & Locked Payouts (From Wallet)
+$pendingStmt = $pdo->prepare("SELECT pending_balance, locked_balance FROM seller_wallets WHERE seller_id = ?");
 $pendingStmt->execute([$_SESSION['userid']]);
-$pending_balance = $pendingStmt->fetchColumn() ?: 0.00;
+$walletData = $pendingStmt->fetch(PDO::FETCH_ASSOC);
+$pending_balance = $walletData['pending_balance'] ?? 0.00;
+$locked_balance = $walletData['locked_balance'] ?? 0.00;
 
 // 4. Low Stock Alert
 $stockStmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE seller_id = ? AND total_qty < 5");
@@ -61,7 +63,7 @@ $joined_date = $joinStmt->fetchColumn();
         <!-- Mobile Sidebar Toggle -->
         <div class="lg:hidden mb-4 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm">
             <h2 class="font-black text-navy uppercase">Dashboard Menu</h2>
-            <button onclick="document.getElementById('mobileMenu').classList.toggle('hidden')" class="text-navy">
+            <button onclick="document.getElementById('mobileMenu').classList.remove('hidden')" class="text-navy">
                 <i class="fas fa-bars text-xl"></i>
             </button>
         </div>
@@ -71,10 +73,10 @@ $joined_date = $joinStmt->fetchColumn();
             <div class="flex items-center gap-4">
                 <div class="relative">
                 <?php 
-                $logo_exists = !empty($business['logo_path']) && file_exists('../assets/uploads/' . $business['logo_path']);
+                $logo_exists = !empty($business['logo_path']) && file_exists('../image/logos/' . $business['logo_path']);
                 if ($logo_exists): 
                 ?>
-                    <img src="../assets/uploads/<?= htmlspecialchars($business['logo_path']) ?>" class="w-16 h-16 rounded-full object-cover ring-4 ring-white shadow-sm">
+                    <img src="../image/logos/<?= htmlspecialchars($business['logo_path']) ?>" class="w-16 h-16 rounded-full object-cover ring-4 ring-white shadow-sm">
                 <?php else: ?>
                     <div class="w-16 h-16 rounded-full bg-[#0066FF] text-white flex items-center justify-center text-2xl font-black shadow-sm ring-4 ring-white">
                         <?= strtoupper(substr($business['business_name'], 0, 1)) ?>
@@ -106,9 +108,21 @@ $joined_date = $joinStmt->fetchColumn();
 
         <div class="flex flex-col lg:flex-row gap-8">
             <!-- Sidebar Navigation -->
-            <div id="mobileMenu" class="hidden lg:block w-full lg:w-64 shrink-0">
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
-                    <nav class="flex flex-col p-2 gap-1">
+            <div id="mobileMenu" class="fixed inset-0 z-50 hidden lg:static lg:block lg:w-64 shrink-0">
+                <div class="absolute inset-0 bg-black/50 lg:hidden" onclick="document.getElementById('mobileMenu').classList.add('hidden')"></div>
+                
+                <div class="absolute top-0 left-0 w-[80%] max-w-[300px] h-full bg-white shadow-2xl lg:w-full lg:static lg:h-auto lg:shadow-none lg:bg-transparent overflow-y-auto lg:overflow-visible">
+                    
+                    <!-- Mobile Close Header -->
+                    <div class="p-4 border-b border-gray-100 flex justify-between items-center lg:hidden">
+                        <h2 class="font-black text-navy uppercase">Dashboard Menu</h2>
+                        <button onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="text-gray-400 hover:text-red-500 transition-colors w-8 h-8 flex items-center justify-center bg-gray-50 rounded-full">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="bg-white lg:rounded-2xl lg:shadow-sm lg:border border-gray-100 overflow-hidden lg:sticky top-24 p-2 lg:p-0">
+                        <nav class="flex flex-col p-2 gap-1">
                         <a href="?tab=dashboard" class="flex items-center justify-between px-4 py-3 rounded-xl transition-colors <?= $tab == 'dashboard' ? 'bg-blue-50 text-[#0066FF] font-bold shadow-sm border border-blue-100' : 'text-slate hover:bg-gray-50 hover:text-navy font-medium' ?>">
                             <span><i class="fas fa-chart-pie w-6"></i> Overview</span>
                         </a>
@@ -133,6 +147,7 @@ $joined_date = $joinStmt->fetchColumn();
                         </a>
                     </nav>
                     
+                    
                     <div class="p-4 bg-gray-50 border-t border-gray-100 mt-2">
                         <a href="#" class="flex items-center text-sm font-bold text-slate hover:text-[#0066FF]">
                             <i class="fas fa-life-ring w-6"></i> Help Center
@@ -141,9 +156,10 @@ $joined_date = $joinStmt->fetchColumn();
                 </div>
                 
                 <!-- Mobile Add Product Button -->
-                <a href="seller-add-product.php" class="md:hidden mt-4 w-full bg-[#0066FF] hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold uppercase tracking-wide transition-all shadow-lg shadow-blue-500/30 flex justify-center items-center">
+                <a href="seller-add-product.php" class="md:hidden m-4 bg-[#0066FF] hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold uppercase tracking-wide transition-all shadow-lg shadow-blue-500/30 flex justify-center items-center">
                     <i class="fas fa-plus me-2"></i> Add Product
                 </a>
+            </div>
             </div>
 
             <!-- Main Content Area -->
@@ -167,11 +183,22 @@ $joined_date = $joinStmt->fetchColumn();
                         <!-- Pending Payouts -->
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group hover:border-[#0066FF] transition-colors">
                             <div>
-                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Pending Payouts</p>
+                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Available Payouts</p>
                                 <h3 class="text-xl font-black text-[#0066FF]">Rs. <?= number_format($pending_balance) ?></h3>
                             </div>
                             <div class="w-10 h-10 rounded-xl bg-blue-50 text-[#0066FF] flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
-                                <i class="fas fa-clock"></i>
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Locked Funds -->
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between group hover:border-yellow-500 transition-colors">
+                            <div>
+                                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1">Locked (14-Day Hold)</p>
+                                <h3 class="text-xl font-black text-yellow-600">Rs. <?= number_format($locked_balance) ?></h3>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl bg-yellow-50 text-yellow-600 flex items-center justify-center text-lg group-hover:scale-110 transition-transform">
+                                <i class="fas fa-lock"></i>
                             </div>
                         </div>
                         

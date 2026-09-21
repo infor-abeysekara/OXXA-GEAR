@@ -1,12 +1,15 @@
 <?php
 $page_title = 'Product Details - OXXA GEAR';
-include('../include/header.php');
+include(__DIR__ . '/../include/header.php');
+
+$current_dir = dirname($_SERVER['PHP_SELF']);
+$base_path = (strpos($current_dir, '/site') !== false) ? '../' : '';
 
 $product_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 if ($product_id <= 0) {
     echo "<div class='min-h-[60vh] flex items-center justify-center'><div class='text-center'><h2 class='text-2xl font-black mb-4'>Product Not Found</h2><a href='shop.php' class='text-primary hover:underline font-bold'>Back to Shop</a></div></div>";
-    include('../include/footer.php');
+    include(__DIR__ . '/../include/footer.php');
     exit;
 }
 
@@ -76,7 +79,11 @@ $uniqueColors = [];
 $allSizes = [];
 $variantsJsonData = [];
 if (!empty($variants)) {
-    foreach($variants as $v) {
+    foreach($variants as &$v) {
+        if (!empty($v['size'])) {
+            $v['size'] = urldecode($v['size']);
+        }
+        
         $c = !empty($v['color']) ? trim($v['color']) : 'Default';
         $variantsByColor[$c][] = $v;
         if (!in_array($c, $uniqueColors)) {
@@ -189,7 +196,7 @@ if (isset($_SESSION['userid'])) {
                 <i class="fas fa-chevron-left"></i>
             </button>
             <!-- Mobile Wishlist Button overlay -->
-            <button class="md:hidden absolute top-4 right-4 z-10 w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-gray-400 shadow-sm">
+            <button onclick="CartManager.addToWishlist(<?= $product_id ?>)" class="md:hidden absolute top-4 right-4 z-10 w-10 h-10 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center text-gray-400 shadow-sm hover:text-red-500 transition-colors">
                 <i class="far fa-heart"></i>
             </button>
             <?php if(isset($product['is_free_shipping']) && $product['is_free_shipping'] == 1): ?>
@@ -203,8 +210,8 @@ if (isset($_SESSION['userid'])) {
                 <div class="swiper-wrapper">
                     <?php if(!empty($images)): ?>
                         <?php foreach($images as $img): ?>
-                        <div class="swiper-slide flex items-center justify-center p-4 md:p-8">
-                            <img src="../assets/uploads/products/<?php echo htmlspecialchars($img['image_path']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="w-full h-full object-contain mix-blend-multiply drop-shadow-sm cursor-zoom-in" onclick="openZoom(this.src)">
+                        <div class="swiper-slide flex items-center justify-center p-4 md:p-8 overflow-hidden">
+                            <img src="<?php echo $base_path; ?>assets/uploads/products/<?php echo htmlspecialchars($img['image_path']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-zoom-img w-full h-full object-contain mix-blend-multiply drop-shadow-sm cursor-zoom-in transition-transform duration-200" onclick="openZoom(this.src)">
                         </div>
                         <?php endforeach; ?>
                     <?php else: ?>
@@ -232,11 +239,276 @@ if (isset($_SESSION['userid'])) {
             <div class="hidden md:flex gap-4 mt-6 overflow-x-auto pb-4 custom-scrollbar">
                 <?php foreach($images as $index => $img): ?>
                 <button onclick="productSwiper.slideTo(<?php echo $index; ?>)" onmouseenter="productSwiper.slideTo(<?php echo $index; ?>)" class="w-20 h-20 rounded-xl bg-[#F8F9FA] border-2 border-transparent hover:border-primary focus:border-primary transition-colors flex-shrink-0 flex items-center justify-center overflow-hidden">
-                    <img src="../assets/uploads/products/<?php echo htmlspecialchars($img['image_path']); ?>" class="w-full h-full object-contain mix-blend-multiply p-2">
+                    <img src="<?php echo $base_path; ?>assets/uploads/products/<?php echo htmlspecialchars($img['image_path']); ?>" class="w-full h-full object-contain mix-blend-multiply p-2" alt="">
                 </button>
                 <?php endforeach; ?>
             </div>
             <?php endif; ?>
+            </div>
+
+
+        </div>
+
+        <!-- Product Details -->
+        <div class="w-full md:w-1/2 p-5 md:p-0 pt-6 md:pt-4">
+            
+            <!-- Brand & Badges -->
+            <div class="flex items-center justify-between mb-3">
+                <?php if(!empty($brandName)): ?>
+                    <div class="flex items-center gap-3">
+                        <?php if(!empty($brandLogo)): ?>
+                            <img src="<?php echo $base_path; ?>assets/uploads/brands/<?php echo htmlspecialchars($brandLogo); ?>" alt="<?php echo htmlspecialchars($brandName); ?>" class="h-10 w-auto object-contain" onerror="this.style.display='none'">
+                        <?php endif; ?>
+                        <span class="text-base font-black text-black uppercase tracking-widest"><?php echo htmlspecialchars($brandName); ?></span>
+                    </div>
+                <?php else: ?>
+                    <div></div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Title -->
+            <h1 class="text-2xl md:text-4xl font-black text-navy uppercase tracking-wide leading-tight mb-2"><?php echo htmlspecialchars($product['name']); ?></h1>
+            
+            <!-- Desktop Wishlist -->
+            <button onclick="CartManager.addToWishlist(<?= $product_id ?>)" class="hidden md:flex items-center gap-2 text-gray-400 hover:text-red-500 font-bold text-sm transition-colors uppercase tracking-wide mb-4">
+                <i class="far fa-heart text-lg"></i> Add to Wishlist
+            </button>
+            
+            <!-- Ratings (Dynamic) -->
+            <div class="flex items-center gap-4 mb-6">
+                <?php if ($totalReviews > 0): ?>
+                    <div class="flex items-center text-yellow-400 text-sm">
+                        <?php 
+                        $fullStars = floor($avgRating);
+                        $halfStar = ($avgRating - $fullStars) >= 0.5;
+                        $emptyStars = 5 - $fullStars - ($halfStar ? 1 : 0);
+                        
+                        for($i=0; $i<$fullStars; $i++) echo '<i class="fas fa-star"></i> ';
+                        if($halfStar) echo '<i class="fas fa-star-half-alt"></i> ';
+                        for($i=0; $i<$emptyStars; $i++) echo '<i class="far fa-star"></i> ';
+                        ?>
+                    </div>
+                    <a href="#reviewsSection" class="text-sm font-bold text-gray-500 hover:text-navy cursor-pointer transition-colors border-b border-gray-300 hover:border-navy"><?php echo $totalReviews; ?> Reviews</a>
+                <?php else: ?>
+                    <div class="flex items-center text-gray-300 text-sm">
+                        <i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i>
+                    </div>
+                    <span class="text-sm font-bold text-gray-400">No reviews yet</span>
+                <?php endif; ?>
+            </div>
+
+            <!-- Price -->
+            <?php if ($isHotDealProduct): ?>
+                <div class="mb-6 p-4 rounded-2xl bg-[#0A1222] border border-[#CCFF00]/40 shadow-lg text-white">
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#CCFF00] text-black font-black text-xs uppercase tracking-wider">
+                            <i class="fas fa-bolt animate-pulse"></i> -<?php echo $hotDealDiscount; ?>% HOT DEAL
+                        </span>
+                        <?php if($hotDealDaysLeft !== null): ?>
+                            <span class="text-xs text-[#CCFF00] font-bold flex items-center gap-1">
+                                <i class="fas fa-clock text-[10px]"></i>
+                                <?php echo $hotDealDaysLeft > 1 ? "Ends in {$hotDealDaysLeft} days" : ($hotDealDaysLeft == 1 ? "Ends tomorrow" : "Ends today!"); ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="flex items-baseline gap-3">
+                        <span class="text-3xl md:text-4xl font-black text-[#CCFF00] tracking-tight" id="displayPrice">
+                            Rs. <?php echo number_format($hotDealSalePrice, 0); ?>
+                        </span>
+                        <span class="text-lg font-bold text-gray-400 line-through">
+                            Rs. <?php echo number_format($hotDealOrigPrice, 0); ?>
+                        </span>
+                    </div>
+                    <div class="mt-2 text-xs text-gray-400 flex items-center gap-2 border-t border-white/10 pt-2">
+                        <span>Pay in 3 installments of Rs. <?php echo number_format($hotDealSalePrice / 3, 0); ?> with</span>
+                        <img src="<?php echo $base_path; ?>image/KOKO_logo.png" class="h-3.5 w-auto rounded" alt="KOKO">
+                    </div>
+                </div>
+            <?php else: ?>
+                <div class="mb-6 flex flex-col gap-1">
+                    <div class="flex items-end gap-3">
+                        <span class="text-3xl md:text-4xl font-black text-navy tracking-tight" id="displayPrice">
+                            <?php if ($lowestPrice != $highestPrice): ?>
+                                Rs. <?php echo number_format($lowestPrice, 0); ?> - <?php echo number_format($highestPrice, 0); ?>
+                            <?php else: ?>
+                                Rs. <?php echo number_format($lowestPrice, 0); ?>
+                            <?php endif; ?>
+                        </span>
+                        <?php if(!empty($product['cost_price']) && $product['cost_price'] > $lowestPrice): ?>
+                        <span class="text-lg font-bold text-gray-400 line-through mb-1">Rs. <?php echo number_format($product['cost_price'], 0); ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <!-- KOKO Pay -->
+                    <div class="text-sm font-bold text-gray-500 flex items-center gap-2">
+                        <span id="kokoText">Pay in 3 installments of Rs. <?php echo number_format($lowestPrice / 3, 0); ?> with</span>
+                        <img src="<?php echo $base_path; ?>image/KOKO_logo.png" class="h-4 w-auto rounded" alt="KOKO">
+                    </div>
+                </div>
+            <?php endif; ?>
+
+
+            <!-- Shipping Information Badge -->
+            <div class="mb-8 mt-2">
+                <?php if (isset($product['is_free_shipping']) && $product['is_free_shipping'] == 1): ?>
+                    <div class="inline-block p-1 bg-green-50 rounded-xl border border-green-100">
+                        <div class="flex items-center gap-2 bg-[#D4FF00] text-black px-4 py-2 rounded-lg font-black text-xs uppercase tracking-wide shadow-sm">
+                            <i class="fas fa-truck text-sm"></i> FREE Shipping - Islandwide Delivery
+                        </div>
+                    </div>
+                    <p class="text-[10px] font-bold text-gray-500 mt-2 flex items-center gap-2 uppercase tracking-wide">
+                        <i class="fas fa-bolt text-yellow-400"></i> Delivered in 2-3 days <span class="w-1 h-1 bg-gray-300 rounded-full mx-1"></span> <i class="fas fa-shield-alt text-[#0066FF]"></i> 100% Authentic
+                    </p>
+                <?php else: ?>
+                    <?php $shippingCost = isset($product['shipping_cost']) ? (float)$product['shipping_cost'] : 300; ?>
+                    <div class="inline-block p-1 bg-gray-50 rounded-xl border border-gray-200">
+                        <div class="flex items-center gap-2 bg-white text-navy px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wide shadow-sm">
+                            <i class="fas fa-truck text-gray-400 text-sm"></i> Delivery: Rs. <?php echo number_format($shippingCost, 0); ?> - Islandwide
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Variants Selection -->
+            <?php if(!empty($variants)): ?>
+            <div class="mb-8" id="variantsWrapper">
+                <?php if($isTwoStep): ?>
+                    <!-- Step 1: Colors -->
+                    <div class="mb-6">
+                        <div class="flex justify-between items-end mb-3">
+                            <h3 class="text-sm font-black text-navy uppercase tracking-wide">Color: <span id="selectedColorLabel" class="text-gray-500 font-bold">Select Color</span></h3>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            <?php foreach($uniqueColors as $color): 
+                                $thumbnail = null;
+                                if (!empty($variantsByColor[$color][0]['thumbnail_path'])) {
+                                    $thumbnail = $base_path . 'assets/uploads/products/' . $variantsByColor[$color][0]['thumbnail_path'];
+                                }
+                            ?>
+                                <button type="button" 
+                                        onclick="selectColor('<?php echo htmlspecialchars($color, ENT_QUOTES); ?>')"
+                                        class="color-btn relative rounded-xl border-2 border-transparent hover:border-navy focus:border-navy transition-all duration-200 flex items-center justify-center overflow-hidden w-[72px] h-[72px] bg-[#F8F9FA]"
+                                        data-color="<?php echo htmlspecialchars($color, ENT_QUOTES); ?>"
+                                        title="<?php echo htmlspecialchars($color); ?>">
+                                    <?php if($thumbnail): ?>
+                                        <img src="<?php echo htmlspecialchars($thumbnail); ?>" alt="<?php echo htmlspecialchars($color); ?>" class="w-full h-full object-contain mix-blend-multiply p-1" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
+                                        <span class="text-[10px] font-bold text-navy text-center leading-tight p-1 hidden"><?php echo htmlspecialchars($color); ?></span>
+                                    <?php else: ?>
+                                        <span class="text-[10px] font-bold text-navy text-center leading-tight p-1"><?php echo htmlspecialchars($color); ?></span>
+                                    <?php endif; ?>
+                                    <div class="absolute inset-0 border-2 border-transparent transition-colors pointer-events-none check-overlay rounded-xl"></div>
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    
+                    <!-- Step 2: Sizes -->
+                    <div class="mb-6 hidden" id="sizeContainerWrapper">
+                        <div class="flex justify-between items-end mb-3">
+                            <h3 class="text-sm font-black text-navy uppercase tracking-wide">Size: <span id="selectedSizeLabel" class="text-gray-500 font-bold">Select Size</span></h3>
+                            <?php if(stripos($product['category_name'], 'footwear') !== false): ?>
+                                <button type="button" onclick="document.getElementById('sizeGuideModal').classList.remove('hidden'); document.getElementById('sizeGuideModal').classList.add('flex')" class="text-xs font-bold text-gray-400 hover:text-primary underline"><i class="fas fa-ruler me-1"></i>Size Guide</button>
+                            <?php endif; ?>
+                        </div>
+                        <div class="flex flex-wrap gap-2" id="sizeContainer">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <!-- Standard (1-Step) Variant Selector -->
+                    <div class="flex justify-between items-end mb-3">
+                        <h3 class="text-sm font-black text-navy uppercase tracking-wide">Select Variant</h3>
+                    </div>
+                    <div class="flex flex-wrap gap-3" id="variantContainer">
+                        <?php 
+                        foreach($variants as $index => $v): 
+                            $labelParts = [];
+                            if (!empty($v['size'])) $labelParts[] = htmlspecialchars($v['size']);
+                            if (!empty($v['color'])) $labelParts[] = htmlspecialchars($v['color']);
+                            if (!empty($v['flavor'])) $labelParts[] = htmlspecialchars($v['flavor']);
+                            if (!empty($v['weight'])) $labelParts[] = htmlspecialchars($v['weight']);
+                            $label = !empty($labelParts) ? implode(' - ', $labelParts) : 'Standard';
+                            $vPrice = ($v['price'] > 0) ? $v['price'] : $product['base_price'];
+                        ?>
+                            <button type="button" 
+                                    onclick="selectStandardVariant(this, <?php echo $v['id']; ?>, <?php echo $vPrice; ?>, <?php echo $v['qty']; ?>, '<?php echo $label; ?>')"
+                                    class="variant-btn relative px-6 py-3 rounded-xl border-2 font-bold text-sm uppercase tracking-wider transition-all duration-200 <?php echo $v['qty'] <= 0 ? 'opacity-50 border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50' : 'border-gray-200 text-gray-600 hover:border-navy hover:text-navy cursor-pointer bg-white'; ?>">
+                                <?php echo $label; ?>
+                                <?php if($v['qty'] <= 0): ?>
+                                    <svg class="absolute inset-0 w-full h-full text-gray-300" preserveAspectRatio="none" viewBox="0 0 100 100"><line x1="0" y1="100" x2="100" y2="0" stroke="currentColor" stroke-width="2"></line></svg>
+                                <?php endif; ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+                
+                <p id="stockMessage" class="mt-3 text-xs font-bold hidden flex items-center gap-1"></p>
+            </div>
+            <?php endif; ?>
+
+
+
+            <!-- Add to Cart & Buy Now Actions -->
+            <div class="flex flex-col gap-4">
+                <div class="flex gap-4 h-14">
+                    <!-- Quantity Selector -->
+                    <div class="flex items-center bg-gray-50 rounded-xl border border-gray-200 px-2 flex-shrink-0">
+                        <button type="button" onclick="updateQty(-1)" class="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-navy transition-colors font-bold"><i class="fas fa-minus text-xs"></i></button>
+                        <input type="number" id="qtyInputDesktop" value="1" min="1" max="<?php echo $totalStock; ?>" class="w-12 h-10 bg-transparent text-center text-navy font-black focus:outline-none" readonly>
+                        <button type="button" onclick="updateQty(1)" class="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-navy transition-colors font-bold"><i class="fas fa-plus text-xs"></i></button>
+                    </div>
+                    
+                    <button id="addToCartDesktopBtn" onclick="addToCart(this)" class="flex-1 bg-navy hover:bg-black text-white rounded-xl font-black uppercase tracking-widest text-sm shadow-xl shadow-black/10 transition-all flex items-center justify-center gap-3">
+                    <i class="fas fa-shopping-bag"></i> <span>Add to Cart</span>
+                </button>
+            </div>
+            <button id="buyNowDesktopBtn" onclick="buyNow(this)" class="w-full h-14 bg-primary hover:bg-blue-700 text-white rounded-xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/30 transition-all flex items-center justify-center">
+                <span>Buy It Now</span>
+            </button>
+            
+            <!-- Trust Badges -->
+            <div class="flex items-center justify-center gap-4 md:gap-6 mt-8 py-6 border-y border-gray-100 text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider text-center">
+                <div class="flex flex-col items-center gap-2"><i class="fas fa-truck text-navy text-xl"></i> <span>Islandwide<br>Delivery</span></div>
+                <div class="w-px h-10 bg-gray-200"></div>
+                <div class="flex flex-col items-center gap-2"><i class="fas fa-check-circle text-navy text-xl"></i> <span>100%<br>Authentic</span></div>
+                <div class="w-px h-10 bg-gray-200"></div>
+                <div class="flex flex-col items-center gap-2"><i class="fas fa-undo text-navy text-xl"></i> <span>14-Day<br>Returns</span></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+    <!-- Product Details & Reviews (Full Width) -->
+    <div class="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 mt-12 mb-12">
+            <!-- Description Accordion (Mobile friendly) -->
+            <div class="mt-8 mb-8 border-t border-b border-gray-100">
+                <details class="group py-4" open>
+                    <summary class="flex justify-between items-center font-black text-sm uppercase tracking-wide cursor-pointer list-none text-navy">
+                        Product Details
+                        <span class="transition group-open:rotate-180">
+                            <i class="fas fa-chevron-down"></i>
+                        </span>
+                    </summary>
+                    <div class="text-gray-600 text-sm font-medium mt-4 leading-relaxed whitespace-pre-line prose prose-sm">
+                        <?php echo htmlspecialchars($product['description']); ?>
+                    </div>
+                </details>
+                <details class="group py-4 border-t border-gray-100">
+                    <summary class="flex justify-between items-center font-black text-sm uppercase tracking-wide cursor-pointer list-none text-navy">
+                        Shipping & Returns
+                        <span class="transition group-open:rotate-180">
+                            <i class="fas fa-chevron-down"></i>
+                        </span>
+                    </summary>
+                    <div class="text-gray-600 text-sm font-medium mt-4 leading-relaxed">
+                        <ul class="list-disc pl-5 space-y-2">
+                            <li>Islandwide Delivery available (2-4 working days)</li>
+                            <li>Secure Payments - COD, Card via PayHere & KOKO Pay in 3 x installments, tracking SMS for every orde</li>
+                            <li>14-day return policy for unused items in original packaging</li>
+                            <li>100% Authentic Guaranteed - all products from verified sellers, quality checked by OXXA</li>
+                        </ul>
+                    </div>
+                </details>
             </div>
 
             <!-- Reviews Section -->
@@ -297,7 +569,7 @@ if (isset($_SESSION['userid'])) {
                             ?>
                                 <div class="flex gap-2 mb-3">
                                     <?php foreach($revImages as $rImg): ?>
-                                        <img src="../assets/uploads/reviews/<?php echo htmlspecialchars($rImg); ?>" class="w-16 h-16 object-cover rounded-lg border border-gray-200">
+                                        <img src="<?php echo $base_path; ?>assets/uploads/reviews/<?php echo htmlspecialchars($rImg); ?>" class="w-16 h-16 object-cover rounded-lg border border-gray-200">
                                     <?php endforeach; ?>
                                 </div>
                             <?php endif; ?>
@@ -329,298 +601,8 @@ if (isset($_SESSION['userid'])) {
                     </div>
                 <?php endif; ?>
             </div>
-
-        </div>
-
-        <!-- Product Details -->
-        <div class="w-full md:w-1/2 p-5 md:p-0 pt-6 md:pt-4">
-            
-            <!-- Brand & Badges -->
-            <div class="flex items-center justify-between mb-3">
-                <?php if(!empty($brandName)): ?>
-                    <div class="flex items-center gap-3">
-                        <?php if(!empty($brandLogo)): ?>
-                            <img src="../assets/uploads/brands/<?php echo htmlspecialchars($brandLogo); ?>" alt="<?php echo htmlspecialchars($brandName); ?>" class="h-10 w-auto object-contain">
-                        <?php endif; ?>
-                        <span class="text-base font-black text-black uppercase tracking-widest"><?php echo htmlspecialchars($brandName); ?></span>
-                    </div>
-                <?php else: ?>
-                    <div></div>
-                <?php endif; ?>
-                
-                <!-- Desktop Wishlist -->
-                <button class="hidden md:flex items-center gap-2 text-gray-400 hover:text-red-500 font-bold text-sm transition-colors uppercase tracking-wide">
-                    <i class="far fa-heart text-lg"></i> Add to Wishlist
-                </button>
-            </div>
-
-            <!-- Title -->
-            <h1 class="text-2xl md:text-4xl font-black text-navy uppercase tracking-wide leading-tight mb-4"><?php echo htmlspecialchars($product['name']); ?></h1>
-            
-            <!-- Ratings (Dynamic) -->
-            <div class="flex items-center gap-4 mb-6">
-                <?php if ($totalReviews > 0): ?>
-                    <div class="flex items-center text-yellow-400 text-sm">
-                        <?php 
-                        $fullStars = floor($avgRating);
-                        $halfStar = ($avgRating - $fullStars) >= 0.5;
-                        $emptyStars = 5 - $fullStars - ($halfStar ? 1 : 0);
-                        
-                        for($i=0; $i<$fullStars; $i++) echo '<i class="fas fa-star"></i> ';
-                        if($halfStar) echo '<i class="fas fa-star-half-alt"></i> ';
-                        for($i=0; $i<$emptyStars; $i++) echo '<i class="far fa-star"></i> ';
-                        ?>
-                    </div>
-                    <a href="#reviewsSection" class="text-sm font-bold text-gray-500 hover:text-navy cursor-pointer transition-colors border-b border-gray-300 hover:border-navy"><?php echo $totalReviews; ?> Reviews</a>
-                <?php else: ?>
-                    <div class="flex items-center text-gray-300 text-sm">
-                        <i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i>
-                    </div>
-                    <span class="text-sm font-bold text-gray-400">No reviews yet</span>
-                <?php endif; ?>
-            </div>
-
-            <!-- Price -->
-            <?php if ($isHotDealProduct): ?>
-                <div class="mb-6 p-4 rounded-2xl bg-[#0A1222] border border-[#CCFF00]/40 shadow-lg text-white">
-                    <div class="flex items-center justify-between gap-3 mb-2">
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#CCFF00] text-black font-black text-xs uppercase tracking-wider">
-                            <i class="fas fa-bolt animate-pulse"></i> -<?php echo $hotDealDiscount; ?>% HOT DEAL
-                        </span>
-                        <?php if($hotDealDaysLeft !== null): ?>
-                            <span class="text-xs text-[#CCFF00] font-bold flex items-center gap-1">
-                                <i class="fas fa-clock text-[10px]"></i>
-                                <?php echo $hotDealDaysLeft > 1 ? "Ends in {$hotDealDaysLeft} days" : ($hotDealDaysLeft == 1 ? "Ends tomorrow" : "Ends today!"); ?>
-                            </span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="flex items-baseline gap-3">
-                        <span class="text-3xl md:text-4xl font-black text-[#CCFF00] tracking-tight" id="displayPrice">
-                            Rs. <?php echo number_format($hotDealSalePrice, 0); ?>
-                        </span>
-                        <span class="text-lg font-bold text-gray-400 line-through">
-                            Rs. <?php echo number_format($hotDealOrigPrice, 0); ?>
-                        </span>
-                    </div>
-                    <div class="mt-2 text-xs text-gray-400 flex items-center gap-2 border-t border-white/10 pt-2">
-                        <span>Pay in 3 installments of Rs. <?php echo number_format($hotDealSalePrice / 3, 0); ?> with</span>
-                        <img src="../image/KOKO_logo.png" class="h-3.5 w-auto rounded" alt="KOKO">
-                    </div>
-                </div>
-            <?php else: ?>
-                <div class="mb-6 flex flex-col gap-1">
-                    <div class="flex items-end gap-3">
-                        <span class="text-3xl md:text-4xl font-black text-navy tracking-tight" id="displayPrice">
-                            <?php if ($lowestPrice != $highestPrice): ?>
-                                Rs. <?php echo number_format($lowestPrice, 0); ?> - <?php echo number_format($highestPrice, 0); ?>
-                            <?php else: ?>
-                                Rs. <?php echo number_format($lowestPrice, 0); ?>
-                            <?php endif; ?>
-                        </span>
-                        <?php if(!empty($product['cost_price']) && $product['cost_price'] > $lowestPrice): ?>
-                        <span class="text-lg font-bold text-gray-400 line-through mb-1">Rs. <?php echo number_format($product['cost_price'], 0); ?></span>
-                        <?php endif; ?>
-                    </div>
-                    <!-- KOKO Pay -->
-                    <div class="text-sm font-bold text-gray-500 flex items-center gap-2">
-                        <span id="kokoText">Pay in 3 installments of Rs. <?php echo number_format($lowestPrice / 3, 0); ?> with</span>
-                        <img src="../image/KOKO_logo.png" class="h-4 w-auto rounded" alt="KOKO">
-                    </div>
-                </div>
-            <?php endif; ?>
-
-
-
-            <?php endif; ?>
-
-            <!-- Shipping Information Badge -->
-            <div class="mb-8 mt-2">
-                <?php if (isset($product['is_free_shipping']) && $product['is_free_shipping'] == 1): ?>
-                    <div class="inline-block p-1 bg-green-50 rounded-xl border border-green-100">
-                        <div class="flex items-center gap-2 bg-[#D4FF00] text-black px-4 py-2 rounded-lg font-black text-xs uppercase tracking-wide shadow-sm">
-                            <i class="fas fa-truck text-sm"></i> FREE Shipping - Islandwide Delivery
-                        </div>
-                    </div>
-                    <p class="text-[10px] font-bold text-gray-500 mt-2 flex items-center gap-2 uppercase tracking-wide">
-                        <i class="fas fa-bolt text-yellow-400"></i> Delivered in 2-3 days <span class="w-1 h-1 bg-gray-300 rounded-full mx-1"></span> <i class="fas fa-shield-alt text-[#0066FF]"></i> 100% Authentic
-                    </p>
-                <?php else: ?>
-                    <?php $shippingCost = isset($product['shipping_cost']) ? (float)$product['shipping_cost'] : 300; ?>
-                    <div class="inline-block p-1 bg-gray-50 rounded-xl border border-gray-200">
-                        <div class="flex items-center gap-2 bg-white text-navy px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wide shadow-sm">
-                            <i class="fas fa-truck text-gray-400 text-sm"></i> Delivery: Rs. <?php echo number_format($shippingCost, 0); ?> - Islandwide
-                        </div>
-                    </div>
-                    <p class="text-[10px] font-bold text-gray-500 mt-2 uppercase tracking-wide flex items-center gap-1.5">
-                        <i class="fas fa-box text-gray-400"></i> Free delivery over Rs.5000 
-                        <span class="text-[#0066FF]">Add Rs. <?php echo number_format(max(0, 5000 - $lowestPrice), 0); ?> more for free!</span>
-                    </p>
-                <?php endif; ?>
-            </div>
-
-            <!-- Variants Selection -->
-            <?php if(!empty($variants)): ?>
-            <div class="mb-8" id="variantsWrapper">
-                <?php if($isTwoStep): ?>
-                    <!-- Step 1: Colors -->
-                    <div class="mb-6">
-                        <div class="flex justify-between items-end mb-3">
-                            <h3 class="text-sm font-black text-navy uppercase tracking-wide">Color: <span id="selectedColorLabel" class="text-gray-500 font-bold">Select Color</span></h3>
-                        </div>
-                        <div class="flex flex-wrap gap-3">
-                            <?php foreach($uniqueColors as $color): 
-                                // Basic mapping for common colors to hex (can be expanded)
-                                $hexMap = [
-                                    'GREEN' => '#22c55e', 'PINK' => '#ec4899', 'BLACK' => '#000000', 'WHITE' => '#ffffff',
-                                    'RED' => '#ef4444', 'BLUE' => '#3b82f6', 'YELLOW' => '#eab308', 'GRAY' => '#6b7280',
-                                    'NAVY' => '#1e3a8a', 'ORANGE' => '#f97316', 'PURPLE' => '#a855f7'
-                                ];
-                                $upperColor = strtoupper($color);
-                                $isStandardColor = isset($hexMap[$upperColor]);
-                                $bgStyle = $isStandardColor ? "background-color: {$hexMap[$upperColor]};" : "";
-                            ?>
-                                <button type="button" 
-                                        onclick="selectColor('<?php echo htmlspecialchars($color, ENT_QUOTES); ?>')"
-                                        class="color-btn relative rounded-full border-2 border-gray-200 hover:border-navy transition-all duration-200 flex items-center justify-center overflow-hidden <?php echo $isStandardColor ? 'w-10 h-10' : 'px-4 py-2 text-sm font-bold bg-white text-navy'; ?>"
-                                        data-color="<?php echo htmlspecialchars($color, ENT_QUOTES); ?>"
-                                        style="<?php echo $bgStyle; ?>"
-                                        title="<?php echo htmlspecialchars($color); ?>">
-                                    <?php if(!$isStandardColor): ?>
-                                        <?php echo htmlspecialchars($color); ?>
-                                    <?php endif; ?>
-                                    <i class="fas fa-check absolute text-white text-xs opacity-0 pointer-events-none transition-opacity duration-200 <?php echo $upperColor == 'WHITE' ? 'text-black' : ''; ?>"></i>
-                                </button>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                    
-                    <!-- Step 2: Sizes -->
-                    <div class="mb-6 hidden" id="sizeContainerWrapper">
-                        <div class="flex justify-between items-end mb-3">
-                            <h3 class="text-sm font-black text-navy uppercase tracking-wide">Size: <span id="selectedSizeLabel" class="text-gray-500 font-bold">Select Size</span></h3>
-                            <button type="button" onclick="document.getElementById('sizeGuideModal').classList.remove('hidden'); document.getElementById('sizeGuideModal').classList.add('flex')" class="text-xs font-bold text-gray-400 hover:text-primary underline"><i class="fas fa-ruler me-1"></i>Size Guide</button>
-                        </div>
-                        <div class="flex flex-wrap gap-2" id="sizeContainer">
-                            <!-- Populated by JS -->
-                        </div>
-                    </div>
-                <?php else: ?>
-                    <!-- Standard (1-Step) Variant Selector -->
-                    <div class="flex justify-between items-end mb-3">
-                        <h3 class="text-sm font-black text-navy uppercase tracking-wide">Select Variant</h3>
-                    </div>
-                    <div class="flex flex-wrap gap-3" id="variantContainer">
-                        <?php 
-                        foreach($variants as $index => $v): 
-                            $labelParts = [];
-                            if (!empty($v['size'])) $labelParts[] = htmlspecialchars($v['size']);
-                            if (!empty($v['color'])) $labelParts[] = htmlspecialchars($v['color']);
-                            if (!empty($v['flavor'])) $labelParts[] = htmlspecialchars($v['flavor']);
-                            if (!empty($v['weight'])) $labelParts[] = htmlspecialchars($v['weight']);
-                            $label = !empty($labelParts) ? implode(' - ', $labelParts) : 'Standard';
-                            $vPrice = ($v['price'] > 0) ? $v['price'] : $product['base_price'];
-                        ?>
-                            <button type="button" 
-                                    onclick="selectStandardVariant(this, <?php echo $v['id']; ?>, <?php echo $vPrice; ?>, <?php echo $v['qty']; ?>, '<?php echo $label; ?>')"
-                                    class="variant-btn relative px-6 py-3 rounded-xl border-2 font-bold text-sm uppercase tracking-wider transition-all duration-200 <?php echo $v['qty'] <= 0 ? 'opacity-50 border-gray-200 text-gray-400 cursor-not-allowed bg-gray-50' : 'border-gray-200 text-gray-600 hover:border-navy hover:text-navy cursor-pointer bg-white'; ?>">
-                                <?php echo $label; ?>
-                                <?php if($v['qty'] <= 0): ?>
-                                    <svg class="absolute inset-0 w-full h-full text-gray-300" preserveAspectRatio="none" viewBox="0 0 100 100"><line x1="0" y1="100" x2="100" y2="0" stroke="currentColor" stroke-width="2"></line></svg>
-                                <?php endif; ?>
-                            </button>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-                
-                <p id="stockMessage" class="mt-3 text-xs font-bold hidden flex items-center gap-1"></p>
-            </div>
-            <?php endif; ?>
-
-            <!-- Description Accordion (Mobile friendly) -->
-            <div class="mb-8 border-t border-b border-gray-100">
-                <details class="group py-4" open>
-                    <summary class="flex justify-between items-center font-black text-sm uppercase tracking-wide cursor-pointer list-none text-navy">
-                        Product Details
-                        <span class="transition group-open:rotate-180">
-                            <i class="fas fa-chevron-down"></i>
-                        </span>
-                    </summary>
-                    <div class="text-gray-600 text-sm font-medium mt-4 leading-relaxed whitespace-pre-line prose prose-sm">
-                        <?php echo htmlspecialchars($product['description']); ?>
-                    </div>
-                </details>
-                <details class="group py-4 border-t border-gray-100">
-                    <summary class="flex justify-between items-center font-black text-sm uppercase tracking-wide cursor-pointer list-none text-navy">
-                        Shipping & Returns
-                        <span class="transition group-open:rotate-180">
-                            <i class="fas fa-chevron-down"></i>
-                        </span>
-                    </summary>
-                    <div class="text-gray-600 text-sm font-medium mt-4 leading-relaxed">
-                        <ul class="list-disc pl-5 space-y-2">
-                            <li>Islandwide Delivery available (2-4 working days)</li>
-                            <li>Free shipping on orders over Rs. 15,000</li>
-                            <li>14-day return policy for unused items in original packaging</li>
-                        </ul>
-                    </div>
-                </details>
-            </div>
-
-            <!-- Desktop Add to Cart (Hidden on Mobile) -->
-            <div class="hidden md:flex flex-col gap-4">
-                <div class="flex gap-4 h-14">
-                    <!-- Quantity Selector -->
-                    <div class="flex items-center bg-gray-50 rounded-xl border border-gray-200 px-2 flex-shrink-0">
-                        <button type="button" onclick="updateQty(-1)" class="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-navy transition-colors font-bold"><i class="fas fa-minus text-xs"></i></button>
-                        <input type="number" id="qtyInputDesktop" value="1" min="1" max="<?php echo $totalStock; ?>" class="w-12 h-10 bg-transparent text-center text-navy font-black focus:outline-none" readonly>
-                        <button type="button" onclick="updateQty(1)" class="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-navy transition-colors font-bold"><i class="fas fa-plus text-xs"></i></button>
-                    </div>
-                    
-                    <button id="addToCartDesktopBtn" onclick="addToCart(this)" class="flex-1 bg-navy hover:bg-black text-white rounded-xl font-black uppercase tracking-widest text-sm shadow-xl shadow-black/10 transition-all flex items-center justify-center gap-3">
-                    <i class="fas fa-shopping-bag"></i> <span>Add to Cart</span>
-                </button>
-            </div>
-            <button id="buyNowDesktopBtn" onclick="buyNow(this)" class="w-full h-14 bg-primary hover:bg-blue-700 text-white rounded-xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-500/30 transition-all flex items-center justify-center">
-                <span>Buy It Now</span>
-            </button>
-            
-            <!-- Trust Badges -->
-            <div class="flex items-center justify-center gap-4 md:gap-6 mt-8 py-6 border-y border-gray-100 text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider text-center">
-                <div class="flex flex-col items-center gap-2"><i class="fas fa-truck text-navy text-xl"></i> <span>Islandwide<br>Delivery</span></div>
-                <div class="w-px h-10 bg-gray-200"></div>
-                <div class="flex flex-col items-center gap-2"><i class="fas fa-check-circle text-navy text-xl"></i> <span>100%<br>Authentic</span></div>
-                <div class="w-px h-10 bg-gray-200"></div>
-                <div class="flex flex-col items-center gap-2"><i class="fas fa-undo text-navy text-xl"></i> <span>14-Day<br>Returns</span></div>
-            </div>
-        </div>
     </div>
-    <!-- Related Products -->
-    <?php if(!empty($relatedProducts)): ?>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-gray-100">
-        <h2 class="text-2xl font-black text-navy uppercase tracking-wide mb-8">You May Also Like</h2>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
-            <?php foreach($relatedProducts as $relProduct): 
-                // Fetch primary image for related
-                $relImgStmt = $pdo->prepare("SELECT image_path FROM product_images WHERE product_id = ? ORDER BY is_primary DESC LIMIT 1");
-                $relImgStmt->execute([$relProduct['id']]);
-                $relImg = $relImgStmt->fetchColumn();
-            ?>
-            <a href="product-details.php?id=<?php echo $relProduct['id']; ?>" class="group block">
-                <div class="aspect-square bg-[#F8F9FA] rounded-2xl mb-4 overflow-hidden p-4 md:p-6 flex items-center justify-center">
-                    <?php if($relImg): ?>
-                        <img src="../assets/uploads/products/<?php echo htmlspecialchars($relImg); ?>" class="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500">
-                    <?php else: ?>
-                        <i class="fas fa-image text-4xl text-gray-300"></i>
-                    <?php endif; ?>
-                </div>
-                <h3 class="text-sm font-black text-navy uppercase tracking-wide truncate"><?php echo htmlspecialchars($relProduct['name']); ?></h3>
-                <div class="text-sm font-bold text-gray-500 mt-1">Rs. <?php echo number_format($relProduct['base_price'], 0); ?></div>
-            </a>
-            <?php endforeach; ?>
-        </div>
-    </div>
-    <?php endif; ?>
-</div>
+
 
 <!-- Size Guide Modal -->
 <div id="sizeGuideModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
@@ -990,7 +972,18 @@ if (isset($_SESSION['userid'])) {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>REDIRECTING...</span>';
         btn.disabled = true;
         
-        window.location.href = `checkout.php?buy_now=${selectedVariantId || '0'}&qty=${currentQty}`;
+        const productId = <?php echo $product_id; ?>;
+        if (typeof CartManager !== 'undefined' && CartManager.addToCart) {
+            CartManager.addToCart(productId, selectedVariantId || null, currentQty, btn).then(() => {
+                window.location.href = 'checkout.php';
+            }).catch(() => {
+                btn.innerHTML = '<span>Buy It Now</span>';
+                btn.disabled = false;
+                Swal.fire({ icon: 'error', title: 'Could not add to cart', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
+            });
+        } else {
+            window.location.href = `checkout.php?buy_now=${selectedVariantId || '0'}&qty=${currentQty}`;
+        }
     }
     // --- Review Form Logic ---
     function openReviewModal() {
@@ -1046,7 +1039,7 @@ if (isset($_SESSION['userid'])) {
         
         const formData = new FormData(e.target);
         
-        fetch('../Backend/submit-review.php', {
+        fetch('<?php echo $base_path; ?>Backend/submit-review.php', {
             method: 'POST',
             body: formData
         })
@@ -1092,6 +1085,35 @@ if (isset($_SESSION['userid'])) {
 
 </script>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inner Zoom for Product Images (Desktop only)
+    if (window.innerWidth >= 768) {
+        const zoomImages = document.querySelectorAll('.product-zoom-img');
+        
+        zoomImages.forEach(img => {
+            img.addEventListener('mousemove', function(e) {
+                const { left, top, width, height } = this.getBoundingClientRect();
+                
+                // Calculate cursor position as a percentage
+                const x = ((e.clientX - left) / width) * 100;
+                const y = ((e.clientY - top) / height) * 100;
+                
+                // Update transform origin to mouse position and scale
+                this.style.transformOrigin = `${x}% ${y}%`;
+                this.style.transform = 'scale(2)';
+            });
+            
+            img.addEventListener('mouseleave', function() {
+                // Reset on mouse leave
+                this.style.transformOrigin = 'center center';
+                this.style.transform = 'scale(1)';
+            });
+        });
+    }
+});
+</script>
+
 <style>
     /* Swiper Pagination Styling */
     .productSwiper .swiper-pagination-bullet {
@@ -1120,4 +1142,4 @@ if (isset($_SESSION['userid'])) {
     }
 </style>
 
-<?php include('../include/footer.php'); ?>
+<?php include(__DIR__ . '/../include/footer.php'); ?>

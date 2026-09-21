@@ -1,7 +1,7 @@
 <?php
 session_start();
 include('../../include/connection.php');
-
+include('../../include/functions.php');
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_SESSION['userid'])) {
     $order_id = $_POST['order_id'];
     $status = $_POST['status'];
@@ -26,6 +26,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_SESSION['userid'])) {
         // Update the order status
         $stmt = $pdo->prepare("UPDATE orders SET status = ?, tracking_number = ?, courier_company = ? WHERE id = ?");
         $stmt->execute([$status, $tracking_number, $courier_company, $order_id]);
+
+        // Fetch buyer's user_id to send a notification
+        $buyerStmt = $pdo->prepare("SELECT user_id, order_code FROM orders WHERE id = ?");
+        $buyerStmt->execute([$order_id]);
+        $buyer = $buyerStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($buyer) {
+            $buyerId = $buyer['user_id'];
+            $orderCode = $buyer['order_code'];
+            
+            $notifMsg = "Your order #$orderCode has been updated to " . strtoupper($status);
+            if ($status === 'shipped' && $tracking_number) {
+                $notifMsg .= " (Tracking: $tracking_number via $courier_company)";
+            }
+            
+            addNotification($conn, $buyerId, $notifMsg, 'info', 'Orders', 'site/order-details.php?id=' . $order_id);
+        }
 
         // If status is delivered or completed, process payouts for this seller's items
         if ($status === 'delivered' || $status === 'completed') {

@@ -56,38 +56,34 @@ include("../include/header.php");
                         <p class="text-sm text-gray-500">@<?php echo htmlspecialchars($user['username']); ?></p>
                     </div>
                     
-                    <div class="p-3 flex flex-col gap-1">
-                        <a href="profile.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                    <div class="p-2 lg:p-3 flex overflow-x-auto lg:flex-col gap-3 lg:gap-1 hide-scrollbar">
+                        <a href="profile.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="far fa-user-circle w-6 text-lg"></i> My Profile
                         </a>
-                        <a href="address-book.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="address-book.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="far fa-address-book w-6 text-lg"></i> Address Book
                         </a>
-                        <a href="my-orders.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm bg-blue-50 text-[#0066FF] transition-colors">
+                        <a href="my-orders.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm bg-blue-50 text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="fas fa-shopping-bag w-6 text-lg"></i> My Orders
                         </a>
-                        <a href="wishlist.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="wishlist.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="far fa-heart w-6 text-lg"></i> Wishlist
                         </a>
-                        <a href="reviews.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="reviews.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="far fa-star w-6 text-lg"></i> My Reviews
                         </a>
-                        <a href="returns.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="returns.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="fas fa-undo-alt w-6 text-lg"></i> My Returns
                         </a>
-                        <a href="coupons.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="coupons.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="fas fa-ticket-alt w-6 text-lg"></i> My Coupons
                         </a>
-                        <a href="recently-viewed.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors border-b border-gray-100 pb-4 mb-1">
+                        <a href="recently-viewed.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap lg:border-b border-gray-100 lg:pb-4 lg:mb-1">
                             <i class="far fa-eye w-6 text-lg"></i> Recently Viewed
                         </a>
                         <?php if($user['user_type'] == 'seller'): ?>
-                        <a href="seller-dashboard.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors mt-2 border-t border-gray-100 pt-3">
+                        <a href="seller-dashboard.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap lg:mt-2 lg:border-t border-gray-100 lg:pt-3">
                             <i class="fas fa-store w-6 text-lg"></i> Seller Dashboard
-                        </a>
-                        <?php else: ?>
-                        <a href="sell-on-oxxa.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors mt-2 border-t border-gray-100 pt-3">
-                            <i class="fas fa-store w-6 text-lg"></i> Sell on OXXA
                         </a>
                         <?php endif; ?>
                     </div>
@@ -135,7 +131,7 @@ include("../include/header.php");
                                     <div class="flex flex-col md:flex-row justify-between gap-4">
                                         <div class="flex items-center gap-4">
                                             <?php if($firstItem && !empty($firstItem['product_image'])): ?>
-                                                <img src="../<?php echo htmlspecialchars($firstItem['product_image']); ?>" class="w-20 h-20 rounded-lg object-cover bg-white border border-gray-200">
+                                                <img src="../assets/uploads/products/<?php echo htmlspecialchars($firstItem['product_image']); ?>" class="w-20 h-20 rounded-lg object-cover bg-white border border-gray-200">
                                             <?php else: ?>
                                                 <div class="w-20 h-20 rounded-lg bg-white border border-gray-200 flex items-center justify-center"><i class="fas fa-box text-gray-300 text-xl"></i></div>
                                             <?php endif; ?>

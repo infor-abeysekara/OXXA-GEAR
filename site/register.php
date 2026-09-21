@@ -233,21 +233,7 @@ include('../include/header.php');
                         </label>
                     </div>
 
-                    <!-- reCAPTCHA Dummy -->
-                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center justify-between mt-4">
-                        <div class="flex items-center gap-3 cursor-pointer" onclick="document.getElementById('regRecaptcha').click()">
-                            <div class="relative flex items-center justify-center">
-                                <input type="checkbox" id="regRecaptcha" required class="peer appearance-none w-6 h-6 border-2 border-gray-300 rounded bg-white checked:bg-[#0A6CFF] checked:border-[#0A6CFF] transition-colors cursor-pointer shadow-inner">
-                                <i class="fas fa-check absolute text-white text-xs opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
-                            </div>
-                            <span class="text-sm font-bold text-navy select-none">I'm not a robot</span>
-                        </div>
-                        <div class="flex flex-col items-center">
-                            <img src="https://www.gstatic.com/recaptcha/api2/logo_48.png" class="w-8 opacity-80" alt="reCAPTCHA">
-                            <span class="text-[8px] text-gray-400 mt-1 font-bold">reCAPTCHA</span>
-                        </div>
-                    </div>
-                    <span id="errRecaptcha" class="text-red-500 text-[10px] mt-1 hidden font-bold"></span>
+
 
                     <!-- Submit Button -->
                     <button type="submit" id="regSubmitBtn" name="register" class="w-full h-[56px] bg-[#0B1120] hover:bg-[#0A6CFF] text-white font-black text-sm uppercase tracking-widest rounded-xl transition-all duration-300 shadow-lg hover:shadow-[0_10px_30px_rgba(10,108,255,0.3)] hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2">

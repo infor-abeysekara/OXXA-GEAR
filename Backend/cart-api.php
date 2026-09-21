@@ -264,7 +264,6 @@ if ($action === 'get_cart') {
     }
 
     // Shipping calculation
-    $freeShippingThreshold = 5000.00;
     
     $allFreeShipping = true;
     foreach ($items as $item) {
@@ -274,9 +273,9 @@ if ($action === 'get_cart') {
         }
     }
 
-    $isFreeShipping = ($subtotal >= $freeShippingThreshold || ($allFreeShipping && count($items) > 0));
+    $isFreeShipping = ($allFreeShipping && count($items) > 0);
     $shippingFee = ($subtotal > 0 && !$isFreeShipping) ? 300.00 : 0.00;
-    $freeShippingRemaining = max(0, $freeShippingThreshold - $subtotal);
+    $freeShippingRemaining = 0;
 
     // Coupon calculation
     $couponDiscount = 0;
@@ -691,6 +690,7 @@ if ($action === 'get_product_variants') {
             $colors[$cid] = [
                 'color_id' => $cid,
                 'color_name' => $row['color_name'] ?: 'Default',
+                'thumbnail_path' => $row['thumbnail_path'] ?? null,
                 'color_image' => !empty($row['color_image']) ? '../assets/uploads/products/' . $row['color_image'] : null,
                 'sizes' => []
             ];

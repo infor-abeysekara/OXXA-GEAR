@@ -68,11 +68,7 @@ include("../include/header.php");
                         </a>
                         <?php if($user['user_type'] == 'seller'): ?>
                         <a href="seller-dashboard.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors mt-2 border-t border-gray-100 pt-3">
-                            <i class="fas fa-store w-6 text-lg"></i> Seller Dashboard
-                        </a>
-                        <?php else: ?>
-                        <a href="sell-on-oxxa.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors mt-2 border-t border-gray-100 pt-3">
-                            <i class="fas fa-store w-6 text-lg"></i> Sell on OXXA
+                            <i class="fas fa-store w-6 text-lg"></i> Dashboard
                         </a>
                         <?php endif; ?>
                     </div>

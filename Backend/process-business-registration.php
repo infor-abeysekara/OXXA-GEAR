@@ -37,8 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     // Business Registration number eke format eka check karanawa
-    if (!$business_reg_id || !preg_match('/^[A-Z]{1,3}-[A-Z]?-?\d{4,6}$/i', $business_reg_id)) {
-        $addError('business_reg_id', 'Invalid BR format.');
+    if (!$business_reg_id || !preg_match('/^[A-Za-z0-9\/\-\. ]{3,30}$/', $business_reg_id)) {
+        $addError('business_reg_id', 'Invalid BR format. Min 3 characters required.');
     } else {
         $business_reg_id = strtoupper($business_reg_id); // auto uppercase
     }
@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $business_phone = trim($_POST['business_phone'] ?? '');
     $business_email = trim($_POST['business_email'] ?? '');
 
-    if (!$owner_name || !preg_match('/^[a-zA-Z\s]{3,100}$/', $owner_name)) {
+    if (!$owner_name || !preg_match('/^[a-zA-Z\s\.\']{3,100}$/', $owner_name)) {
         $addError('owner_name', 'Invalid owner name.');
     }
     // NIC eka old format da new format da kiyala balanawa
@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     $personal_phone = preg_replace('/\D/', '', $personal_phone);
-    if (!$personal_phone || !preg_match('/^07[0-8]\d{7}$/', $personal_phone)) {
+    if (!$personal_phone || !preg_match('/^07[0-9]\d{7}$/', $personal_phone)) {
         $addError('personal_phone', 'Invalid personal SL mobile.');
     }
     $business_phone = preg_replace('/\D/', '', $business_phone);
@@ -131,8 +131,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $estimated_products = trim($_POST['estimated_products'] ?? '');
     $social_website = trim($_POST['social_website'] ?? '');
 
-    if ($social_website && !filter_var($social_website, FILTER_VALIDATE_URL)) {
-        $addError('social_website', 'Invalid URL.');
+    if ($social_website) {
+        if (!preg_match('~^https?://~i', $social_website)) {
+            $social_website = 'https://' . $social_website;
+        }
+        if (!filter_var($social_website, FILTER_VALIDATE_URL)) {
+            $addError('social_website', 'Invalid URL.');
+        }
     }
 
     // 7. Declaration

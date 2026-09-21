@@ -50,7 +50,7 @@ $result = $conn->query($query);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reported Reviews - OXXA GEAR Admin</title>
+    <title>Reported Reviews | OXXA GEAR Control Center</title>
     <link rel="icon" type="image/png" href="../image/oxxa_gear_logo.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -68,9 +68,22 @@ $result = $conn->query($query);
     <?php include("components/sidebar.php"); ?>
 
     <div class="main-content">
-        <div class="d-flex justify-content-between items-center mb-4">
-            <h2 class="fw-bold mb-0">Reported Reviews</h2>
+        <!-- Standardized Page Header -->
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4 pb-1">
+            <div class="d-flex align-items-center gap-3">
+                <span style="width: 42px; height: 42px; border-radius: 12px; background: #EFF6FF; color: #0066FF; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; font-weight: 900; box-shadow: 0 1px 2px rgba(0,0,0,0.05); flex-shrink: 0;">
+                    <i class="fas fa-flag"></i>
+                </span>
+                <div>
+                    <h1 class="d-flex align-items-center gap-2 mb-0" style="font-size: 1.35rem; font-weight: 900; color: #0F172A; letter-spacing: -0.025em; line-height: 1.2;">
+                        Reported Reviews
+                        <span style="font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 9999px; background: #DBEAFE; color: #1E40AF; letter-spacing: 0.05em; text-transform: uppercase;">Trust & Safety</span>
+                    </h1>
+                    <p class="mb-0" style="color: #64748B; font-size: 0.78rem; font-weight: 500; margin-top: 2px;">Customer content moderation, fraudulent feedback screening & community guidelines.</p>
+                </div>
+            </div>
         </div>
+
 
         <?php if(isset($msg)): ?>
             <div class="alert alert-<?php echo $msg_type; ?> alert-dismissible fade show" role="alert">

@@ -121,14 +121,14 @@ foreach ($masterRows as $row) {
                         <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Base Cost Price (Rs) *</label>
                         <div class="relative">
                             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">Rs.</span>
-                            <input type="number" id="baseBuyPrice" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-9 pr-4 text-sm font-bold text-navy focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all" step="0.01" placeholder="0.00">
+                            <input type="number" id="baseBuyPrice" name="cost_price" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-9 pr-4 text-sm font-bold text-navy focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all" step="0.01" placeholder="0.00">
                         </div>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Base Selling Price (Rs) *</label>
                         <div class="relative">
                             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-sm">Rs.</span>
-                            <input type="number" id="baseSellPrice" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-9 pr-4 text-sm font-bold text-navy focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all" step="0.01" placeholder="0.00">
+                            <input type="number" id="baseSellPrice" name="selling_price" class="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-9 pr-4 text-sm font-bold text-navy focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all" step="0.01" placeholder="0.00">
                         </div>
                     </div>
                     <div></div>
@@ -184,23 +184,50 @@ foreach ($masterRows as $row) {
             </script>
 
             <!-- CARD 3: PRODUCT IMAGES (GLOBAL) -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-                <h2 class="text-lg font-black text-navy uppercase tracking-wide mb-6 pb-2 border-b border-gray-100"><i class="fas fa-images text-pink-500 me-2"></i> Product Images</h2>
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8" id="productImagesCard">
+                <div class="flex justify-between items-center mb-6 pb-2 border-b border-gray-100">
+                    <h2 class="text-lg font-black text-navy uppercase tracking-wide mb-0">
+                        <i class="fas fa-images text-pink-500 me-2"></i> Product Images
+                    </h2>
+                    <span id="globalImageCountBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                        0 / 10 photos (Min 1 required)
+                    </span>
+                </div>
                 
                 <div class="mb-4">
-                    <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">Main Images (4 to 10 photos) *</label>
-                    <div class="global-preview-container grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-4">
-                        <!-- Preview Images will appear here -->
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-sm font-bold text-navy uppercase tracking-wide">Main Images (1 to 10 photos) *</label>
+                        <span class="text-xs text-gray-400 font-medium">JPG, PNG, WEBP up to 10MB each</span>
+                    </div>
+
+                    <style>
+                        #globalDropzone * {
+                            pointer-events: none !important;
+                        }
+                    </style>
+
+                    <!-- Grid Preview Container (Holds thumbnails + '+ Add More' slot) -->
+                    <div class="global-preview-container grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-4">
+                        <!-- Uploaded Preview Images will appear here -->
                     </div>
                     
-                    <label class="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-[#0066FF] transition-all group global-file-label">
-                        <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-blue-50 transition-colors">
-                            <i class="fas fa-cloud-upload-alt text-gray-400 text-xl group-hover:text-[#0066FF]"></i>
-                        </div>
-                        <span class="text-sm font-bold text-navy">Drag & drop or click to upload</span>
-                        <span class="text-xs text-gray-400 mt-1">Upload 4-10 images. First image will be primary.</span>
-                        <input type="file" name="product_images[]" multiple required accept="image/*" class="global-file-input hidden">
-                    </label>
+                    <!-- Main Drag & Drop Zone (Visible when 0 images) -->
+                    <div class="global-dropzone-wrapper relative" id="globalDropzoneWrapper">
+                        <label class="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50/40 hover:border-[#0066FF] transition-all group global-file-label text-center" id="globalDropzone" for="globalFileInput">
+                            <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-blue-100 group-hover:scale-110 transition-all dropzone-icon-wrap">
+                                <i class="fas fa-cloud-upload-alt text-gray-400 text-2xl group-hover:text-[#0066FF] dropzone-icon"></i>
+                            </div>
+                            <span class="text-sm font-bold text-navy dropzone-text">Drag & drop photos here, or <span class="text-[#0066FF] underline font-black">browse</span></span>
+                            <span class="text-xs text-gray-400 mt-1.5 dropzone-subtext">Upload 1 to 10 photos. First photo will be the primary store image.</span>
+                        </label>
+                    </div>
+
+                    <!-- Hidden global input placed outside wrapper with sr-only so it stays in form layout DOM unconditionally -->
+                    <input type="file" name="product_images[]" multiple accept="image/*" class="global-file-input sr-only" id="globalFileInput">
+
+                    <div id="imageUploadNotice" class="text-xs text-amber-600 font-bold mt-2 hidden flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
+                        <i class="fas fa-info-circle"></i> <span>Minimum 1 photo required for store listing.</span>
+                    </div>
                 </div>
             </div>
 
@@ -259,5 +286,5 @@ foreach ($masterRows as $row) {
         }
     });
 </script>
-<script src="../assets/js/seller-add-product-colors.js?v=<?= time() ?>_2"></script>
+<script src="../assets/js/seller-add-product-colors.js?v=<?= time() ?>_v4"></script>
 <?php include('../include/footer.php'); ?>

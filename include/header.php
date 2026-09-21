@@ -124,24 +124,39 @@ if (isset($_SESSION['userid'])) {
   <header class="fixed w-full top-0 z-50 bg-white/85 backdrop-blur-md shadow-sm border-b border-gray-100 transition-all duration-300">
     
     <!-- Top Announcement Bar -->
-    <div class="bg-[#0A0A0A] text-white text-xs py-2.5 font-space tracking-widest uppercase font-bold">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center items-center space-x-4 md:space-x-8">
-        <span class="flex items-center"><i class="fas fa-truck-fast text-primary me-2 animate-bounce"></i> Islandwide Delivery</span>
-        <span class="hidden sm:flex items-center"><img src="<?php echo $base_path; ?>image/KOKO_logo.png" class="h-3 w-auto me-2" alt="KOKO"> Pay in 3</span>
-        <span class="flex items-center"><i class="fas fa-shield-check text-primary me-2"></i> 100% Authentic</span>
+    <style>
+      @keyframes topbarMarquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+      .marquee-content { display: flex; width: max-content; animation: topbarMarquee 15s linear infinite; }
+      @media (min-width: 1024px) {
+        .marquee-content { animation: none; width: 100%; justify-content: center; }
+      }
+    </style>
+    <div class="bg-[#0A0A0A] text-white text-xs py-2.5 font-space tracking-widest uppercase font-bold overflow-hidden">
+      <div class="marquee-content px-4 space-x-8">
+        <span class="flex items-center flex-shrink-0"><i class="fas fa-truck-fast text-primary me-2 animate-bounce"></i> Islandwide Delivery</span>
+        <span class="flex items-center flex-shrink-0"><img src="<?php echo $base_path; ?>image/KOKO_logo.png" class="h-3 w-auto me-2" alt="KOKO"> Pay in 3</span>
+        <span class="flex items-center flex-shrink-0"><i class="fas fa-shield-check text-primary me-2"></i> 100% Authentic</span>
+        <!-- Duplicates for seamless scroll on mobile -->
+        <span class="flex lg:hidden items-center flex-shrink-0"><i class="fas fa-truck-fast text-primary me-2 animate-bounce"></i> Islandwide Delivery</span>
+        <span class="flex lg:hidden items-center flex-shrink-0"><img src="<?php echo $base_path; ?>image/KOKO_logo.png" class="h-3 w-auto me-2" alt="KOKO"> Pay in 3</span>
+        <span class="flex lg:hidden items-center flex-shrink-0"><i class="fas fa-shield-check text-primary me-2"></i> 100% Authentic</span>
       </div>
     </div>
 
     <!-- Middle Bar -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[80px] flex items-center justify-between relative">
-        <!-- Logo -->
-        <div class="flex-shrink-0 z-10">
+        <!-- Mobile Menu Toggle & Logo -->
+        <div class="flex items-center gap-3 z-10 flex-shrink-0">
+          <button id="mobileMenuBtn" onclick="toggleMobileMenu()" class="lg:hidden flex items-center justify-center w-10 h-10 text-black -ml-2">
+             <i class="fas fa-bars text-xl"></i>
+          </button>
+          
           <?php
           $current_dir = dirname($_SERVER['PHP_SELF']);
           $base_path = (strpos($current_dir, '/site') !== false) ? '../' : '';
           ?>
           <a href="<?php echo $base_path; ?>index.php" class="flex items-center group">
-            <img src="<?php echo $base_path; ?>image/oxxa_gear_logo.png" alt="OXXA GEAR" class="h-10 md:h-12 w-auto object-contain transform group-hover:scale-105 transition-transform duration-300">
+            <img src="<?php echo $base_path; ?>image/oxxa_gear_logo.png" alt="OXXA GEAR" class="h-8 md:h-12 w-auto object-contain transform group-hover:scale-105 transition-transform duration-300">
           </a>
         </div>
 
@@ -201,7 +216,7 @@ if (isset($_SESSION['userid'])) {
           </button>
           
           <?php if(isset($_SESSION['userid'])): ?>
-            <!-- User Profile Dropdown (Hidden on mobile) -->
+            <!-- User Profile Dropdown -->
             <div class="relative dropdown hidden lg:block">
               <button class="flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-black relative group dropdown-toggle" 
                       data-bs-toggle="dropdown" aria-expanded="false" id="profileDropdown" style="padding: 4px 12px 4px 4px;">
@@ -256,7 +271,7 @@ if (isset($_SESSION['userid'])) {
               </ul>
             </div>
 
-            <!-- Notifications (Hidden on mobile) -->
+            <!-- Notifications -->
             <div class="relative dropdown hidden lg:block">
               <button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group dropdown-toggle" 
                       data-bs-toggle="dropdown" aria-expanded="false" id="notificationDropdown">
@@ -277,7 +292,7 @@ if (isset($_SESSION['userid'])) {
               </ul>
             </div>
 
-            <!-- Cart (Hidden on mobile, visible on desktop) -->
+            <!-- Cart -->
             <?php 
             $cartCount = 0;
             if (isset($_SESSION['userid'])) {
@@ -298,15 +313,15 @@ if (isset($_SESSION['userid'])) {
             </button>
 
           <?php else: ?>
-            <!-- Login (Hidden on mobile) -->
+            <!-- Login -->
             <button onclick="openAuthModal('login')" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
               <i class="far fa-user text-lg group-hover:text-primary transition-colors"></i>
             </button>
             <button onclick="openAuthModal('login')" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group">
               <i class="far fa-bell text-lg group-hover:text-primary transition-colors"></i>
             </button>
-            <!-- Cart (Hidden on mobile, visible on desktop - Guest supported!) -->
-            <button onclick="openCartDrawer()" id="headerCartIconGuest" class="hidden lg:flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group" aria-label="Cart">
+            <!-- Cart -->
+            <button onclick="openCartDrawer()" id="headerCartIconGuest" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors text-black relative group" aria-label="Cart">
               <i class="fas fa-shopping-bag text-lg group-hover:text-primary transition-colors"></i>
               <span class="cart-badge absolute top-0 right-0 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white hidden" id="cartBadge">
                 0
@@ -314,10 +329,6 @@ if (isset($_SESSION['userid'])) {
             </button>
           <?php endif; ?>
           
-          <!-- Hamburger Menu (Mobile) -->
-          <button class="lg:hidden w-10 h-10 flex items-center justify-center text-black hover:text-primary transition-colors" onclick="toggleMobileMenu()">
-            <i class="fas fa-bars text-xl"></i>
-          </button>
         </div>
     </div>
 
@@ -334,20 +345,23 @@ if (isset($_SESSION['userid'])) {
         <i class="fas fa-times text-2xl"></i>
       </button>
     </div>
-    <div class="p-6 overflow-y-auto flex-grow flex flex-col gap-2 font-space font-bold uppercase tracking-wider text-sm">
-      <a href="<?php echo $base_path; ?>site/hot-deals.php" class="flex items-center text-red-600 font-extrabold hover:text-red-700 transition-colors py-3 border-b border-gray-100"><i class="fas fa-fire w-6 text-center me-3 text-red-500 animate-pulse"></i> 🔥 Hot Deals</a>
-      <div class="text-gray-400 text-xs mb-2 mt-2">Categories</div>
-      <a href="<?php echo $base_path; ?>site/products.php?category=Sports+Wear" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="fas fa-tshirt w-6 text-center me-3"></i> Sports Wear</a>
-      <a href="<?php echo $base_path; ?>site/products.php?category=Footwear" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="fas fa-shoe-prints w-6 text-center me-3"></i> Footwear</a>
-      <a href="<?php echo $base_path; ?>site/products.php?category=Fitness+Gym" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="fas fa-dumbbell w-6 text-center me-3"></i> Fitness & Gym</a>
-      <a href="<?php echo $base_path; ?>site/products.php?category=Nutrition" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="fas fa-prescription-bottle-alt w-6 text-center me-3"></i> Nutrition</a>
+    <div class="p-6 overflow-y-auto flex-grow flex flex-col font-space font-bold uppercase tracking-wider text-sm">
+      <a href="<?php echo $base_path; ?>site/hot-deals.php" class="flex items-center text-red-600 font-extrabold hover:text-red-700 hover:bg-red-50 transition-colors px-3 py-3 rounded-xl mb-4 border border-red-100 bg-red-50/50">
+        <i class="fas fa-fire w-6 text-center me-3 text-red-500 animate-pulse"></i> Hot Deals
+      </a>
+      
+      <div class="text-gray-400 text-[10px] tracking-widest mb-2 px-3">Categories</div>
+      <a href="<?php echo $base_path; ?>site/shop.php?category=sports-wear" class="flex items-center text-navy hover:text-[#0066FF] hover:bg-blue-50 transition-colors px-3 py-2.5 rounded-xl"><i class="fas fa-tshirt w-6 text-center me-3 text-gray-400"></i> Sports Wear</a>
+      <a href="<?php echo $base_path; ?>site/shop.php?category=footwear" class="flex items-center text-navy hover:text-[#0066FF] hover:bg-blue-50 transition-colors px-3 py-2.5 rounded-xl"><i class="fas fa-shoe-prints w-6 text-center me-3 text-gray-400"></i> Footwear</a>
+      <a href="<?php echo $base_path; ?>site/shop.php?category=fitness-gym" class="flex items-center text-navy hover:text-[#0066FF] hover:bg-blue-50 transition-colors px-3 py-2.5 rounded-xl"><i class="fas fa-dumbbell w-6 text-center me-3 text-gray-400"></i> Fitness & Gym</a>
+      <a href="<?php echo $base_path; ?>site/shop.php?category=nutrition" class="flex items-center text-navy hover:text-[#0066FF] hover:bg-blue-50 transition-colors px-3 py-2.5 rounded-xl"><i class="fas fa-prescription-bottle-alt w-6 text-center me-3 text-gray-400"></i> Nutrition</a>
       
       <?php if(isset($_SESSION['userid']) && $_SESSION['type'] == 'seller'): ?>
-        <hr class="border-gray-100 my-4">
-        <div class="text-gray-400 text-xs mb-2">Seller Menu</div>
-        <a href="<?php echo $base_path; ?>site/seller-dashboard.php" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="fas fa-chart-line w-6 text-center me-3"></i> Dashboard</a>
-        <a href="<?php echo $base_path; ?>site/business-registration.php" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="far fa-building w-6 text-center me-3"></i> Business</a>
-        <a href="<?php echo $base_path; ?>site/add-product.php" class="flex items-center text-black hover:text-primary transition-colors py-3"><i class="fas fa-plus-circle w-6 text-center me-3"></i> Add Product</a>
+        <hr class="border-gray-100 my-4 mx-3">
+        <div class="text-gray-400 text-[10px] tracking-widest mb-2 px-3">Seller Menu</div>
+        <a href="<?php echo $base_path; ?>site/seller-dashboard.php" class="flex items-center text-navy hover:text-[#0066FF] hover:bg-blue-50 transition-colors px-3 py-2.5 rounded-xl"><i class="fas fa-chart-line w-6 text-center me-3 text-gray-400"></i> Dashboard</a>
+        <a href="<?php echo $base_path; ?>site/business-registration.php" class="flex items-center text-navy hover:text-[#0066FF] hover:bg-blue-50 transition-colors px-3 py-2.5 rounded-xl"><i class="far fa-building w-6 text-center me-3 text-gray-400"></i> Business</a>
+        <a href="<?php echo $base_path; ?>site/seller-add-product.php" class="flex items-center text-navy hover:text-[#0066FF] hover:bg-blue-50 transition-colors px-3 py-2.5 rounded-xl"><i class="fas fa-plus-circle w-6 text-center me-3 text-gray-400"></i> Add Product</a>
       <?php endif; ?>
     </div>
     
@@ -370,7 +384,7 @@ if (isset($_SESSION['userid'])) {
   </div>
   
   <!-- Spacer to prevent content from hiding under fixed header -->
-  <div class="h-[120px] md:h-[80px]"></div>
+  <div class="h-[112px]"></div>
 
   <!-- Mobile Bottom Navigation (5 Icons: Home, Categories, Wishlist, Profile, Cart) -->
   <div class="lg:hidden fixed bottom-0 left-0 w-full bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-[95] border-t border-gray-100 pb-safe">
@@ -419,8 +433,7 @@ if (isset($_SESSION['userid'])) {
       </div>
   </div>
 
-  <!-- Content Spacer for Fixed Header -->
-  <div class="h-16"></div>
+  <!-- Main Content Container -->
   <!-- Main Content Container -->
   <main class="flex-grow-1">
 

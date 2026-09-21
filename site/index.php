@@ -28,17 +28,17 @@ include(__DIR__ . '/../include/header.php');
     
     <!-- Hero Content -->
     <div class="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-4 max-w-4xl mx-auto">
-        <h1 class="text-[1.35rem] leading-tight sm:text-6xl lg:text-7xl font-extrabold text-white uppercase tracking-tight mb-2 sm:mb-6" style="text-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+        <h1 class="text-[32px] leading-tight sm:text-6xl lg:text-7xl font-extrabold text-white uppercase tracking-tight mb-2 sm:mb-6" style="text-shadow: 0 4px 20px rgba(0,0,0,0.5);">
             <span class="block text-primary mb-1 sm:mb-2 text-[10px] sm:text-2xl tracking-widest font-bold">PERFORMANCE STARTS HERE</span>
             Gear Up. Train Hard.<br>
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 text-lg sm:text-6xl">Perform Better.</span>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 text-[24px] sm:text-6xl">Perform Better.</span>
         </h1>
         
         <p class="hidden sm:block text-gray-300 text-lg md:text-xl mb-10 max-w-2xl mx-auto font-medium">
             Discover premium gear for cricket, football, gym, running & every sport. Push your limits with OXXA GEAR.
         </p>
         
-        <div class="mt-4 sm:mt-0 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full px-4 sm:px-0">
+        <div class="mt-4 sm:mt-0 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-[90%] sm:w-full mx-auto sm:px-0">
             <a href="products.php" class="w-full sm:w-auto bg-primary hover:bg-primary-hover text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(22,119,255,0.4)] text-sm sm:text-base">
                 Shop Sports Gear
             </a>
@@ -66,7 +66,6 @@ include(__DIR__ . '/../include/header.php');
             position: relative;
             width: 100%;
             overflow: hidden;
-            display: flex;
             align-items: center;
         }
         .marquee-container::before,
@@ -155,7 +154,8 @@ include(__DIR__ . '/../include/header.php');
         }
         </style>
 
-        <div class="marquee-container container mx-auto">
+        <!-- Desktop Marquee -->
+        <div class="marquee-container container mx-auto hidden md:flex">
             <div class="marquee-track">
                 <?php
                 // Fetch active brands for carousel
@@ -174,6 +174,18 @@ include(__DIR__ . '/../include/header.php');
                 ?>
             </div>
         </div>
+
+        <!-- Mobile Horizontal Scroll (Snap) -->
+        <div class="md:hidden flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-4 px-4 w-full pb-2">
+            <?php
+            foreach ($carouselBrands as $b) {
+                $imageSrc = !empty($b['logo_image']) ? $base_path . 'assets/uploads/brands/' . htmlspecialchars($b['logo_image']) : 'https://via.placeholder.com/130x50?text=' . urlencode($b['name']);
+                echo '<a href="shop.php?brand[]=' . $b['id'] . '" class="brand-card shrink-0 snap-start" title="' . htmlspecialchars($b['name']) . '">';
+                echo '<img src="' . $imageSrc . '" alt="' . htmlspecialchars($b['name']) . '">';
+                echo '</a>';
+            }
+            ?>
+        </div>
     </section>
 
 <!-- Quick Categories Section -->
@@ -185,8 +197,8 @@ include(__DIR__ . '/../include/header.php');
         <div class="w-16 sm:w-24 h-1 bg-primary sm:mx-auto rounded-full"></div>
     </div>
     
-    <!-- Desktop Grid / Mobile Horizontal Chips -->
-    <div class="flex sm:grid sm:grid-cols-3 lg:grid-cols-6 overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-3 sm:gap-4 px-4 sm:px-0 pb-4 sm:pb-0 -mx-4 sm:mx-0">
+    <!-- Desktop & Mobile Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 px-4 sm:px-0 pb-4 sm:pb-0">
         <?php
         $catStmt = $pdo->query("SELECT * FROM categories ORDER BY FIELD(name, 'Sports Wear', 'Footwear', 'Fitness & Gym', 'Nutrition', 'Accessories', 'Equipment')");
         $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -194,22 +206,12 @@ include(__DIR__ . '/../include/header.php');
         foreach ($categories as $cat) {
             $catImage = !empty($cat['image']) ? $base_path . 'assets/uploads/categories/' . htmlspecialchars($cat['image']) : 'https://via.placeholder.com/400x500?text=' . urlencode($cat['name']);
             ?>
-            <!-- Mobile Chip View -->
-            <a href="shop.php?category=<?php echo htmlspecialchars($cat['slug']); ?>" class="sm:hidden flex-shrink-0 snap-start relative rounded-2xl w-32 h-20 overflow-hidden shadow-sm border border-gray-100/20">
-                <img src="<?php echo $catImage; ?>" alt="<?php echo htmlspecialchars($cat['name']); ?>" class="absolute inset-0 w-full h-full object-cover">
-                <div class="absolute inset-0 bg-black/50"></div>
-                <div class="absolute inset-0 flex items-center justify-center p-2 text-center text-white font-space font-bold text-[11px] uppercase tracking-wider leading-tight">
-                    <?php echo htmlspecialchars($cat['name']); ?>
-                </div>
-            </a>
-            
-            <!-- Desktop Grid View -->
-            <a href="shop.php?category=<?php echo htmlspecialchars($cat['slug']); ?>" class="hidden sm:block group relative rounded-2xl overflow-hidden aspect-[4/5] shadow-md hover:shadow-xl transition-all">
+            <a href="shop.php?category=<?php echo htmlspecialchars($cat['slug']); ?>" class="group relative rounded-2xl overflow-hidden h-28 sm:h-auto sm:aspect-[4/5] shadow-md hover:shadow-xl transition-all">
                 <img src="<?php echo $catImage; ?>" alt="<?php echo htmlspecialchars($cat['name']); ?>" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div class="absolute inset-0 flex flex-col items-center justify-end p-4 pb-6 text-center">
-                    <h3 class="text-white font-space font-bold text-lg md:text-xl uppercase tracking-widest mb-2 translate-y-4 group-hover:translate-y-0 transition-transform"><?php echo htmlspecialchars($cat['name']); ?></h3>
-                    <span class="text-primary text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">SHOP NOW &rarr;</span>
+                <div class="absolute inset-0 bg-black/40 sm:bg-gradient-to-t sm:from-black/90 sm:via-black/20 sm:to-transparent sm:opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div class="absolute inset-0 flex flex-col items-center justify-center sm:justify-end p-2 sm:p-4 pb-2 sm:pb-6 text-center">
+                    <h3 class="text-white font-space font-bold text-[12px] sm:text-lg md:text-xl uppercase tracking-widest sm:mb-2 translate-y-0 sm:translate-y-4 sm:group-hover:translate-y-0 transition-transform text-shadow-md leading-tight"><?php echo htmlspecialchars($cat['name']); ?></h3>
+                    <span class="hidden sm:block text-primary text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity">SHOP NOW &rarr;</span>
                 </div>
             </a>
             <?php
@@ -257,7 +259,7 @@ include(__DIR__ . '/../include/header.php');
             ?>
             <!-- Product Card -->
             <div class="group bg-white rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 relative flex flex-col overflow-hidden">
-                <button class="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 w-7 h-7 sm:w-8 sm:h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-gray-400 hover:text-danger hover:bg-white shadow-sm transition-all" onclick="showToast('Added to Wishlist ✓', 'success')">
+                <button class="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 w-7 h-7 sm:w-8 sm:h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-gray-400 hover:text-danger hover:bg-white shadow-sm transition-all" onclick="CartManager.addToWishlist(<?php echo $p['id']; ?>)">
                     <i class="far fa-heart text-sm sm:text-base"></i>
                 </button>
                 <a href="product-details.php?id=<?php echo $p['id']; ?>" class="block relative aspect-square overflow-hidden bg-offwhite">
@@ -271,8 +273,8 @@ include(__DIR__ . '/../include/header.php');
                         <div>
                             <span class="text-navy font-black text-sm sm:text-lg">Rs. <?php echo number_format($p['lowest_price'], 0); ?></span>
                         </div>
-                        <button type="button" onclick="quickAddToCart(<?php echo $p['id']; ?>, this)" class="w-8 h-8 rounded-full bg-navy hover:bg-primary text-white flex items-center justify-center transition-all shadow-sm hover:scale-105" title="Add to Cart">
-                            <i class="fas fa-shopping-bag text-xs"></i>
+                        <button type="button" onclick="quickAddToCart(<?php echo $p['id']; ?>, this)" class="w-11 h-11 sm:w-10 sm:h-10 rounded-full bg-navy hover:bg-primary text-white flex items-center justify-center transition-all shadow-sm hover:scale-105 shrink-0" title="Add to Cart">
+                            <i class="fas fa-shopping-bag text-sm sm:text-xs"></i>
                         </button>
                     </div>
                 </div>
@@ -383,7 +385,7 @@ include(__DIR__ . '/../include/header.php');
                     </div>
                     <h3 class="text-xl font-bold text-navy mb-2">Exclusive Deals Dropping Soon!</h3>
                     <p class="text-gray-600 text-sm max-w-md mx-auto mb-6">Our verified sellers are preparing limited-time clearance deals with up to 50% discount. Check back frequently!</p>
-                    <a href="<?php echo $base_path; ?>site/shop.php" class="inline-flex items-center gap-2 bg-[#0A6CFF] text-white px-6 py-2.5 rounded-full font-bold uppercase text-xs tracking-wider hover:bg-[#0855c9] transition-colors">
+                    <a href="<?php echo $base_path; ?>site/shop.php" class="inline-flex items-center gap-2 bg-[#0A6CFF] text-white px-4 py-3 rounded-full font-bold uppercase text-sm tracking-wider hover:bg-[#0855c9] transition-colors">
                         Browse All Products
                     </a>
                 </div>
@@ -400,44 +402,44 @@ include(__DIR__ . '/../include/header.php');
             <div class="w-16 h-1 bg-primary mx-auto rounded-full"></div>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <!-- Goal 1 -->
-            <a href="products.php?goal=build-strength" class="relative rounded-2xl overflow-hidden h-72 cursor-pointer group shadow-md hover:shadow-xl transition-all">
+            <a href="products.php?goal=build-strength" class="relative rounded-2xl overflow-hidden h-36 sm:h-72 cursor-pointer group shadow-md hover:shadow-xl transition-all">
                 <img src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Build Strength" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                 <div class="absolute inset-0 bg-gradient-to-t from-navy via-navy/50 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300"></div>
-                <div class="absolute inset-0 p-6 flex flex-col justify-end text-left">
-                    <h4 class="text-2xl font-extrabold text-white uppercase tracking-widest mb-1">BUILD STRENGTH</h4>
-                    <p class="text-gray-300 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0">Improve strength & muscle performance</p>
+                <div class="absolute inset-0 p-4 sm:p-6 flex flex-col justify-end text-left">
+                    <h4 class="text-xl sm:text-2xl font-extrabold text-white uppercase tracking-widest mb-1">BUILD STRENGTH</h4>
+                    <p class="text-gray-300 text-xs sm:text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0">Improve strength & muscle performance</p>
                 </div>
             </a>
             
             <!-- Goal 2 -->
-            <a href="products.php?goal=endurance" class="relative rounded-2xl overflow-hidden h-72 cursor-pointer group shadow-md hover:shadow-xl transition-all">
+            <a href="products.php?goal=endurance" class="relative rounded-2xl overflow-hidden h-36 sm:h-72 cursor-pointer group shadow-md hover:shadow-xl transition-all">
                 <img src="https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Endurance" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                 <div class="absolute inset-0 bg-gradient-to-t from-navy via-navy/50 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300"></div>
-                <div class="absolute inset-0 p-6 flex flex-col justify-end text-left">
-                    <h4 class="text-2xl font-extrabold text-white uppercase tracking-widest mb-1">ENDURANCE</h4>
-                    <p class="text-gray-300 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0">Train longer. Go further.</p>
+                <div class="absolute inset-0 p-4 sm:p-6 flex flex-col justify-end text-left">
+                    <h4 class="text-xl sm:text-2xl font-extrabold text-white uppercase tracking-widest mb-1">ENDURANCE</h4>
+                    <p class="text-gray-300 text-xs sm:text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0">Train longer. Go further.</p>
                 </div>
             </a>
             
             <!-- Goal 3 -->
-            <a href="products.php?goal=fitness" class="relative rounded-2xl overflow-hidden h-72 cursor-pointer group shadow-md hover:shadow-xl transition-all">
+            <a href="products.php?goal=fitness" class="relative rounded-2xl overflow-hidden h-36 sm:h-72 cursor-pointer group shadow-md hover:shadow-xl transition-all">
                 <img src="https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Fitness" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                 <div class="absolute inset-0 bg-gradient-to-t from-navy via-navy/50 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300"></div>
-                <div class="absolute inset-0 p-6 flex flex-col justify-end text-left">
-                    <h4 class="text-2xl font-extrabold text-white uppercase tracking-widest mb-1">FITNESS</h4>
-                    <p class="text-gray-300 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0">Everything for your daily training.</p>
+                <div class="absolute inset-0 p-4 sm:p-6 flex flex-col justify-end text-left">
+                    <h4 class="text-xl sm:text-2xl font-extrabold text-white uppercase tracking-widest mb-1">FITNESS</h4>
+                    <p class="text-gray-300 text-xs sm:text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0">Everything for your daily training.</p>
                 </div>
             </a>
             
             <!-- Goal 4 -->
-            <a href="products.php?goal=sports-performance" class="relative rounded-2xl overflow-hidden h-72 cursor-pointer group shadow-md hover:shadow-xl transition-all">
+            <a href="products.php?goal=sports-performance" class="relative rounded-2xl overflow-hidden h-36 sm:h-72 cursor-pointer group shadow-md hover:shadow-xl transition-all">
                 <img src="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Sports Performance" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                 <div class="absolute inset-0 bg-gradient-to-t from-navy via-navy/50 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-300"></div>
-                <div class="absolute inset-0 p-6 flex flex-col justify-end text-left">
-                    <h4 class="text-2xl font-extrabold text-white uppercase tracking-widest mb-1">SPORTS</h4>
-                    <p class="text-gray-300 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0">Gear built for champions.</p>
+                <div class="absolute inset-0 p-4 sm:p-6 flex flex-col justify-end text-left">
+                    <h4 class="text-xl sm:text-2xl font-extrabold text-white uppercase tracking-widest mb-1">SPORTS</h4>
+                    <p class="text-gray-300 text-xs sm:text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-4 group-hover:translate-y-0">Gear built for champions.</p>
                 </div>
             </a>
         </div>
@@ -581,14 +583,13 @@ include(__DIR__ . '/../include/header.php');
             <div class="bg-white p-12">
                 <form id="contactHubForm" class="space-y-6">
                     <div class="relative">
-                        <select id="subject" name="subject" class="block px-2.5 pb-2.5 pt-6 w-full text-sm text-gray-900 bg-transparent rounded-lg border-2 border-gray-200 appearance-none focus:outline-none focus:ring-0 focus:border-primary peer" required>
-                            <option value="" disabled selected></option>
-                            <option value="General Inquiry">General Inquiry</option>
-                            <option value="Order Support">Order Support</option>
-                            <option value="Become a Seller">Become a Seller</option>
-                        </select>
+                        <input type="text" list="subjectOptions" id="subject" name="subject" class="block px-2.5 pb-2.5 pt-6 w-full text-sm text-gray-900 bg-transparent rounded-lg border-2 border-gray-200 appearance-none focus:outline-none focus:ring-0 focus:border-primary peer" placeholder=" " required />
+                        <datalist id="subjectOptions">
+                            <option value="General Inquiry">
+                            <option value="Order Support">
+                            <option value="Become a Seller">
+                        </datalist>
                         <label for="subject" class="absolute text-sm text-gray-500 duration-300 transform -translate-y-3 scale-75 top-4 z-10 origin-[0] left-4 peer-focus:text-primary peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-3 bg-white px-1">Subject</label>
-                        <i class="fas fa-chevron-down absolute right-4 top-5 text-gray-400 pointer-events-none"></i>
                     </div>
 
                     <div class="relative">

@@ -10,7 +10,7 @@ if (!isset($_SESSION['userid']) || $_SESSION['type'] != 'seller') {
 
 if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
     $userid = $_SESSION['userid'];
-    $uploadDir = '../assets/uploads/';
+    $uploadDir = '../image/logos/';
     
     // Check if seller profile exists
     $stmt = $pdo->prepare("SELECT logo_path FROM seller_profiles WHERE user_id = ?");

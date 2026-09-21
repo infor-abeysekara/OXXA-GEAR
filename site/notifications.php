@@ -1,6 +1,11 @@
 <?php
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+include_once('../include/connection.php');
+include_once('../include/functions.php');
+
 $page_title = 'Notifications - OXXA GEAR';
-include('../include/header.php');
 
 // Check if user is logged in
 if (!isset($_SESSION['userid'])) {
@@ -38,7 +43,31 @@ if (isset($_POST['action'])) {
     exit();
 }
 
-// Get notifications
+include('../include/header.php');
+
+// Transparently reassign any misrouted product notifications to their rightful product sellers
+$conn->query("
+    UPDATE notifications n
+    JOIN products p ON (
+        n.message LIKE CONCAT('%Your product ', p.name, ' has been%')
+        OR n.message LIKE CONCAT('%Your product ', p.name, ' is now%')
+        OR n.message LIKE CONCAT('%Your product ', p.name, ' was%')
+    )
+    SET n.user_id = p.seller_id
+    WHERE n.user_id != p.seller_id
+");
+
+// Remove any orphan seller-directed product notifications remaining on admin accounts
+$conn->query("
+    DELETE n FROM notifications n
+    JOIN users u ON n.user_id = u.id
+    WHERE u.user_type = 'admin' 
+      AND (n.message LIKE 'Product Approved! - Your product %' 
+        OR n.message LIKE 'Product Suspended - Your product %'
+        OR n.message LIKE 'Product Rejected - Your product %')
+");
+
+// Get notifications for current logged-in user only
 $notificationsQuery = "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 100";
 $stmt = $conn->prepare($notificationsQuery);
 $stmt->bind_param("s", $user_id);
@@ -75,33 +104,30 @@ while ($row = $notificationsResult->fetch_assoc()) {
 }
 ?>
 
-<div class="bg-[#F8F9FA] min-h-screen py-6 lg:py-10">
+<div class="bg-[#F8F9FA] min-h-screen py-6 lg:py-10 pb-24 md:pb-12">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <!-- Header Section -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+        <div class="flex items-start md:items-center justify-between mb-6 gap-4">
             <div>
-                <h1 class="text-2xl lg:text-3xl font-black text-black font-space flex items-center gap-3">
+                <h1 class="text-2xl lg:text-3xl font-black text-black font-space flex flex-wrap items-center gap-2 md:gap-3">
                     Inbox
                     <?php if ($unread_count > 0): ?>
-                        <span class="bg-primary text-white text-xs px-2.5 py-1 rounded-full font-bold"><?php echo $unread_count; ?> new</span>
+                        <span class="bg-primary text-white text-[10px] md:text-xs px-2.5 py-1 rounded-full font-bold"><?php echo $unread_count; ?> new</span>
                     <?php endif; ?>
                 </h1>
-                <p class="text-gray-500 text-sm mt-1 font-medium">Manage your updates, alerts, and account activity.</p>
+                <p class="text-gray-500 text-xs md:text-sm mt-1.5 font-medium">Manage your updates, alerts, and account activity.</p>
             </div>
             
-            <div class="flex items-center gap-3">
+            <div class="flex shrink-0 items-center gap-3">
                 <?php if ($counts['All'] > 0): ?>
                 <form method="POST" class="m-0">
                     <input type="hidden" name="action" value="mark_all_read">
-                    <button type="submit" class="text-sm font-semibold text-gray-600 hover:text-black transition-colors px-4 py-2 rounded-full hover:bg-gray-200">
+                    <button type="submit" class="text-[11px] md:text-sm font-semibold text-gray-600 hover:text-black transition-colors px-3 md:px-4 py-2 rounded-full hover:bg-gray-200 flex items-center bg-white md:bg-transparent shadow-sm md:shadow-none border border-gray-100 md:border-transparent">
                         <i class="fas fa-check-double me-2"></i>Mark all as read
                     </button>
                 </form>
                 <?php endif; ?>
-                <button class="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors">
-                    <i class="fas fa-cog"></i>
-                </button>
             </div>
         </div>
 
@@ -204,10 +230,10 @@ while ($row = $notificationsResult->fetch_assoc()) {
                                             </a>
                                         <?php endif; ?>
                                         
-                                        <div class="flex items-center gap-3 mt-3">
-                                            <span class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide"><?php echo date('M j, Y • g:i A', strtotime($notif['created_at'])); ?></span>
-                                            <span class="w-1 h-1 rounded-full bg-gray-300"></span>
-                                            <span class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide"><?php echo $category; ?></span>
+                                        <div class="flex flex-wrap items-center gap-2 md:gap-3 mt-3">
+                                            <span class="text-[10px] md:text-[11px] font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap"><?php echo date('M j, Y • g:i A', strtotime($notif['created_at'])); ?></span>
+                                            <span class="hidden md:inline-block w-1 h-1 rounded-full bg-gray-300"></span>
+                                            <span class="text-[10px] md:text-[11px] font-semibold text-primary bg-blue-50/50 px-2 py-0.5 rounded uppercase tracking-wide"><?php echo $category; ?></span>
                                         </div>
                                     </div>
                                     

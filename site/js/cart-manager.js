@@ -25,18 +25,26 @@ const CartManager = {
     // -------------------------------------------------------------
     // PATH & API RESOLUTION
     // -------------------------------------------------------------
+    getBasePath() {
+        const path = window.location.pathname;
+        const siteIdx = path.indexOf('/site/');
+        if (siteIdx !== -1) {
+            return path.substring(0, siteIdx) + '/';
+        }
+        const lastSlash = path.lastIndexOf('/');
+        return lastSlash !== -1 ? path.substring(0, lastSlash + 1) : '/';
+    },
+
     getApiUrl(queryString = '') {
-        const isInsideSite = window.location.pathname.includes('/site/');
-        const base = (isInsideSite ? '../' : './') + 'Backend/cart-api.php';
+        const base = this.getBasePath() + 'Backend/cart-api.php';
         return queryString ? `${base}?${queryString}` : base;
     },
 
     resolveImagePath(imgPath) {
-        if (!imgPath) return (window.location.pathname.includes('/site/') ? '../' : './') + 'image/placeholder.png';
+        if (!imgPath) return this.getBasePath() + 'image/placeholder.png';
         if (imgPath.startsWith('http://') || imgPath.startsWith('https://') || imgPath.startsWith('data:')) return imgPath;
-        const isInsideSite = window.location.pathname.includes('/site/');
         const clean = imgPath.replace(/^(\.\.\/|\.\/)+/, '');
-        return (isInsideSite ? '../' : './') + clean;
+        return this.getBasePath() + clean;
     },
 
     // -------------------------------------------------------------
@@ -230,6 +238,34 @@ const CartManager = {
         }
     },
 
+    async addToWishlist(productId) {
+        if (!this.cartData || !this.cartData.is_logged_in) {
+            this.showToast('Please login to save items to your wishlist', 'info');
+            if (typeof openAuthModal === 'function') openAuthModal('login');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('action', 'add');
+        formData.append('product_id', productId);
+        
+        // Use the new wishlist-api.php or if it's placed in cart-api.php, use that. 
+        // Let's assume we created wishlist-api.php
+        try {
+            // Need to get the correct base path. cart-api uses getApiUrl() which is basePath + 'Backend/cart-api.php'
+            const basePath = this.getApiUrl().replace('cart-api.php', 'wishlist-api.php');
+            const res = await fetch(basePath, { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) {
+                this.showToast(data.message, 'success');
+            } else {
+                this.showToast(data.message, 'error');
+            }
+        } catch (e) {
+            this.showToast('Error adding to wishlist', 'error');
+        }
+    },
+
     // -------------------------------------------------------------
     // QUICK ADD MODAL LOGIC
     // -------------------------------------------------------------
@@ -286,11 +322,25 @@ const CartManager = {
             if (p.colors.length > 1 || (p.colors.length === 1 && p.colors[0].color_name !== 'Default')) {
                 colorSection.classList.remove('hidden');
                 document.getElementById('qaSelectedColorName').innerText = p.colors[0].color_name;
-                colorOptions.innerHTML = p.colors.map((c, idx) => `
-                    <button type="button" onclick="CartManager.selectColor(${idx})" class="qa-color-btn px-3 py-1.5 rounded-xl border-2 text-xs font-bold transition-all ${idx === 0 ? 'border-primary bg-blue-50/50 text-primary' : 'border-gray-200 text-gray-600 hover:border-gray-300'}">
-                        ${c.color_name}
-                    </button>
-                `).join('');
+                colorOptions.innerHTML = p.colors.map((c, idx) => {
+                    const isActive = idx === 0;
+                    const activeClasses = isActive ? 'border-navy ring-2 ring-navy ring-offset-1' : 'border-transparent hover:border-navy focus:border-navy';
+                    let thumbSrc = '';
+                    if (c.thumbnail_path) {
+                        const rawThumb = c.thumbnail_path.includes('assets/') ? c.thumbnail_path : 'assets/uploads/products/' + c.thumbnail_path;
+                        thumbSrc = this.resolveImagePath(rawThumb);
+                    }
+                    const innerHtml = thumbSrc 
+                        ? `<img src="${thumbSrc}" alt="${c.color_name}" class="w-full h-full object-contain mix-blend-multiply p-1" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.classList.remove('hidden');">
+                           <span class="text-[10px] font-bold text-navy text-center leading-tight p-1 hidden">${c.color_name}</span>`
+                        : `<span class="text-[10px] font-bold text-navy text-center leading-tight p-1">${c.color_name}</span>`;
+                    
+                    return `
+                        <button type="button" onclick="CartManager.selectColor(${idx})" title="${c.color_name}" class="qa-color-btn relative rounded-xl border-2 transition-all duration-200 flex items-center justify-center overflow-hidden w-16 h-16 bg-[#F8F9FA] ${activeClasses}">
+                            ${innerHtml}
+                        </button>
+                    `;
+                }).join('');
             } else {
                 colorSection.classList.add('hidden');
             }
@@ -324,14 +374,17 @@ const CartManager = {
         const buttons = document.querySelectorAll('.qa-color-btn');
         buttons.forEach((b, i) => {
             if (i === idx) {
-                b.className = 'qa-color-btn px-3 py-1.5 rounded-xl border-2 text-xs font-bold transition-all border-primary bg-blue-50/50 text-primary';
+                b.className = 'qa-color-btn relative rounded-xl border-2 transition-all duration-200 flex items-center justify-center overflow-hidden w-16 h-16 bg-[#F8F9FA] border-navy ring-2 ring-navy ring-offset-1';
             } else {
-                b.className = 'qa-color-btn px-3 py-1.5 rounded-xl border-2 text-xs font-bold transition-all border-gray-200 text-gray-600 hover:border-gray-300';
+                b.className = 'qa-color-btn relative rounded-xl border-2 transition-all duration-200 flex items-center justify-center overflow-hidden w-16 h-16 bg-[#F8F9FA] border-transparent hover:border-navy focus:border-navy';
             }
         });
 
         if (color.color_image) {
             document.getElementById('qaProductImage').src = this.resolveImagePath(color.color_image);
+        } else if (color.thumbnail_path) {
+            const rawThumb = color.thumbnail_path.includes('assets/') ? color.thumbnail_path : 'assets/uploads/products/' + color.thumbnail_path;
+            document.getElementById('qaProductImage').src = this.resolveImagePath(rawThumb);
         }
 
         this.renderQuickAddSizes(color);
@@ -595,25 +648,6 @@ const CartManager = {
         body.classList.remove('hidden');
         footer.classList.remove('hidden');
         emptyState.classList.add('hidden');
-        document.getElementById('freeShippingBanner').classList.remove('hidden');
-
-        // Free shipping progress bar
-        const fsText = document.getElementById('freeShippingText');
-        const fsBar = document.getElementById('freeShippingBar');
-        const fsPercent = document.getElementById('freeShippingPercent');
-
-        if (data.is_free_shipping) {
-            fsText.innerHTML = '<i class="fas fa-check-circle text-emerald-500"></i> <span class="text-emerald-700 font-bold">🎉 You have unlocked FREE Shipping!</span>';
-            fsBar.style.width = '100%';
-            fsBar.className = 'h-full bg-emerald-500 rounded-full transition-all duration-500';
-            fsPercent.innerText = '100%';
-        } else {
-            const pct = Math.min(100, Math.round((data.subtotal / 5000) * 100));
-            fsText.innerHTML = `<i class="fas fa-truck-fast text-primary"></i> Add <span class="text-primary font-black">Rs. ${Number(data.free_shipping_remaining).toLocaleString()}</span> more for FREE Delivery!`;
-            fsBar.style.width = pct + '%';
-            fsBar.className = 'h-full bg-primary rounded-full transition-all duration-500';
-            fsPercent.innerText = pct + '%';
-        }
 
         // Render Grouped Sellers & Items
         let html = '';
@@ -637,7 +671,7 @@ const CartManager = {
                 const isHot = item.is_hot_deal;
                 const hasPriceChange = item.price_change !== null;
                 const itemImg = this.resolveImagePath(item.image);
-                const detailUrl = (window.location.pathname.includes('/site/') ? '' : 'site/') + `product-details.php?id=${item.product_id}`;
+                const detailUrl = this.getBasePath() + `site/product-details.php?id=${item.product_id}`;
 
                 html += `
                     <div class="flex gap-3.5 items-start relative group">

@@ -128,7 +128,7 @@ if ($currentStatusIndex === false && $order['status'] == 'cancelled') {
                         <div class="border border-gray-100 rounded-xl p-5 flex flex-col md:flex-row justify-between gap-4 bg-gray-50/30">
                             <div class="flex items-center gap-4">
                                 <?php if(!empty($item['product_image'])): ?>
-                                    <img src="../<?php echo htmlspecialchars($item['product_image']); ?>" class="w-20 h-20 rounded-lg object-cover bg-white border border-gray-200">
+                                    <img src="../assets/uploads/products/<?php echo htmlspecialchars($item['product_image']); ?>" class="w-20 h-20 rounded-lg object-cover bg-white border border-gray-200">
                                 <?php else: ?>
                                     <div class="w-20 h-20 rounded-lg bg-white border border-gray-200 flex items-center justify-center"><i class="fas fa-box text-gray-300 text-xl"></i></div>
                                 <?php endif; ?>

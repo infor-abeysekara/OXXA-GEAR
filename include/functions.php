@@ -355,34 +355,31 @@ if (!function_exists('uploadImage')) {
         return null;
     }
 
-    // Add notification with user validation
+    // Add notification with user validation (supports numeric id OR user_code)
     function addNotification($conn, $user_id, $message, $type = 'info', $category = 'System', $action_url = null)
     {
-        // First check if the target user exists
-        $checkQuery = "SELECT id FROM users WHERE id = ?";
+        if (empty($user_id)) {
+            return false;
+        }
+
+        // First check if the target user exists (support numeric id OR user_code)
+        $checkQuery = "SELECT id FROM users WHERE id = ? OR user_code = ? LIMIT 1";
         $checkStmt = $conn->prepare($checkQuery);
-        $checkStmt->bind_param("s", $user_id);
+        $checkStmt->bind_param("ss", $user_id, $user_id);
         $checkStmt->execute();
         $checkResult = $checkStmt->get_result();
         
-        if ($checkResult->num_rows === 0) {
-            // User doesn't exist, try to find any admin user
-            $adminQuery = "SELECT id FROM users WHERE user_type = 'admin' LIMIT 1";
-            $adminResult = mysqli_query($conn, $adminQuery);
-            
-            if ($adminResult && mysqli_num_rows($adminResult) > 0) {
-                $adminRow = mysqli_fetch_assoc($adminResult);
-                $user_id = $adminRow['id'];
-            } else {
-                // No admin found, skip notification
-                return false;
-            }
+        if ($checkRow = $checkResult->fetch_assoc()) {
+            $target_user_id = $checkRow['id'];
+        } else {
+            // Target user does NOT exist. Never route to admin!
+            return false;
         }
         
-        // Now insert the notification
+        // Now insert the notification to the verified target user
         $query = "INSERT INTO notifications (user_id, message, type, category, action_url, created_at) VALUES (?, ?, ?, ?, ?, NOW())";
         $stmt = $conn->prepare($query);
-        $stmt->bind_param("sssss", $user_id, $message, $type, $category, $action_url);
+        $stmt->bind_param("sssss", $target_user_id, $message, $type, $category, $action_url);
         return $stmt->execute();
     }
 

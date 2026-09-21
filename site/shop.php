@@ -1,6 +1,9 @@
 <?php
 $page_title = 'Shop - OXXA GEAR';
-include('../include/header.php');
+include(__DIR__ . '/../include/header.php');
+
+$current_dir = dirname($_SERVER['PHP_SELF']);
+$base_path = (strpos($current_dir, '/site') !== false) ? '../' : '';
 
 $limit = 12;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -197,7 +200,7 @@ function buildFilterUrl($updates) {
                                     <i class="fas fa-check absolute text-white text-[10px] opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
                                 </div>
                                 <?php if($b['logo_image']): ?>
-                                    <img src="../assets/uploads/brands/<?php echo htmlspecialchars($b['logo_image']); ?>" class="w-8 h-8 rounded object-cover" alt="">
+                                    <img src="<?php echo $base_path; ?>assets/uploads/brands/<?php echo htmlspecialchars($b['logo_image']); ?>" class="w-8 h-8 rounded object-cover" alt="" onerror="this.style.display='none'">
                                 <?php else: ?>
                                     <div class="w-8 h-8 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400"><i class="fas fa-tag"></i></div>
                                 <?php endif; ?>
@@ -274,7 +277,7 @@ function buildFilterUrl($updates) {
                             <!-- Image -->
                             <a href="product-details.php?id=<?php echo $p['id']; ?>" class="block relative aspect-square bg-[#F8F9FA] overflow-hidden rounded-t-2xl">
                                 <?php if(!empty($p['image'])): ?>
-                                    <img src="../assets/uploads/products/<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['name']); ?>" class="absolute inset-0 w-full h-full object-cover mix-blend-multiply transition-all duration-500 group-hover:scale-105">
+                                    <img src="<?php echo $base_path; ?>assets/uploads/products/<?php echo htmlspecialchars($p['image']); ?>" alt="<?php echo htmlspecialchars($p['name']); ?>" class="absolute inset-0 w-full h-full object-cover mix-blend-multiply transition-all duration-500 group-hover:scale-105">
                                 <?php else: ?>
                                     <div class="w-full h-full flex items-center justify-center"><i class="fas fa-image text-gray-300 text-3xl"></i></div>
                                 <?php endif; ?>
@@ -627,4 +630,4 @@ function quickAdd(productId, btn = null) {
 }
 </style>
 
-<?php include("../include/footer.php"); ?>
+<?php include(__DIR__ . "/../include/footer.php"); ?>

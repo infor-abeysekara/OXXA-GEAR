@@ -28,10 +28,14 @@ try {
         $city = trim($_POST['city'] ?? 'Colombo'); // Default to Colombo if not passed
         $contact1 = trim($_POST['contact1'] ?? '');
         $contact2 = trim($_POST['contact2'] ?? '');
-        $paymentMethod = trim($_POST['paymentMethod'] ?? 'COD');
+        $paymentMethod = strtoupper(trim($_POST['paymentMethod'] ?? 'COD'));
+        if ($paymentMethod === 'PAYHERE') {
+            $paymentMethod = 'CARD';
+        }
         $couponCode = trim($_POST['coupon_code'] ?? '');
         $couponDiscount = floatval($_POST['discount_amount'] ?? 0);
         
+
         // Validate required fields
         if (empty($customerName) || empty($address) || empty($contact1) || empty($paymentMethod)) {
             echo json_encode(['success' => false, 'message' => 'Please fill all required fields']);
@@ -90,11 +94,70 @@ try {
             }
         }
         
-        $freeShippingThreshold = 5000.00;
-        $isFreeShipping = ($subtotal >= $freeShippingThreshold || ($allFreeShipping && count($cartItems) > 0));
+        $isFreeShipping = ($allFreeShipping && count($cartItems) > 0);
         $deliveryFee = ($subtotal > 0 && !$isFreeShipping) ? 300.00 : 0.00;
 
-        $totalAmount = ($subtotal + $deliveryFee) - $couponDiscount;
+        $netBaseTotal = ($subtotal + $deliveryFee) - $couponDiscount;
+        if ($netBaseTotal < 0) $netBaseTotal = 0;
+
+        // Payment details & Gateway Fee
+        $gatewayFee = 0.00;
+        $paymentStatus = 'pending';
+        $gatewayName = 'COD';
+        $cardLast4 = null;
+        $cardType = null;
+        $kokoOrderId = null;
+        $kokoInstallments = null;
+        $bankSlipPath = null;
+        $codCollected = 0;
+
+        if ($paymentMethod === 'CARD') {
+            $gatewayName = 'PayHere';
+            $gatewayFee = round($netBaseTotal * 0.03, 2); // 3.0% gateway fee
+            $paymentStatus = 'paid';
+            $rawCardNum = preg_replace('/\s+/', '', $_POST['cardNumber'] ?? '4242424242424242');
+            $cardLast4 = substr($rawCardNum, -4) ?: '4242';
+            $firstDigit = substr($rawCardNum, 0, 1);
+            $cardType = ($firstDigit === '5') ? 'Mastercard' : (($firstDigit === '3') ? 'Amex' : 'Visa');
+        } elseif ($paymentMethod === 'KOKO') {
+            $gatewayName = 'KOKO Pay in 3';
+            $gatewayFee = round($netBaseTotal * 0.05, 2); // 5.0% gateway fee
+            $paymentStatus = 'paid';
+            $kokoOrderId = 'KOKO-' . date('Ymd') . rand(1000, 9999);
+            $installmentAmount = round(($netBaseTotal + $gatewayFee) / 3, 2);
+            $kokoInstallments = json_encode([
+                ['installment' => 1, 'amount' => $installmentAmount, 'due' => date('Y-m-d'), 'status' => 'Paid Today'],
+                ['installment' => 2, 'amount' => $installmentAmount, 'due' => date('Y-m-d', strtotime('+30 days')), 'status' => 'Upcoming (Month 1)'],
+                ['installment' => 3, 'amount' => $installmentAmount, 'due' => date('Y-m-d', strtotime('+60 days')), 'status' => 'Upcoming (Month 2)']
+            ]);
+        } elseif ($paymentMethod === 'BANK') {
+            $gatewayName = 'Bank Transfer';
+            $gatewayFee = 0.00;
+            $paymentStatus = 'pending_verification';
+
+            // Check if slip is uploaded
+            if (isset($_FILES['bankSlip']) && $_FILES['bankSlip']['error'] === UPLOAD_ERR_OK) {
+                $uploadDir = __DIR__ . '/../assets/uploads/slips/';
+                if (!is_dir($uploadDir)) {
+                    @mkdir($uploadDir, 0777, true);
+                }
+                $fileExt = pathinfo($_FILES['bankSlip']['name'], PATHINFO_EXTENSION);
+                $slipFileName = 'slip_' . time() . '_' . rand(100, 999) . '.' . $fileExt;
+                $targetFile = $uploadDir . $slipFileName;
+                if (move_uploaded_file($_FILES['bankSlip']['tmp_name'], $targetFile)) {
+                    $bankSlipPath = 'assets/uploads/slips/' . $slipFileName;
+                }
+            }
+        } else {
+            // COD
+            $paymentMethod = 'COD';
+            $gatewayName = 'COD';
+            $gatewayFee = 0.00;
+            $paymentStatus = 'pending';
+            $codCollected = 0;
+        }
+
+        $totalAmount = $netBaseTotal + $gatewayFee;
 
         // DB Transaction
         $pdo->beginTransaction();
@@ -110,10 +173,20 @@ try {
 
             // 2. Insert into orders (Header)
             $orderStmt = $pdo->prepare("
-                INSERT INTO orders (order_code, user_id, shipping_address_id, subtotal, delivery_fee, coupon_code, coupon_discount, total_amount, payment_method, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+                INSERT INTO orders (
+                    order_code, user_id, shipping_address_id, subtotal, delivery_fee, 
+                    coupon_code, coupon_discount, total_amount, payment_method, 
+                    payment_status, gateway, gateway_fee, card_last4, card_type, 
+                    koko_order_id, koko_installments, cod_collected, bank_slip_path, status
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
             ");
-            $orderStmt->execute([$orderCode, $user_id, $addressId, $subtotal, $deliveryFee, $couponCode, $couponDiscount, $totalAmount, $paymentMethod]);
+            $orderStmt->execute([
+                $orderCode, $user_id, $addressId, $subtotal, $deliveryFee, 
+                $couponCode, $couponDiscount, $totalAmount, $paymentMethod,
+                $paymentStatus, $gatewayName, $gatewayFee, $cardLast4, $cardType,
+                $kokoOrderId, $kokoInstallments, $codCollected, $bankSlipPath
+            ]);
             $orderId = $pdo->lastInsertId();
 
             // Calculate order-level discount ratio for proportional item distribution
@@ -131,7 +204,8 @@ try {
                 }
                 
                 $oxxa_fee = $profit * 0.10;
-                $seller_earning = $effective_unit_price - $oxxa_fee;
+                // As per requirement: Cost price + Profit * 90%
+                $seller_earning = $cost_price + ($profit * 0.90);
                 
                 // Insert line item
                 $itemStmt = $pdo->prepare("
@@ -154,6 +228,30 @@ try {
                     $oxxa_fee,
                     $seller_earning
                 ]);
+                $orderItemId = $pdo->lastInsertId();
+
+                // Record in seller_payouts for finance tracking
+                try {
+                    $itemGatewayFee = ($subtotal > 0 && $gatewayFee > 0) ? round(($item['total_price'] / $subtotal) * $gatewayFee, 2) : 0.00;
+                    $sellerPayoutStatus = ($paymentStatus === 'paid') ? 'pending' : 'locked';
+                    $spStmt = $pdo->prepare("
+                        INSERT INTO seller_payouts (seller_id, order_item_id, selling_price, cost_price, profit, admin_commission, gateway_fee, seller_earning, payout_status, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                    ");
+                    $spStmt->execute([
+                        $item['seller_id'],
+                        $orderItemId,
+                        $item['total_price'],
+                        $cost_price * $item['quantity'],
+                        $profit * $item['quantity'],
+                        $oxxa_fee * $item['quantity'],
+                        $itemGatewayFee,
+                        $seller_earning * $item['quantity'],
+                        $sellerPayoutStatus
+                    ]);
+                } catch (Exception $payoutEx) {
+                    // Fail-safe if seller_payouts already tracked elsewhere
+                }
 
                 // Update product stock
                 if ($item['variant_id']) {
@@ -186,6 +284,12 @@ try {
             echo json_encode([
                 'success' => true, 
                 'message' => 'Order placed successfully!',
+                'orderCode' => $orderCode,
+                'date' => date('M d, Y'),
+                'totalAmount' => number_format($totalAmount, 2),
+                'paymentMethod' => $paymentMethod,
+                'gatewayFee' => number_format($gatewayFee, 2),
+                'status' => ($paymentStatus === 'paid' ? 'Paid' : ($paymentStatus === 'pending_verification' ? 'Pending Slip Verification' : 'Pending')),
                 'redirect' => 'order-success.php?id=' . $orderCode
             ]);
 

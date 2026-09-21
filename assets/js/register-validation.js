@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const password = document.getElementById('regPassword');
     const confirm = document.getElementById('regConfirm');
     const terms = document.getElementById('regTerms');
-    const recaptcha = document.getElementById('regRecaptcha');
     const submitBtn = document.getElementById('regSubmitBtn');
     
     // Photo
@@ -34,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
         password: false,
         confirm: false,
         terms: false,
-        recaptcha: false,
         photo: true // Optional initially, but validated if uploaded
     };
 
@@ -363,16 +361,6 @@ document.addEventListener('DOMContentLoaded', () => {
         validateForm();
     });
 
-    recaptcha.addEventListener('change', (e) => {
-        validState.recaptcha = e.target.checked;
-        if(!e.target.checked) {
-            showError('Recaptcha', 'Please complete the bot check');
-        } else {
-            document.getElementById('errRecaptcha').classList.add('hidden');
-        }
-        validateForm();
-    });
-    
     // Initial State Check
     validateForm();
     

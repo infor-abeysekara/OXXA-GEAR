@@ -43,6 +43,16 @@ $autoEmail = $currentUser['email'] ?? '';
             <p class="text-slate mt-1">Complete your business verification to start selling.</p>
         </div>
 
+        <?php if (isset($_SESSION['info'])): ?>
+            <div class="bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-xl mb-8 flex items-start shadow-sm">
+                <i class="fas fa-info-circle mt-1 me-3 text-xl text-blue-600"></i>
+                <div>
+                    <h4 class="font-bold">Action Required: Complete Verification</h4>
+                    <p class="text-sm mt-1"><?php echo htmlspecialchars($_SESSION['info']); unset($_SESSION['info']); ?></p>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <?php if (isset($_GET['success'])): ?>
             <div class="bg-green-50 border border-green-200 text-green-700 px-6 py-4 rounded-xl mb-8 flex items-start">
                 <i class="fas fa-check-circle mt-1 me-3 text-xl"></i>
@@ -122,10 +132,10 @@ $autoEmail = $currentUser['email'] ?? '';
                                 <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-8 bg-gray-50 p-5 rounded-xl border border-gray-100">
                                     <form action="../Backend/update-business-logo.php" method="POST" enctype="multipart/form-data" class="relative group cursor-pointer shrink-0" onclick="document.getElementById('biz_logo_verified').click()">
                                         <?php 
-                                        $logo_exists = !empty($business['logo_path']) && file_exists('../assets/uploads/' . $business['logo_path']);
+                                        $logo_exists = !empty($business['logo_path']) && file_exists('../image/logos/' . $business['logo_path']);
                                         if ($logo_exists): 
                                         ?>
-                                            <img src="../assets/uploads/<?= htmlspecialchars($business['logo_path']) ?>" class="w-20 h-20 rounded-full object-cover ring-4 ring-white shadow-sm group-hover:opacity-80 transition-opacity">
+                                            <img src="../image/logos/<?= htmlspecialchars($business['logo_path']) ?>" class="w-20 h-20 rounded-full object-cover ring-4 ring-white shadow-sm group-hover:opacity-80 transition-opacity">
                                         <?php else: ?>
                                             <div class="w-20 h-20 rounded-full bg-[#0066FF] text-white flex items-center justify-center text-3xl font-black shadow-sm ring-4 ring-white group-hover:opacity-80 transition-opacity">
                                                 <?= strtoupper(substr($business['business_name'], 0, 1)) ?>
@@ -164,21 +174,34 @@ $autoEmail = $currentUser['email'] ?? '';
                                     </div>
                                     <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
                                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Owner NIC</p>
-                                        <p class="text-navy font-semibold"><?= htmlspecialchars($business['owner_nic']) ?></p>
+                                        <p class="text-navy font-semibold flex items-center justify-between gap-2">
+                                            <span><?= htmlspecialchars($business['owner_nic']) ?></span>
+                                            <?php if(!empty($business['nic_path'])): ?>
+                                                <a href="../assets/uploads/<?= htmlspecialchars($business['nic_path']) ?>" target="_blank" class="text-[#0066FF] hover:underline text-[10px] uppercase font-bold bg-blue-50 px-2 py-0.5 rounded">View Copy</a>
+                                            <?php endif; ?>
+                                        </p>
                                     </div>
                                     <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
                                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Business Phone</p>
-                                        <p class="text-navy font-semibold"><?= htmlspecialchars($business['business_number'] ?: $business['personal_phone']) ?></p>
+                                        <p class="text-navy font-semibold"><?= htmlspecialchars($business['business_number'] ?: 'Not Provided') ?></p>
+                                    </div>
+                                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Personal Phone</p>
+                                        <p class="text-navy font-semibold"><?= htmlspecialchars($business['personal_phone']) ?></p>
                                     </div>
                                     <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
                                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Business Email</p>
-                                        <p class="text-navy font-semibold break-all"><?= htmlspecialchars($business['business_email'] ?: $business['personal_email']) ?></p>
+                                        <p class="text-navy font-semibold break-all"><?= htmlspecialchars($business['business_email'] ?: 'Not Provided') ?></p>
+                                    </div>
+                                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Personal Email</p>
+                                        <p class="text-navy font-semibold break-all"><?= htmlspecialchars($business['personal_email']) ?></p>
                                     </div>
                                     <div class="sm:col-span-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
                                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Registered Address</p>
                                         <p class="text-navy font-semibold">
                                             <?= htmlspecialchars($business['address_line1']) ?><?= !empty($business['address_line2']) ? ', ' . htmlspecialchars($business['address_line2']) : '' ?>,
-                                            <?= htmlspecialchars($business['city']) ?>, <?= htmlspecialchars($business['province']) ?>
+                                            <?= htmlspecialchars($business['city']) ?>, <?= htmlspecialchars($business['district']) ?>, <?= htmlspecialchars($business['province']) ?> - <?= htmlspecialchars($business['postal_code']) ?>
                                         </p>
                                     </div>
                                     <div class="sm:col-span-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
@@ -235,7 +258,7 @@ $autoEmail = $currentUser['email'] ?? '';
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Business Name <span class="text-red-500">*</span></label>
-                                                <input type="text" name="business_name" value="<?= htmlspecialchars($business['business_name']) ?>" required class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <input type="text" name="business_name" value="<?= htmlspecialchars($business['business_name']) ?>" required class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">BR Number <i class="fas fa-lock text-gray-400 ms-1" title="Cannot be changed"></i></label>
@@ -243,7 +266,7 @@ $autoEmail = $currentUser['email'] ?? '';
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Business Type <span class="text-red-500">*</span></label>
-                                                <select name="business_type" required class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <select name="business_type" required class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                                     <option value="Sole Proprietorship" <?= $business['business_type'] == 'Sole Proprietorship' ? 'selected' : '' ?>>Sole Proprietorship</option>
                                                     <option value="Partnership" <?= $business['business_type'] == 'Partnership' ? 'selected' : '' ?>>Partnership</option>
                                                     <option value="Private Limited Company" <?= $business['business_type'] == 'Private Limited Company' ? 'selected' : '' ?>>Private Limited Company</option>
@@ -251,7 +274,7 @@ $autoEmail = $currentUser['email'] ?? '';
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Nature of Business <span class="text-red-500">*</span></label>
-                                                <select name="nature_of_business" required class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <select name="nature_of_business" required class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                                     <option value="Retail" <?= $business['nature_of_business'] == 'Retail' ? 'selected' : '' ?>>Retail</option>
                                                     <option value="Wholesale" <?= $business['nature_of_business'] == 'Wholesale' ? 'selected' : '' ?>>Wholesale</option>
                                                     <option value="Manufacturer" <?= $business['nature_of_business'] == 'Manufacturer' ? 'selected' : '' ?>>Manufacturer</option>
@@ -267,7 +290,7 @@ $autoEmail = $currentUser['email'] ?? '';
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Owner Name <span class="text-red-500">*</span></label>
-                                                <input type="text" name="owner_name" value="<?= htmlspecialchars($business['owner_name']) ?>" required class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <input type="text" name="owner_name" value="<?= htmlspecialchars($business['owner_name']) ?>" required class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Owner NIC <i class="fas fa-lock text-gray-400 ms-1" title="Cannot be changed"></i></label>
@@ -275,19 +298,19 @@ $autoEmail = $currentUser['email'] ?? '';
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Personal Phone <span class="text-red-500">*</span></label>
-                                                <input type="text" name="personal_phone" value="<?= htmlspecialchars($business['personal_phone']) ?>" required class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <input type="text" name="personal_phone" value="<?= htmlspecialchars($business['personal_phone']) ?>" required class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Business Phone</label>
-                                                <input type="text" name="business_number" value="<?= htmlspecialchars($business['business_number']) ?>" class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <input type="text" name="business_number" value="<?= htmlspecialchars($business['business_number']) ?>" class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Personal Email <span class="text-red-500">*</span></label>
-                                                <input type="email" name="personal_email" value="<?= htmlspecialchars($business['personal_email']) ?>" required class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <input type="email" name="personal_email" value="<?= htmlspecialchars($business['personal_email']) ?>" required class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Business Email</label>
-                                                <input type="email" name="business_email" value="<?= htmlspecialchars($business['business_email']) ?>" class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <input type="email" name="business_email" value="<?= htmlspecialchars($business['business_email']) ?>" class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                             </div>
                                         </div>
                                     </div>
@@ -298,23 +321,23 @@ $autoEmail = $currentUser['email'] ?? '';
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div class="sm:col-span-2">
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Address Line 1 <span class="text-red-500">*</span></label>
-                                                <input type="text" name="address_line1" value="<?= htmlspecialchars($business['address_line1']) ?>" required class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <input type="text" name="address_line1" value="<?= htmlspecialchars($business['address_line1']) ?>" required class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                             </div>
                                             <div class="sm:col-span-2">
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Address Line 2</label>
-                                                <input type="text" name="address_line2" value="<?= htmlspecialchars($business['address_line2']) ?>" class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <input type="text" name="address_line2" value="<?= htmlspecialchars($business['address_line2']) ?>" class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">City <span class="text-red-500">*</span></label>
-                                                <input type="text" name="city" value="<?= htmlspecialchars($business['city']) ?>" required class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <input type="text" name="city" value="<?= htmlspecialchars($business['city']) ?>" required class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Postal Code <span class="text-red-500">*</span></label>
-                                                <input type="text" name="postal_code" value="<?= htmlspecialchars($business['postal_code']) ?>" required class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <input type="text" name="postal_code" value="<?= htmlspecialchars($business['postal_code']) ?>" required class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                             </div>
                                             <div class="sm:col-span-2">
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Province <span class="text-red-500">*</span></label>
-                                                <select name="province" required class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <select name="province" required class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                                     <?php foreach($provinces as $prov): ?>
                                                         <option value="<?= htmlspecialchars($prov) ?>" <?= $business['province'] == $prov ? 'selected' : '' ?>><?= htmlspecialchars($prov) ?></option>
                                                     <?php endforeach; ?>
@@ -329,7 +352,7 @@ $autoEmail = $currentUser['email'] ?? '';
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Bank Name <span class="text-red-500">*</span></label>
-                                                <select name="bank_name" required class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <select name="bank_name" required class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                                     <option value="Commercial Bank" <?= ($business['bank_name'] ?? '') == 'Commercial Bank' ? 'selected' : '' ?>>Commercial Bank</option>
                                                     <option value="Bank of Ceylon" <?= ($business['bank_name'] ?? '') == 'Bank of Ceylon' ? 'selected' : '' ?>>Bank of Ceylon</option>
                                                     <option value="People\'s Bank" <?= ($business['bank_name'] ?? '') == 'People\'s Bank' ? 'selected' : '' ?>>People's Bank</option>
@@ -341,15 +364,15 @@ $autoEmail = $currentUser['email'] ?? '';
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Branch Name <span class="text-red-500">*</span></label>
-                                                <input type="text" name="branch_name" value="<?= htmlspecialchars($business['branch_name'] ?? '') ?>" required class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <input type="text" name="branch_name" value="<?= htmlspecialchars($business['branch_name'] ?? '') ?>" required class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Account Number <span class="text-red-500">*</span></label>
-                                                <input type="text" name="account_number" value="<?= htmlspecialchars($business['account_number'] ?? '') ?>" required class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <input type="text" name="account_number" value="<?= htmlspecialchars($business['account_number'] ?? '') ?>" required class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-1">Account Holder Name <span class="text-red-500">*</span></label>
-                                                <input type="text" name="account_holder_name" value="<?= htmlspecialchars($business['account_holder_name'] ?? '') ?>" required class="w-full border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                                <input type="text" name="account_holder_name" value="<?= htmlspecialchars($business['account_holder_name'] ?? '') ?>" required class="w-full bg-white border border-gray-200 rounded-xl py-2 px-3 text-sm focus:ring-[#0066FF] focus:border-[#0066FF]">
                                             </div>
                                         </div>
                                     </div>
@@ -503,13 +526,13 @@ $autoEmail = $currentUser['email'] ?? '';
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Business Name <span class="text-red-500">*</span></label>
-                                <input type="text" id="business_name" name="business_name" required placeholder="e.g. Ravindu Sports" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="business_name" name="business_name" required placeholder="e.g. Zenith Sports" class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_business_name"></span>
                                 <p class="text-xs text-gray-400 mt-1">This name will be displayed on your OXXA shop.</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Business Type <span class="text-red-500">*</span></label>
-                                <select id="business_type" name="business_type" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <select id="business_type" name="business_type" required class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                     <option value="" disabled selected>Select Type</option>
                                     <option value="Sole Proprietorship">Sole Proprietorship</option>
                                     <option value="Partnership">Partnership</option>
@@ -519,17 +542,18 @@ $autoEmail = $currentUser['email'] ?? '';
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Business Registration Number (BR) <span class="text-red-500">*</span></label>
-                                <input type="text" id="br_number" name="business_reg_id" required placeholder="e.g. WP-C-32194" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF] uppercase">
+                                <input type="text" id="br_number" name="business_reg_id" required placeholder="e.g. WP-C-32194" class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF] uppercase">
+                                <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_br_number"></span>
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_business_reg_id"></span>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Date of Incorporation <span class="text-red-500">*</span></label>
-                                <input type="date" id="date_of_incorporation" name="date_of_incorporation" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="date" id="date_of_incorporation" name="date_of_incorporation" required class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_date_of_incorporation"></span>
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Nature of Business <span class="text-red-500">*</span></label>
-                                <select id="nature_of_business" name="nature_of_business" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <select id="nature_of_business" name="nature_of_business" required class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                     <option value="" disabled selected>Select Category</option>
                                     <option value="Retail">Retail</option>
                                     <option value="Wholesale">Wholesale</option>
@@ -550,32 +574,32 @@ $autoEmail = $currentUser['email'] ?? '';
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Owner Full Name <span class="text-red-500">*</span></label>
-                                <input type="text" id="owner_name" name="owner_name" value="<?php echo htmlspecialchars($autoFullName); ?>" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="owner_name" name="owner_name" value="<?php echo htmlspecialchars($autoFullName); ?>" required class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_owner_name"></span>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">NIC Number <span class="text-red-500">*</span></label>
-                                <input type="text" id="owner_nic" name="owner_nic" required placeholder="e.g. 199012345678 or 901234567V" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF] uppercase">
+                                <input type="text" id="owner_nic" name="owner_nic" required placeholder="e.g. 199012345678 or 901234567V" class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF] uppercase">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_owner_nic"></span>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Personal Phone <span class="text-red-500">*</span></label>
-                                <input type="text" id="personal_phone" name="personal_phone" value="<?php echo htmlspecialchars($autoPhone); ?>" required placeholder="07XXXXXXXX" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)" inputmode="numeric" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="personal_phone" name="personal_phone" value="<?php echo htmlspecialchars($autoPhone); ?>" required placeholder="07XXXXXXXX" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)" inputmode="numeric" class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_personal_phone"></span>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Personal Email <span class="text-red-500">*</span></label>
-                                <input type="email" id="personal_email" name="personal_email" value="<?php echo htmlspecialchars($autoEmail); ?>" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="email" id="personal_email" name="personal_email" value="<?php echo htmlspecialchars($autoEmail); ?>" required class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_personal_email"></span>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Business Phone <span class="text-red-500">*</span></label>
-                                <input type="text" id="business_phone" name="business_phone" required placeholder="011XXXXXXX" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)" inputmode="numeric" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="business_phone" name="business_phone" required placeholder="011XXXXXXX" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)" inputmode="numeric" class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_business_phone"></span>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Business Email <span class="text-gray-400 text-xs normal-case">(Optional)</span></label>
-                                <input type="email" id="business_email" name="business_email" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="email" id="business_email" name="business_email" class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_business_email"></span>
                             </div>
                         </div>
@@ -590,19 +614,19 @@ $autoEmail = $currentUser['email'] ?? '';
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Address Line 1 <span class="text-red-500">*</span></label>
-                                <input type="text" id="address_line1" name="address_line1" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="address_line1" name="address_line1" required class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_address_line1"></span>
                             </div>
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Address Line 2 <span class="text-gray-400 text-xs normal-case">(Optional)</span></label>
-                                <input type="text" id="address_line2" name="address_line2" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="address_line2" name="address_line2" class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_address_line2"></span>
                             </div>
 
                             <!-- Province -->
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Province <span class="text-red-500">*</span></label>
-                                <select id="province" name="province" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <select id="province" name="province" required class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                     <option value="" disabled selected>Select Province</option>
                                     <?php foreach($provinces as $prov): ?>
                                         <option value="<?php echo htmlspecialchars($prov); ?>"><?php echo htmlspecialchars($prov); ?></option>
@@ -614,7 +638,7 @@ $autoEmail = $currentUser['email'] ?? '';
                             <!-- District -->
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">District <span class="text-red-500">*</span></label>
-                                <select id="district" name="district" required disabled class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF] disabled:opacity-50 disabled:cursor-not-allowed">
+                                <select id="district" name="district" required disabled class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF] disabled:opacity-50 disabled:cursor-not-allowed">
                                     <option value="" disabled selected>Select District</option>
                                 </select>
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_district"></span>
@@ -623,7 +647,7 @@ $autoEmail = $currentUser['email'] ?? '';
                             <!-- City -->
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">City <span class="text-red-500">*</span></label>
-                                <select id="city" name="city" required disabled class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF] disabled:opacity-50 disabled:cursor-not-allowed">
+                                <select id="city" name="city" required disabled class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF] disabled:opacity-50 disabled:cursor-not-allowed">
                                     <option value="" disabled selected>Select City</option>
                                 </select>
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_city"></span>
@@ -632,7 +656,7 @@ $autoEmail = $currentUser['email'] ?? '';
                             <!-- Postal Code -->
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Postal Code <span class="text-red-500">*</span></label>
-                                <input type="text" id="postal_code" name="postal_code" required maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,5)" inputmode="numeric" placeholder="e.g. 00500" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="postal_code" name="postal_code" required maxlength="5" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,5)" inputmode="numeric" placeholder="e.g. 00500" class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_postal_code"></span>
                             </div>
                         </div>
@@ -789,7 +813,7 @@ $autoEmail = $currentUser['email'] ?? '';
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100">
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Bank Name <span class="text-red-500">*</span></label>
-                                <select id="bank_name" name="bank_name" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <select id="bank_name" name="bank_name" required class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                     <option value="" disabled selected>Select Bank</option>
                                     <option value="Commercial Bank">Commercial Bank</option>
                                     <option value="Bank of Ceylon">Bank of Ceylon</option>
@@ -803,17 +827,17 @@ $autoEmail = $currentUser['email'] ?? '';
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Branch Name <span class="text-red-500">*</span></label>
-                                <input type="text" id="branch_name" name="branch_name" required class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="branch_name" name="branch_name" required class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_branch_name"></span>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Account Number <span class="text-red-500">*</span></label>
-                                <input type="text" id="account_number" name="account_number" required placeholder="Digits only (10-16 digits)" maxlength="16" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,16)" inputmode="numeric" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="account_number" name="account_number" required placeholder="Digits only (10-16 digits)" maxlength="16" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,16)" inputmode="numeric" class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_account_number"></span>
                             </div>
                             <div>
                                 <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Account Holder Name <span class="text-red-500">*</span></label>
-                                <input type="text" id="account_holder_name" name="account_holder_name" required placeholder="Must match BR Name" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                <input type="text" id="account_holder_name" name="account_holder_name" required placeholder="Must match BR Name" class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                 <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_account_holder_name"></span>
                             </div>
                             
@@ -858,7 +882,7 @@ $autoEmail = $currentUser['email'] ?? '';
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2">
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Estimated Monthly Products</label>
-                                    <select id="estimated_products" name="estimated_products" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                    <select id="estimated_products" name="estimated_products" class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                         <option value="1-50">1 - 50 items</option>
                                         <option value="51-200">51 - 200 items</option>
                                         <option value="200+">200+ items</option>
@@ -866,7 +890,7 @@ $autoEmail = $currentUser['email'] ?? '';
                                 </div>
                                 <div>
                                     <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Website / Facebook Page <span class="text-gray-400 text-xs normal-case">(Optional)</span></label>
-                                    <input type="url" id="social_website" name="social_website" placeholder="https://" class="w-full border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
+                                    <input type="url" id="social_website" name="social_website" placeholder="https://" class="w-full bg-white border border-gray-200 rounded-xl py-3 px-4 focus:ring-[#0066FF] focus:border-[#0066FF]">
                                     <span class="error-msg text-red-500 text-[12px] mt-1 hidden font-bold block" id="err_social_website"></span>
                                 </div>
                             </div>

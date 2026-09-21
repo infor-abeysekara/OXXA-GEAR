@@ -64,39 +64,35 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     
                     <!-- Menu -->
-                    <div class="p-3 flex flex-col gap-1">
-                        <a href="profile.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm transition-colors <?php echo !$isEditMode ? 'bg-blue-50 text-[#0066FF]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#0066FF]'; ?>">
+                    <div class="p-2 lg:p-3 flex overflow-x-auto lg:flex-col gap-3 lg:gap-1 hide-scrollbar">
+                        <a href="profile.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm transition-colors shrink-0 whitespace-nowrap <?php echo !$isEditMode ? 'bg-blue-50 text-[#0066FF]' : 'text-gray-600 hover:bg-gray-50 hover:text-[#0066FF]'; ?>">
                             <i class="far fa-user-circle w-6 text-lg"></i> My Profile
                         </a>
-                        <a href="address-book.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="address-book.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="far fa-address-book w-6 text-lg"></i> Address Book
                         </a>
-                        <a href="my-orders.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="my-orders.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="fas fa-shopping-bag w-6 text-lg"></i> My Orders
                         </a>
-                        <a href="wishlist.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="wishlist.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="far fa-heart w-6 text-lg"></i> Wishlist
                         </a>
-                        <a href="reviews.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="reviews.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="far fa-star w-6 text-lg"></i> My Reviews
                         </a>
-                        <a href="returns.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="returns.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="fas fa-undo-alt w-6 text-lg"></i> My Returns
                         </a>
-                        <a href="coupons.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="coupons.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="fas fa-ticket-alt w-6 text-lg"></i> My Coupons
                         </a>
-                        <a href="recently-viewed.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors border-b border-gray-100 pb-4 mb-1">
+                        <a href="recently-viewed.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap lg:border-b border-gray-100 lg:pb-4 lg:mb-1">
                             <i class="far fa-eye w-6 text-lg"></i> Recently Viewed
                         </a>
                         
                         <?php if($user['user_type'] == 'seller'): ?>
-                        <a href="seller-dashboard.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors mt-2 border-t border-gray-100 pt-3">
-                            <i class="fas fa-store w-6 text-lg"></i> Seller Dashboard
-                        </a>
-                        <?php else: ?>
-                        <a href="sell-on-oxxa.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors mt-2 border-t border-gray-100 pt-3">
-                            <i class="fas fa-store w-6 text-lg"></i> Sell on OXXA
+                        <a href="seller-dashboard.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap lg:mt-2 lg:border-t border-gray-100 lg:pt-3">
+                            <i class="fas fa-store w-6 text-lg"></i> Dashboard
                         </a>
                         <?php endif; ?>
                     </div>
@@ -434,7 +430,7 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="bg-white rounded-2xl md:rounded-[2rem] shadow-sm border border-gray-100 p-5 md:p-8 relative flex flex-col">
                             <div class="flex justify-between items-start mb-6">
                                 <h3 class="text-base md:text-lg font-black text-navy uppercase tracking-wide">Address Book</h3>
-                                <a href="#" class="text-[#0066FF] font-bold text-sm hover:underline"><i class="fas fa-pen me-1 text-xs"></i> EDIT</a>
+                                <a href="address-book.php" class="text-[#0066FF] font-bold text-sm hover:underline"><i class="fas fa-pen me-1 text-xs"></i> EDIT</a>
                             </div>
                             <?php if ($address): ?>
                                 <div class="flex-grow">
@@ -498,7 +494,7 @@ $recentOrders = $ordersStmt->fetchAll(PDO::FETCH_ASSOC);
                                                     <?php if($firstItem): ?>
                                                     <div class="flex items-center gap-3">
                                                         <?php if(!empty($firstItem['product_image'])): ?>
-                                                            <img src="../<?php echo htmlspecialchars($firstItem['product_image']); ?>" class="w-12 h-12 rounded-lg object-cover bg-gray-100 border border-gray-100">
+                                                            <img src="../assets/uploads/products/<?php echo htmlspecialchars($firstItem['product_image']); ?>" class="w-12 h-12 rounded-lg object-cover bg-gray-100 border border-gray-100">
                                                         <?php else: ?>
                                                             <div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center border border-gray-100"><i class="fas fa-box text-gray-300"></i></div>
                                                         <?php endif; ?>

@@ -129,17 +129,8 @@ while ($row = $result->fetch_assoc()) {
                             </div>
                             <div class="flex justify-between items-center text-sm font-bold text-gray-500">
                                 <span>Delivery</span>
-                                <?php if($subtotal > 5000): ?>
-                                    <span class="text-green-500">FREE</span>
-                                <?php else: ?>
-                                    <span>Calculated at checkout</span>
-                                <?php endif; ?>
+                                <span>Calculated at checkout</span>
                             </div>
-                            <?php if($subtotal > 5000): ?>
-                                <div class="text-[10px] text-green-500 font-bold bg-green-50 p-2 rounded text-center">
-                                    <i class="fas fa-check-circle me-1"></i> You have unlocked Free Delivery!
-                                </div>
-                            <?php endif; ?>
                         </div>
                         
                         <div class="border-t border-gray-100 pt-4 mb-8">

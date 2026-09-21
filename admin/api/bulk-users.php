@@ -1,6 +1,6 @@
 <?php
 session_start();
-include_once("../../include/connection.php");
+include_once(__DIR__ . "/../../include/connection.php");
 
 header('Content-Type: application/json');
 
@@ -33,6 +33,18 @@ if ($action === 'suspend') {
         echo json_encode(['success' => true, 'message' => count($ids) . ' user(s) suspended successfully.']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Failed to suspend users.']);
+    }
+} elseif ($action === 'activate' || $action === 'unsuspend') {
+    // Activate users (is_approved = 1)
+    $update_query = "UPDATE users SET is_approved = 1 WHERE id IN ($ids_list)";
+    // Restore their products if they are sellers
+    $prod_query = "UPDATE products SET status = 'active' WHERE seller_id IN ($ids_list) AND status = 'suspended'";
+    
+    if ($conn->query($update_query)) {
+        $conn->query($prod_query);
+        echo json_encode(['success' => true, 'message' => count($ids) . ' user(s) activated successfully.']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Failed to activate users.']);
     }
 } elseif ($action === 'delete') {
     // Delete users

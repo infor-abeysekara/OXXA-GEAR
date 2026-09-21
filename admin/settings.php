@@ -75,45 +75,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         if (empty($error_message)) {
+            // Check if a brand with this slug already exists
+            $checkStmt = $conn->prepare("SELECT id, name FROM brands WHERE slug = ? AND id != ?");
+            $checkStmt->bind_param("si", $slug, $brand_id);
+            $checkStmt->execute();
+            $existing = $checkStmt->get_result()->fetch_assoc();
+
+            $was_existing = false;
+            if ($brand_id === 0 && $existing) {
+                // If adding a brand that already exists, automatically update that existing brand
+                $brand_id = (int)$existing['id'];
+                $was_existing = true;
+            }
+
             if ($brand_id > 0) {
                 // Update
-                if ($logo_image) {
-                    $stmt = $conn->prepare("UPDATE brands SET name=?, slug=?, logo_image=?, is_active=? WHERE id=?");
-                    $stmt->bind_param("sssii", $name, $slug, $logo_image, $is_active, $brand_id);
-                } else {
-                    $stmt = $conn->prepare("UPDATE brands SET name=?, slug=?, is_active=? WHERE id=?");
-                    $stmt->bind_param("ssii", $name, $slug, $is_active, $brand_id);
-                }
-                if ($stmt->execute()) {
-                    // Update categories
-                    $conn->query("DELETE FROM brand_category WHERE brand_id = $brand_id");
-                    if (!empty($categories)) {
-                        $catStmt = $conn->prepare("INSERT INTO brand_category (brand_id, category_id) VALUES (?, ?)");
-                        foreach ($categories as $cat_id) {
-                            $catStmt->bind_param("ii", $brand_id, $cat_id);
-                            $catStmt->execute();
-                        }
+                try {
+                    if ($logo_image) {
+                        $stmt = $conn->prepare("UPDATE brands SET name=?, slug=?, logo_image=?, is_active=? WHERE id=?");
+                        $stmt->bind_param("sssii", $name, $slug, $logo_image, $is_active, $brand_id);
+                    } else {
+                        $stmt = $conn->prepare("UPDATE brands SET name=?, slug=?, is_active=? WHERE id=?");
+                        $stmt->bind_param("ssii", $name, $slug, $is_active, $brand_id);
                     }
-                    $success_message = "Brand updated successfully!";
-                } else {
-                    $error_message = "Failed to update brand.";
+                    if ($stmt->execute()) {
+                        // Update categories
+                        $conn->query("DELETE FROM brand_category WHERE brand_id = $brand_id");
+                        if (!empty($categories)) {
+                            $catStmt = $conn->prepare("INSERT INTO brand_category (brand_id, category_id) VALUES (?, ?)");
+                            foreach ($categories as $cat_id) {
+                                $cat_id = (int)$cat_id;
+                                $catStmt->bind_param("ii", $brand_id, $cat_id);
+                                $catStmt->execute();
+                            }
+                        }
+                        if ($was_existing) {
+                            $success_message = "Brand '" . htmlspecialchars($name) . "' already existed and has been updated successfully with the selected settings!";
+                        } else {
+                            $success_message = "Brand updated successfully!";
+                        }
+                    } else {
+                        $error_message = "Failed to update brand.";
+                    }
+                } catch (mysqli_sql_exception $e) {
+                    if ($e->getCode() == 1062) {
+                        $error_message = "A brand with this slug ('" . htmlspecialchars($slug) . "') already exists.";
+                    } else {
+                        $error_message = "Database error: " . $e->getMessage();
+                    }
                 }
             } else {
                 // Insert
-                $stmt = $conn->prepare("INSERT INTO brands (name, slug, logo_image, is_active) VALUES (?, ?, ?, ?)");
-                $stmt->bind_param("sssi", $name, $slug, $logo_image, $is_active);
-                if ($stmt->execute()) {
-                    $brand_id = $conn->insert_id;
-                    if (!empty($categories)) {
-                        $catStmt = $conn->prepare("INSERT INTO brand_category (brand_id, category_id) VALUES (?, ?)");
-                        foreach ($categories as $cat_id) {
-                            $catStmt->bind_param("ii", $brand_id, $cat_id);
-                            $catStmt->execute();
+                try {
+                    $stmt = $conn->prepare("INSERT INTO brands (name, slug, logo_image, is_active) VALUES (?, ?, ?, ?)");
+                    $stmt->bind_param("sssi", $name, $slug, $logo_image, $is_active);
+                    if ($stmt->execute()) {
+                        $brand_id = $conn->insert_id;
+                        if (!empty($categories)) {
+                            $catStmt = $conn->prepare("INSERT INTO brand_category (brand_id, category_id) VALUES (?, ?)");
+                            foreach ($categories as $cat_id) {
+                                $cat_id = (int)$cat_id;
+                                $catStmt->bind_param("ii", $brand_id, $cat_id);
+                                $catStmt->execute();
+                            }
                         }
+                        $success_message = "Brand added successfully!";
+                    } else {
+                        $error_message = "Failed to add brand.";
                     }
-                    $success_message = "Brand added successfully!";
-                } else {
-                    $error_message = "Failed to add brand. Maybe slug already exists.";
+                } catch (mysqli_sql_exception $e) {
+                    if ($e->getCode() == 1062) {
+                        $error_message = "A brand with this name/slug ('" . htmlspecialchars($slug) . "') already exists.";
+                    } else {
+                        $error_message = "Database error: " . $e->getMessage();
+                    }
                 }
             }
         }
@@ -232,7 +267,7 @@ $brandsRes = $conn->query($brandsQuery);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings - Admin Panel</title>
+    <title>System Settings | OXXA GEAR Control Center</title>
     <link rel="icon" type="image/png" href="../image/oxxa_gear_logo.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -276,12 +311,22 @@ $brandsRes = $conn->query($brandsQuery);
         <?php include("components/topbar.php"); ?>
 
         <div class="container-fluid">
-            <div class="row mb-4">
-                <div class="col-12">
-                    <h2 class="fw-bold text-dark">System Settings</h2>
-                    <p class="text-muted">Manage brands, categories, and general configurations.</p>
+            <!-- Standardized Page Header -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4 pb-1">
+                <div class="d-flex align-items-center gap-3">
+                    <span style="width: 42px; height: 42px; border-radius: 12px; background: #EFF6FF; color: #0066FF; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; font-weight: 900; box-shadow: 0 1px 2px rgba(0,0,0,0.05); flex-shrink: 0;">
+                        <i class="fas fa-sliders"></i>
+                    </span>
+                    <div>
+                        <h1 class="d-flex align-items-center gap-2 mb-0" style="font-size: 1.35rem; font-weight: 900; color: #0F172A; letter-spacing: -0.025em; line-height: 1.2;">
+                            System Settings
+                            <span style="font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 9999px; background: #DBEAFE; color: #1E40AF; letter-spacing: 0.05em; text-transform: uppercase;">Configuration</span>
+                        </h1>
+                        <p class="mb-0" style="color: #64748B; font-size: 0.78rem; font-weight: 500; margin-top: 2px;">Tax rules, platform commissions, brand registries, category taxonomies & system configs.</p>
+                    </div>
                 </div>
             </div>
+
 
             <?php if(!empty($success_message)): ?>
                 <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">

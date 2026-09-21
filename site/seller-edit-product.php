@@ -58,13 +58,28 @@ foreach ($masterRows as $row) {
     ];
 }
 
-// Fetch existing variants for this product
-$varStmt = $pdo->prepare("SELECT * FROM product_variants WHERE product_id = ?");
+// Fetch existing variants for this product from color_sizes and product_colors
+$varStmt = $pdo->prepare("
+    SELECT 
+        cs.size as size, 
+        pc.color_name as color, 
+        '' as flavor, 
+        '' as weight, 
+        '' as fit_type, 
+        cs.cost_price as cost_price, 
+        cs.selling_price as price, 
+        cs.qty as qty, 
+        cs.sku as sku
+    FROM color_sizes cs
+    JOIN product_colors pc ON cs.color_id = pc.id
+    WHERE pc.product_id = ?
+    ORDER BY pc.color_name, cs.id
+");
 $varStmt->execute([$product_id]);
 $existingVariants = $varStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch product images
-$imgStmt = $pdo->prepare("SELECT * FROM product_images WHERE product_id = ? ORDER BY is_primary DESC");
+$imgStmt = $pdo->prepare("SELECT * FROM product_images WHERE product_id = ? ORDER BY is_primary DESC, sort_order ASC, id ASC");
 $imgStmt->execute([$product_id]);
 $existingImages = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -249,196 +264,54 @@ if ($latestHotDealRequest && $latestHotDealRequest['status'] === 'rejected' && !
                 });
             </script>
 
-            <!-- HOT DEALS Promotion Section -->
-            <?php
-            $origPriceValue = !empty($product['original_price']) && $product['original_price'] > 0 ? (float)$product['original_price'] : (float)$product['base_price'];
-            $salePriceValue = !empty($product['sale_price']) && $product['sale_price'] > 0 ? (float)$product['sale_price'] : ($origPriceValue > 0 ? round($origPriceValue * 0.75, 2) : '');
-            $currentDiscountPct = ($origPriceValue > 0 && $salePriceValue > 0 && $salePriceValue < $origPriceValue) ? round((($origPriceValue - $salePriceValue) / $origPriceValue) * 100) : 0;
-            $isHotDealActive = ($product['is_hot_deal'] == 1 && $product['hot_deal_status'] === 'approved');
-            $isHotDealPending = ($product['hot_deal_status'] === 'pending');
-            $isHotDealRejected = ($product['hot_deal_status'] === 'rejected');
-            $isHotDealExpired = ($product['hot_deal_status'] === 'expired');
-            $stockCount = (int)$product['total_qty'];
-            ?>
-            <div class="bg-gradient-to-br from-[#0B0F19] to-[#161F30] text-white rounded-2xl shadow-xl p-8 relative overflow-hidden border border-white/10 mb-8">
-                <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-[#CCFF00] rounded-full blur-[100px] opacity-10 pointer-events-none"></div>
-                
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-5 border-b border-white/10 relative z-10">
-                    <div>
-                        <div class="flex items-center gap-3">
-                            <span class="w-10 h-10 rounded-xl bg-[#CCFF00]/20 text-[#CCFF00] flex items-center justify-center font-black text-xl shadow-inner">
-                                <i class="fas fa-bolt"></i>
-                            </span>
-                            <div>
-                                <h2 class="text-xl font-black text-white uppercase tracking-wider">Hot Deals Promotion</h2>
-                                <p class="text-xs text-gray-400 mt-0.5">Feature your product on the OXXA GEAR homepage with an exclusive countdown discount badge.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <?php if ($isHotDealActive): ?>
-                            <span class="inline-flex items-center gap-2 bg-[#CCFF00] text-black font-black text-xs px-4 py-2 rounded-full uppercase tracking-wider shadow-lg">
-                                <span class="w-2 h-2 rounded-full bg-black animate-ping"></span> Live in Hot Deals
-                            </span>
-                        <?php elseif ($isHotDealPending): ?>
-                            <span class="inline-flex items-center gap-2 bg-yellow-400 text-black font-black text-xs px-4 py-2 rounded-full uppercase tracking-wider shadow-lg">
-                                <i class="fas fa-clock"></i> Pending Admin Approval
-                            </span>
-                        <?php elseif ($isHotDealRejected): ?>
-                            <span class="inline-flex items-center gap-2 bg-rose-500 text-white font-black text-xs px-4 py-2 rounded-full uppercase tracking-wider shadow-lg">
-                                <i class="fas fa-times-circle"></i> Request Rejected
-                            </span>
-                        <?php elseif ($isHotDealExpired): ?>
-                            <span class="inline-flex items-center gap-2 bg-gray-600 text-gray-200 font-black text-xs px-4 py-2 rounded-full uppercase tracking-wider shadow-lg">
-                                <i class="fas fa-history"></i> Deal Expired
-                            </span>
-                        <?php endif; ?>
-                    </div>
-                </div>
 
-                <!-- Status Context Alerts -->
-                <?php if ($isHotDealActive): ?>
-                    <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 mb-6 relative z-10 flex items-start gap-3">
-                        <i class="fas fa-check-circle text-emerald-400 text-xl mt-0.5"></i>
-                        <div class="text-sm">
-                            <p class="text-white font-bold">This product is currently featured in Hot Deals on the homepage!</p>
-                            <p class="text-emerald-300/80 text-xs mt-1">Sale Price: <strong>Rs. <?= number_format($product['sale_price'], 2) ?></strong> (<?= $product['discount_percent'] ?>% OFF) &bull; Deal ends on: <strong><?= !empty($product['hot_deal_expiry']) ? date('M d, Y h:i A', strtotime($product['hot_deal_expiry'])) : 'No expiry' ?></strong></p>
-                        </div>
-                    </div>
-                <?php elseif ($isHotDealPending): ?>
-                    <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6 relative z-10 flex items-start gap-3">
-                        <i class="fas fa-hourglass-half text-yellow-400 text-xl mt-0.5"></i>
-                        <div class="text-sm">
-                            <p class="text-white font-bold">Your Hot Deal request is under review by our admin team.</p>
-                            <p class="text-yellow-200/80 text-xs mt-1">Requested Sale Price: <strong>Rs. <?= number_format($product['sale_price'], 2) ?></strong> (<?= $product['discount_percent'] ?>% OFF) &bull; Reason: "<?= htmlspecialchars($product['hot_deal_request_reason'] ?? 'Clearance') ?>"</p>
-                        </div>
-                    </div>
-                <?php elseif ($isHotDealRejected): ?>
-                    <div class="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 mb-6 relative z-10 flex items-start gap-3">
-                        <i class="fas fa-exclamation-circle text-rose-400 text-xl mt-0.5"></i>
-                        <div class="text-sm">
-                            <p class="text-white font-bold">Your previous Hot Deal request was rejected.</p>
-                            <p class="text-rose-300 text-xs mt-1">Reason: "<?= htmlspecialchars($latestHotDealRequest['reject_reason'] ?? 'Requirements not met') ?>"</p>
-                            <?php if ($hasCooldown): ?>
-                                <p class="text-rose-400 font-bold text-xs mt-2"><i class="fas fa-ban me-1"></i> Anti-Spam Cooldown: You can submit another Hot Deal request for this product in <?= $daysLeftCooldown ?> day(s).</p>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
-                <!-- Price Fields Row with Live Auto Badge Preview -->
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center relative z-10 mb-6">
-                    <div class="col-span-1 md:col-span-5">
-                        <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">
-                            Original Price (Rs.) *
-                        </label>
-                        <div class="relative">
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">Rs.</span>
-                            <input type="number" step="0.01" min="1" id="hot_deal_original_price" name="hot_deal_original_price" value="<?= $origPriceValue ?>" class="w-full bg-white/5 border border-white/20 text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00] transition-all font-bold text-lg" oninput="calculateHotDealDiscount()">
-                        </div>
-                    </div>
-
-                    <div class="col-span-1 md:col-span-5">
-                        <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">
-                            Sale Price (Rs.) *
-                        </label>
-                        <div class="relative">
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">Rs.</span>
-                            <input type="number" step="0.01" min="1" id="hot_deal_sale_price" name="hot_deal_sale_price" value="<?= $salePriceValue ?>" class="w-full bg-white/5 border border-white/20 text-white rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00] transition-all font-bold text-lg text-[#CCFF00]" oninput="calculateHotDealDiscount()">
-                        </div>
-                    </div>
-
-                    <div class="col-span-1 md:col-span-2 flex flex-col items-center justify-center pt-2 md:pt-6">
-                        <span class="text-[10px] uppercase font-bold text-gray-400 mb-1">Discount Preview</span>
-                        <div id="hot_deal_badge_preview" class="bg-[#CCFF00] text-black font-black px-4 py-2 rounded-xl text-lg shadow-lg transform -rotate-3 transition-transform duration-300 flex items-center justify-center">
-                            -<?= $currentDiscountPct ?>%
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Live Rule Feedback -->
-                <div id="hot_deal_validation_msg" class="mb-6 relative z-10 text-xs">
-                    <!-- Dynamic feedback from JS -->
-                </div>
-
-                <!-- Checkbox & Expansion -->
-                <?php 
-                $canRequest = (!$hasCooldown && $sellerActiveDealsCount < 2 && !$isHotDealPending && !$isHotDealActive);
-                ?>
-                <div class="border-t border-white/10 pt-6 relative z-10">
-                    <label class="flex items-start sm:items-center gap-3 cursor-pointer group select-none">
-                        <input type="checkbox" name="request_hot_deal" id="request_hot_deal" value="1" <?= (!$canRequest) ? 'disabled' : '' ?> onchange="toggleHotDealFields()" class="w-5 h-5 rounded border-white/30 text-[#CCFF00] focus:ring-[#CCFF00] bg-white/10 cursor-pointer mt-0.5 sm:mt-0">
-                        <div>
-                            <span class="font-black text-white text-base tracking-wide group-hover:text-[#CCFF00] transition-colors">Request to show in HOT DEALS on homepage</span>
-                            <p class="text-xs text-gray-400">Products are subject to admin clearance review before going live.</p>
-                        </div>
-                    </label>
-
-                    <?php if ($sellerActiveDealsCount >= 2 && !$isHotDealActive): ?>
-                        <div class="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <span>You already have 2 active Hot Deals running (Anti-Spam Limit). Deactivate an existing deal to submit a new one.</span>
-                        </div>
-                    <?php endif; ?>
-
-                    <!-- Expandable Form Fields -->
-                    <div id="hot_deal_extra_fields" class="hidden mt-6 pt-6 border-t border-white/10 space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">
-                                    <i class="fas fa-calendar-alt text-[#CCFF00] me-1"></i> Hot Deal Valid Until * (Max 7 Days)
-                                </label>
-                                <input type="date" name="hot_deal_expiry" id="hot_deal_expiry" min="<?= date('Y-m-d', strtotime('+1 day')) ?>" max="<?= date('Y-m-d', strtotime('+7 days')) ?>" value="<?= date('Y-m-d', strtotime('+3 days')) ?>" class="w-full bg-white/5 border border-white/20 text-white rounded-xl py-3 px-4 focus:outline-none focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00] transition-all font-bold">
-                                <p class="text-[11px] text-gray-400 mt-1">Deals automatically expire after this date to keep homepage deals fresh.</p>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">
-                                    <i class="fas fa-fire text-[#CCFF00] me-1"></i> Why Hot? (Clearance Reason) *
-                                </label>
-                                <textarea name="hot_deal_reason" id="hot_deal_reason" rows="2" placeholder="e.g. Clearance stock, End of season promo, Flash discount..." class="w-full bg-white/5 border border-white/20 text-white rounded-xl py-2 px-4 focus:outline-none focus:border-[#CCFF00] focus:ring-1 focus:ring-[#CCFF00] transition-all text-sm"></textarea>
-                                <p class="text-[11px] text-gray-400 mt-1">This explanation helps administrators verify and quickly approve your deal.</p>
-                            </div>
-                        </div>
-
-                        <!-- Anti-Spam Badges Reminder -->
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                            <div class="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                                <span class="text-[10px] uppercase font-bold text-gray-400 block">Min Discount</span>
-                                <span class="text-sm font-black text-[#CCFF00]">15% OFF</span>
-                            </div>
-                            <div class="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                                <span class="text-[10px] uppercase font-bold text-gray-400 block">Min Stock</span>
-                                <span class="text-sm font-black text-white">10 Units</span>
-                            </div>
-                            <div class="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                                <span class="text-[10px] uppercase font-bold text-gray-400 block">Max Duration</span>
-                                <span class="text-sm font-black text-white">7 Days</span>
-                            </div>
-                            <div class="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                                <span class="text-[10px] uppercase font-bold text-gray-400 block">Max Active Deals</span>
-                                <span class="text-sm font-black text-white">2 per Seller</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Images & Variants -->
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-8">
                 <h2 class="text-lg font-black text-navy uppercase tracking-wide mb-6 pb-2 border-b border-gray-100"><i class="fas fa-images text-purple-500 me-2"></i> Media & Inventory</h2>
                 
-                <!-- 1. Product Images -->
-                <div class="mb-10">
-                    <label class="block text-sm font-bold text-navy mb-2 uppercase tracking-wide">Product Images * <span class="text-xs text-gray-400 font-normal normal-case ml-2">(Min 4, Max 10 images, 1MB each. First image is primary)</span></label>
-                    <div id="imageDropzone" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#0066FF] transition-colors relative cursor-pointer bg-gray-50/50">
-                        <input type="file" name="images[]" id="imageInput" multiple accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer hidden">
-                        <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
-                        <p class="text-sm text-slate font-bold">Click to select files or drag & drop</p>
+                <!-- 1. Product Images Management -->
+                <div class="mb-10" id="productImagesManager">
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="block text-sm font-bold text-navy uppercase tracking-wide">
+                            Product Images * <span class="text-xs text-gray-400 font-normal normal-case ml-2">(Upload 1 to 10 photos, JPG/PNG/WEBP up to 10MB each)</span>
+                        </label>
+                        <span id="editImageCountBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-blue-50 text-[#0066FF] border border-blue-200">
+                            <?= count($existingImages) ?> / 10 photos
+                        </span>
                     </div>
-                    <!-- Image Previews Container -->
-                    <div id="imagePreviewContainer" class="flex flex-wrap gap-4 mt-4 hidden">
-                        <!-- Dynamic Thumbnails Go Here -->
+
+                    <!-- Hidden inputs container for deleted images -->
+                    <div id="deletedImagesInputsContainer"></div>
+                    <input type="hidden" name="primary_image" id="primaryImageInput" value="<?= !empty($existingImages) ? htmlspecialchars($existingImages[0]['image_path']) : '' ?>">
+
+                    <style>
+                        #editDropzone * {
+                            pointer-events: none !important;
+                        }
+                    </style>
+
+                    <!-- Grid of images (Existing + Newly Added + Add More Slot) -->
+                    <div id="allImagesGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-4">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <!-- Drag & Drop Zone (Visible when 0 images) -->
+                    <div id="editDropzoneWrapper" class="relative <?= count($existingImages) > 0 ? 'hidden' : '' ?>">
+                        <label id="editDropzone" for="editFileInput" class="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50/40 hover:border-[#0066FF] transition-all text-center group">
+                            <div class="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-3 group-hover:bg-blue-100 group-hover:scale-110 transition-all">
+                                <i class="fas fa-cloud-upload-alt text-gray-400 text-2xl group-hover:text-[#0066FF]"></i>
+                            </div>
+                            <span class="text-sm font-bold text-navy dropzone-text">Drag & drop photos here, or <span class="text-[#0066FF] underline font-black">browse</span></span>
+                            <span class="text-xs text-gray-400 mt-1.5 dropzone-subtext">Upload 1 to 10 photos. First photo will be the primary store image.</span>
+                        </label>
+                    </div>
+
+                    <!-- Real input holding newly uploaded files -->
+                    <input type="file" name="images[]" id="editFileInput" multiple accept="image/*" class="sr-only">
+
+                    <div id="imageEditNotice" class="text-xs text-amber-600 font-bold mt-2 hidden flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
+                        <i class="fas fa-exclamation-triangle"></i> <span>Minimum 1 photo required for store listing.</span>
                     </div>
                 </div>
 
@@ -454,11 +327,19 @@ if ($latestHotDealRequest && $latestHotDealRequest['status'] === 'rejected' && !
 
                 <!-- 3. Variant Table -->
                 <div class="mt-8">
-                    <div class="flex justify-between items-end mb-4">
-                        <label class="block text-sm font-bold text-navy uppercase tracking-wide">Variant Table & Inventory</label>
-                        <button type="button" id="generateVariantsBtn" class="bg-navy hover:bg-gray-800 text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors shadow-sm hidden">
-                            <i class="fas fa-magic me-1"></i> Generate Table
-                        </button>
+                    <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+                        <div>
+                            <label class="block text-sm font-bold text-navy uppercase tracking-wide">Variant Table & Inventory</label>
+                            <p class="text-xs text-slate mt-0.5">Manage existing variations or add new ones below.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="addManualRowBtnTop" class="bg-white border-2 border-blue-200 hover:border-[#0066FF] text-[#0066FF] hover:bg-blue-50 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm flex items-center gap-1.5">
+                                <i class="fas fa-plus"></i> Add Custom Variant
+                            </button>
+                            <button type="button" id="generateVariantsBtn" class="bg-[#0066FF] hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm flex items-center gap-1.5">
+                                <i class="fas fa-layer-group"></i> Add Selected Chips
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Bulk Actions -->
@@ -513,9 +394,9 @@ if ($latestHotDealRequest && $latestHotDealRequest['status'] === 'rejected' && !
                                 </tr>
                                 <?php else: ?>
                                     <?php foreach ($existingVariants as $v): 
-                                        $v1 = $v['size'] ?? $v['flavor'] ?? '';
-                                        $v2 = $v['color'] ?? $v['weight'] ?? '';
-                                        $vFit = $v['fit_type'] ?? '';
+                                        $v1 = urldecode($v['size'] ?? $v['flavor'] ?? '');
+                                        $v2 = urldecode($v['color'] ?? $v['weight'] ?? '');
+                                        $vFit = urldecode($v['fit_type'] ?? '');
                                         $profit = $v['price'] - $v['cost_price'];
                                     ?>
                                     <tr class="hover:bg-[#f0f7ff] transition-colors h-[60px] even:bg-[#fafafa]">
@@ -565,7 +446,7 @@ if ($latestHotDealRequest && $latestHotDealRequest['status'] === 'rejected' && !
                                         </td>
                                         <td class="p-4 border-b border-gray-100">
                                             <div class="relative">
-                                                <input type="text" name="variant_sku[]" value="<?= htmlspecialchars($v['sku']) ?>" required class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 px-2 text-xs font-bold focus:border-[#0066FF] outline-none uppercase pr-6">
+                                                <input type="text" name="variant_sku[]" value="<?= htmlspecialchars($v['sku']) ?>" class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 px-2 text-xs font-bold focus:border-[#0066FF] outline-none uppercase pr-6">
                                                 <i class="fas fa-pencil-alt absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-300"></i>
                                             </div>
                                         </td>
@@ -592,7 +473,7 @@ if ($latestHotDealRequest && $latestHotDealRequest['status'] === 'rejected' && !
                     
                     <!-- Footer Summary -->
                     <div class="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-wrap gap-4 justify-between items-center">
-                        <button type="button" id="addManualRowBtn" class="text-sm font-bold text-[#0066FF] hover:underline hidden"><i class="fas fa-plus me-1"></i> Add Manual Row</button>
+                        <button type="button" id="addManualRowBtn" class="bg-white border border-gray-300 hover:border-[#0066FF] text-[#0066FF] hover:bg-blue-50 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"><i class="fas fa-plus"></i> Add Custom Variant</button>
                         <div class="flex flex-wrap gap-4 md:gap-6 ml-auto">
                             <div class="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wide">Variants: <span id="totalVariantsCounter" class="text-navy text-sm ms-1 font-black">0</span></div>
                             <div class="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wide">Qty: <span id="totalQtyCounter" class="text-navy text-sm ms-1 font-black">0</span></div>
@@ -635,19 +516,23 @@ function updateFinancials() {
     let cost = parseFloat(costInput.value) || 0;
     let sell = parseFloat(sellInput.value) || 0;
     
-    const submitBtn = document.querySelector('button[name="add_product"]');
+    const submitBtn = document.querySelector('button[name="update_product_btn"]') || document.querySelector('button[name="add_product"]');
     
     // Check if selling is higher than cost
     if (sell > 0 && cost > 0 && sell < cost) {
         vSell.textContent = 'Error';
         vSell.classList.add('text-red-500');
-        submitBtn.disabled = true;
-        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
         return;
     } else {
         vSell.classList.remove('text-red-500');
-        submitBtn.disabled = false;
-        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
     }
     
     let profit = sell - cost;
@@ -668,129 +553,381 @@ sellInput.addEventListener('input', updateFinancials);
 
 
 
-    // --- ADVANCED INVENTORY LOGIC ---
-    
-    // 1. Image Upload Logic
-    const imageInput = document.getElementById('imageInput');
-    const imageDropzone = document.getElementById('imageDropzone');
-    const imagePreviewContainer = document.getElementById('imagePreviewContainer');
-    let selectedFiles = [];
-    const MAX_FILES = 10;
-    const MAX_SIZE = 1 * 1024 * 1024; // 1MB
+    // ==========================================
+    // 1. PRODUCT IMAGES MANAGEMENT (EDIT MODE)
+    // ==========================================
+    let existingImages = <?= json_encode(array_values(array_map(function($img) {
+        return [
+            'id' => (int)$img['id'],
+            'image_path' => $img['image_path'],
+            'is_primary' => (int)$img['is_primary']
+        ];
+    }, $existingImages))) ?>;
 
-    imageDropzone.addEventListener('click', () => imageInput.click());
+    let deletedImages = [];
+    let newUploadedFiles = []; // Array of File objects
+    let currentPrimaryId = <?= !empty($existingImages) ? json_encode($existingImages[0]['image_path']) : '""' ?>;
 
-    imageDropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        imageDropzone.classList.add('border-[#0066FF]', 'bg-blue-50/50');
-    });
-
-    imageDropzone.addEventListener('dragleave', () => {
-        imageDropzone.classList.remove('border-[#0066FF]', 'bg-blue-50/50');
-    });
-
-    imageDropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        imageDropzone.classList.remove('border-[#0066FF]', 'bg-blue-50/50');
-        handleFiles(e.dataTransfer.files);
-    });
-
-    imageInput.addEventListener('change', (e) => {
-        handleFiles(e.target.files);
-    });
-
-    function handleFiles(files) {
-        for (let i = 0; i < files.length; i++) {
-            if (selectedFiles.length >= MAX_FILES) {
-                Swal.fire({ icon: 'warning', title: 'Limit Reached', text: `Maximum ${MAX_FILES} images allowed.` });
-                break;
-            }
-            const file = files[i];
-            if (file.size > MAX_SIZE) {
-                Swal.fire({ icon: 'error', title: 'File Too Large', text: `File ${file.name} is larger than 1MB.` });
-                continue;
-            }
-            if (file.type.startsWith('image/')) {
-                selectedFiles.push(file);
-            }
-        }
-        updatePreviews();
-        updateFileInput();
+    // Ensure we know which image is initial primary
+    const initialPrimaryObj = existingImages.find(img => img.is_primary === 1);
+    if (initialPrimaryObj) {
+        currentPrimaryId = initialPrimaryObj.image_path;
+    } else if (existingImages.length > 0) {
+        currentPrimaryId = existingImages[0].image_path;
     }
 
-    function updatePreviews() {
-        imagePreviewContainer.innerHTML = '';
-        if (selectedFiles.length > 0) {
-            imagePreviewContainer.classList.remove('hidden');
-        } else {
-            imagePreviewContainer.classList.add('hidden');
+    const editFileInput = document.getElementById('editFileInput');
+    const editDropzone = document.getElementById('editDropzone');
+    const editDropzoneWrapper = document.getElementById('editDropzoneWrapper');
+    const allImagesGrid = document.getElementById('allImagesGrid');
+    const editImageCountBadge = document.getElementById('editImageCountBadge');
+    const imageEditNotice = document.getElementById('imageEditNotice');
+    const primaryImageInput = document.getElementById('primaryImageInput');
+    const deletedImagesInputsContainer = document.getElementById('deletedImagesInputsContainer');
+
+    function syncEditFileInput() {
+        if (!editFileInput) return;
+        try {
+            const dt = new DataTransfer();
+            newUploadedFiles.forEach(file => dt.items.add(file));
+            editFileInput.files = dt.files;
+        } catch (e) {
+            console.error('DataTransfer error:', e);
+        }
+    }
+
+    function renderAllImages() {
+        if (!allImagesGrid) return;
+        allImagesGrid.innerHTML = '';
+
+        const totalCount = existingImages.length + newUploadedFiles.length;
+
+        // Update badge
+        if (editImageCountBadge) {
+            if (totalCount === 0) {
+                editImageCountBadge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-red-50 text-red-600 border border-red-200';
+                editImageCountBadge.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i> 0 / 10 photos (Min 1 required)';
+            } else {
+                editImageCountBadge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-green-50 text-green-700 border border-green-200';
+                editImageCountBadge.innerHTML = `<i class="fas fa-check-circle me-1"></i> ${totalCount} / 10 photos`;
+            }
         }
 
-        selectedFiles.forEach((file, index) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const div = document.createElement('div');
-                div.className = 'relative w-24 h-24 rounded-lg border border-gray-200 overflow-hidden group cursor-move shadow-sm bg-white shrink-0';
-                div.draggable = true;
+        // Show/hide large dropzone when 0 images
+        if (editDropzoneWrapper) {
+            if (totalCount === 0) {
+                editDropzoneWrapper.classList.remove('hidden');
+            } else {
+                editDropzoneWrapper.classList.add('hidden');
+            }
+        }
+
+        // Show/hide warning notice
+        if (imageEditNotice) {
+            if (totalCount === 0) {
+                imageEditNotice.classList.remove('hidden');
+            } else {
+                imageEditNotice.classList.add('hidden');
+            }
+        }
+
+        // Sync hidden input for primary
+        if (primaryImageInput) {
+            primaryImageInput.value = currentPrimaryId;
+        }
+
+        // Render Existing Images
+        existingImages.forEach((img, idx) => {
+            const isPrimary = (currentPrimaryId === img.image_path || (currentPrimaryId === '' && idx === 0));
+            const card = document.createElement('div');
+            card.className = 'relative w-full aspect-square rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm group hover:shadow-md transition-all';
+            
+            card.innerHTML = `
+                <img src="../assets/uploads/products/${img.image_path}" class="w-full h-full object-cover">
                 
-                div.innerHTML = `
-                    <img src="${e.target.result}" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button type="button" class="text-white hover:text-red-400 p-1" onclick="removeImage(${index})"><i class="fas fa-trash"></i></button>
-                    </div>
-                `;
-                
-                if (index === 0) {
-                    div.innerHTML += `<div class="absolute top-0 left-0 right-0 bg-[#0066FF] text-white text-[9px] font-bold text-center uppercase py-0.5 tracking-wider">Primary</div>`;
+                <button type="button" class="absolute top-2 right-2 w-7 h-7 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-red-500 shadow-md hover:bg-red-500 hover:text-white hover:scale-110 transition-all z-10" onclick="removeExistingImage(${idx})" title="Delete Photo">
+                    <i class="fas fa-trash-alt text-xs"></i>
+                </button>
+
+                <span class="absolute top-2 left-2 bg-black/60 backdrop-blur text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow">
+                    #${idx + 1}
+                </span>
+
+                ${isPrimary 
+                    ? '<span class="absolute bottom-0 left-0 right-0 bg-[#0066FF] text-white text-[10px] font-black tracking-wider text-center py-1.5 cursor-default flex items-center justify-center gap-1"><i class="fas fa-star text-xs"></i> PRIMARY</span>'
+                    : `<button type="button" class="absolute bottom-0 left-0 right-0 bg-gray-900/80 hover:bg-[#0066FF] text-white text-[10px] font-bold tracking-wider text-center py-1.5 transition-colors opacity-90 group-hover:opacity-100 flex items-center justify-center gap-1" onclick="setPrimaryExisting('${img.image_path}')"><i class="far fa-star text-xs"></i> SET PRIMARY</button>`
                 }
+            `;
+            allImagesGrid.appendChild(card);
+        });
 
-                // Drag Events for reordering
-                div.addEventListener('dragstart', (e) => {
-                    e.dataTransfer.setData('text/plain', index);
-                });
-                div.addEventListener('dragover', (e) => e.preventDefault());
-                div.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                    const toIndex = index;
-                    if (fromIndex !== toIndex) {
-                        const temp = selectedFiles[fromIndex];
-                        selectedFiles.splice(fromIndex, 1);
-                        selectedFiles.splice(toIndex, 0, temp);
-                        updatePreviews();
-                        updateFileInput();
-                    }
-                });
+        // Render New Uploaded Files
+        newUploadedFiles.forEach((file, idx) => {
+            const newKey = 'new_' + idx;
+            const isPrimary = (currentPrimaryId === newKey || (existingImages.length === 0 && idx === 0));
+            const objectUrl = URL.createObjectURL(file);
+            const card = document.createElement('div');
+            card.className = 'relative w-full aspect-square rounded-xl border-2 border-dashed border-[#0066FF]/60 overflow-hidden bg-white shadow-sm group hover:shadow-md transition-all';
 
-                imagePreviewContainer.appendChild(div);
-            };
-            reader.readAsDataURL(file);
+            card.innerHTML = `
+                <img src="${objectUrl}" class="w-full h-full object-cover">
+                
+                <button type="button" class="absolute top-2 right-2 w-7 h-7 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-red-500 shadow-md hover:bg-red-500 hover:text-white hover:scale-110 transition-all z-10" onclick="removeNewFile(${idx})" title="Remove New Photo">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+
+                <span class="absolute top-2 left-2 bg-[#0066FF] text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow">
+                    NEW
+                </span>
+
+                ${isPrimary 
+                    ? '<span class="absolute bottom-0 left-0 right-0 bg-[#0066FF] text-white text-[10px] font-black tracking-wider text-center py-1.5 cursor-default flex items-center justify-center gap-1"><i class="fas fa-star text-xs"></i> PRIMARY</span>'
+                    : `<button type="button" class="absolute bottom-0 left-0 right-0 bg-gray-900/80 hover:bg-[#0066FF] text-white text-[10px] font-bold tracking-wider text-center py-1.5 transition-colors opacity-90 group-hover:opacity-100 flex items-center justify-center gap-1" onclick="setPrimaryNew(${idx})"><i class="far fa-star text-xs"></i> SET PRIMARY</button>`
+                }
+            `;
+            allImagesGrid.appendChild(card);
+        });
+
+        // Render "+ Add More" slot if totalCount between 1 and 9
+        if (totalCount > 0 && totalCount < 10) {
+            const addSlot = document.createElement('label');
+            addSlot.className = 'border-2 border-dashed border-gray-300 hover:border-[#0066FF] rounded-xl flex flex-col items-center justify-center p-3 aspect-square cursor-pointer hover:bg-blue-50/40 transition-all text-center group';
+            addSlot.title = 'Add more photos (up to 10)';
+            addSlot.innerHTML = `
+                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-2 group-hover:bg-blue-100 group-hover:scale-110 transition-all">
+                    <i class="fas fa-plus text-gray-400 group-hover:text-[#0066FF] text-sm"></i>
+                </div>
+                <span class="text-xs font-bold text-navy group-hover:text-[#0066FF]">Add More</span>
+                <span class="text-[10px] text-gray-400 mt-0.5">${totalCount} / 10</span>
+                <input type="file" multiple accept="image/*" class="hidden edit-add-more-input">
+            `;
+
+            const addMoreInput = addSlot.querySelector('.edit-add-more-input');
+            addMoreInput.addEventListener('change', (e) => {
+                handleNewIncomingFiles(e.target.files);
+                addMoreInput.value = '';
+            });
+
+            allImagesGrid.appendChild(addSlot);
+        }
+    }
+
+    // Set Primary Handlers
+    window.setPrimaryExisting = function(path) {
+        currentPrimaryId = path;
+        renderAllImages();
+    };
+
+    window.setPrimaryNew = function(idx) {
+        currentPrimaryId = 'new_' + idx;
+        renderAllImages();
+    };
+
+    // Remove Image Handlers
+    window.removeExistingImage = function(idx) {
+        const removed = existingImages.splice(idx, 1)[0];
+        if (removed) {
+            deletedImages.push(removed.image_path);
+            
+            // Add hidden input so backend receives it
+            if (deletedImagesInputsContainer) {
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'deleted_images[]';
+                hiddenInput.value = removed.image_path;
+                deletedImagesInputsContainer.appendChild(hiddenInput);
+            }
+
+            // If the deleted image was primary, choose new primary
+            if (currentPrimaryId === removed.image_path) {
+                if (existingImages.length > 0) {
+                    currentPrimaryId = existingImages[0].image_path;
+                } else if (newUploadedFiles.length > 0) {
+                    currentPrimaryId = 'new_0';
+                } else {
+                    currentPrimaryId = '';
+                }
+            }
+        }
+        renderAllImages();
+    };
+
+    window.removeNewFile = function(idx) {
+        newUploadedFiles.splice(idx, 1);
+        syncEditFileInput();
+        
+        // If current primary was this new file, re-assign
+        if (currentPrimaryId === 'new_' + idx) {
+            if (existingImages.length > 0) {
+                currentPrimaryId = existingImages[0].image_path;
+            } else if (newUploadedFiles.length > 0) {
+                currentPrimaryId = 'new_0';
+            } else {
+                currentPrimaryId = '';
+            }
+        }
+        renderAllImages();
+    };
+
+    // Process new incoming files
+    function handleNewIncomingFiles(fileList) {
+        if (!fileList || fileList.length === 0) return;
+
+        let oversizedCount = 0;
+        const maxTotal = 10;
+        const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+
+        Array.from(fileList).forEach(file => {
+            const isImage = (file.type && file.type.startsWith('image/')) || 
+                            /\.(jpe?g|png|webp|gif|bmp|jfif|avif|heic|svg)$/i.test(file.name || '');
+            if (!isImage) return;
+
+            if (file.size > maxSizeBytes) {
+                oversizedCount++;
+                return;
+            }
+
+            if (existingImages.length + newUploadedFiles.length >= maxTotal) return;
+
+            // Check duplicate
+            const isDup = newUploadedFiles.some(f => f.name === file.name && f.size === file.size);
+            if (isDup) return;
+
+            newUploadedFiles.push(file);
+        });
+
+        syncEditFileInput();
+        renderAllImages();
+
+        if (oversizedCount > 0) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'File Too Large',
+                    text: `${oversizedCount} photo(s) exceeded the 10MB limit and were skipped.`,
+                    confirmButtonColor: '#0066FF'
+                });
+            } else {
+                alert(`${oversizedCount} photo(s) exceeded the 10MB limit.`);
+            }
+        }
+    }
+
+    // Native file input change
+    if (editFileInput) {
+        editFileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleNewIncomingFiles(Array.from(e.target.files));
+            }
         });
     }
 
-    function removeImage(index) {
-        selectedFiles.splice(index, 1);
-        updatePreviews();
-        updateFileInput();
+    // Drag & Drop on main dropzone and grid
+    function extractFiles(e) {
+        let files = [];
+        if (e.dataTransfer) {
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                files = Array.from(e.dataTransfer.files);
+            } else if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+                for (let i = 0; i < e.dataTransfer.items.length; i++) {
+                    if (e.dataTransfer.items[i].kind === 'file') {
+                        const f = e.dataTransfer.items[i].getAsFile();
+                        if (f) files.push(f);
+                    }
+                }
+            }
+        }
+        return files;
     }
 
-    function updateFileInput() {
-        const dt = new DataTransfer();
-        selectedFiles.forEach(file => dt.items.add(file));
-        imageInput.files = dt.files;
+    // Dropzone events
+    if (editDropzone) {
+        ['dragenter', 'dragover'].forEach(ev => {
+            editDropzone.addEventListener(ev, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+                editDropzone.classList.add('border-[#0066FF]', 'bg-blue-50/70', 'ring-4', 'ring-blue-100');
+            }, false);
+        });
+
+        ['dragleave', 'dragend'].forEach(ev => {
+            editDropzone.addEventListener(ev, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                editDropzone.classList.remove('border-[#0066FF]', 'bg-blue-50/70', 'ring-4', 'ring-blue-100');
+            }, false);
+        });
+
+        editDropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            editDropzone.classList.remove('border-[#0066FF]', 'bg-blue-50/70', 'ring-4', 'ring-blue-100');
+            const files = extractFiles(e);
+            if (files.length > 0) {
+                handleNewIncomingFiles(files);
+            }
+        }, false);
     }
 
+    // Also support dropping directly onto the image grid
+    if (allImagesGrid) {
+        ['dragenter', 'dragover'].forEach(ev => {
+            allImagesGrid.addEventListener(ev, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+                allImagesGrid.classList.add('ring-2', 'ring-[#0066FF]', 'rounded-xl', 'bg-blue-50/20');
+            }, false);
+        });
+        ['dragleave', 'dragend'].forEach(ev => {
+            allImagesGrid.addEventListener(ev, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                allImagesGrid.classList.remove('ring-2', 'ring-[#0066FF]', 'rounded-xl', 'bg-blue-50/20');
+            }, false);
+        });
+        allImagesGrid.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            allImagesGrid.classList.remove('ring-2', 'ring-[#0066FF]', 'rounded-xl', 'bg-blue-50/20');
+            const files = extractFiles(e);
+            if (files.length > 0) {
+                handleNewIncomingFiles(files);
+            }
+        }, false);
+    }
+
+    // Initial render
+    renderAllImages();
+
+    // Form submit validation
     const addProductForm = document.getElementById('addProductForm');
     if (addProductForm) {
         addProductForm.addEventListener('submit', function(e) {
-            if (selectedFiles.length < 4) {
+            const totalRemaining = existingImages.length + newUploadedFiles.length;
+            if (totalRemaining < 1) {
                 e.preventDefault();
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Not Enough Images',
-                    text: 'You must upload at least 4 images to showcase your product properly.'
-                });
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Photo Required',
+                        text: 'Please keep or upload at least 1 photo for this product.',
+                        confirmButtonColor: '#0066FF'
+                    });
+                } else {
+                    alert('Please keep or upload at least 1 photo for this product.');
+                }
+                const pManager = document.getElementById('productImagesManager');
+                if (pManager) {
+                    pManager.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    pManager.classList.add('ring-4', 'ring-amber-300');
+                    setTimeout(() => pManager.classList.remove('ring-4', 'ring-amber-300'), 2500);
+                }
+                return false;
             }
+
+            syncEditFileInput();
         });
     }
 
@@ -814,48 +951,51 @@ sellInput.addEventListener('input', updateFinancials);
     const addManualBtn = document.getElementById('addManualRowBtn');
     const productNameInput = document.querySelector('input[name="name"]');
 
-    let currentConfig = null; 
-
-    categorySelect.addEventListener('change', (e) => {
-        const catId = e.target.value;
-        if (!catId) {
-            dynamicUI.innerHTML = `<div class="p-6 text-center text-gray-400 text-sm font-medium border-2 border-dashed border-gray-200 rounded-xl">Select a Category above to load Variant options.</div>`;
-            tableBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-gray-400 text-sm font-medium">Select a Category first.</td></tr>`;
-            genBtn.classList.add('hidden');
-            addManualBtn.classList.add('hidden');
-            return;
-        }
-
-        renderCategoryUI(catId);
-    });
+    const addManualBtnTop = document.getElementById('addManualRowBtnTop');
+    const bulkActionBar = document.getElementById('bulkActionBar');
 
     function getCatConfig(catId) {
+        if (!categorySelect || !categorySelect.options || categorySelect.selectedIndex < 0) {
+            return { type: 'default', col1: 'Variant / Size', col2: 'Color', dbCol1: 'variant_size[]', dbCol2: 'variant_color[]', hasFit: false };
+        }
         const catName = categorySelect.options[categorySelect.selectedIndex].text.toUpperCase();
         if (catName.includes('SPORTS WEAR')) return { type: 'sports', col1: 'Size', col2: 'Color', dbCol1: 'variant_size[]', dbCol2: 'variant_color[]', hasFit: true };
         if (catName.includes('FOOTWEAR')) return { type: 'footwear', col1: 'Size', col2: 'Color', dbCol1: 'variant_size[]', dbCol2: 'variant_color[]', hasFit: false };
         if (catName.includes('FITNESS')) return { type: 'fitness', col1: 'Size', col2: 'Color', dbCol1: 'variant_size[]', dbCol2: 'variant_color[]', hasFit: false };
         if (catName.includes('ACCESSORIES')) return { type: 'accessories', col1: 'Size', col2: 'Color', dbCol1: 'variant_size[]', dbCol2: 'variant_color[]', hasFit: false };
-        if (catName.includes('EQUIPMENT')) return { type: 'equipment', col1: 'Variant', col2: null, dbCol1: 'variant_size[]', dbCol2: null, hasFit: false };
+        if (catName.includes('EQUIPMENT')) return { type: 'equipment', col1: 'Variant / Size', col2: 'Color', dbCol1: 'variant_size[]', dbCol2: 'variant_color[]', hasFit: false };
         if (catName.includes('NUTRITION')) return { type: 'nutrition', col1: 'Flavor', col2: 'Weight', dbCol1: 'variant_flavor[]', dbCol2: 'variant_weight[]', hasFit: false };
-        return { type: 'default', col1: 'Variant 1', col2: 'Variant 2', dbCol1: 'variant_size[]', dbCol2: 'variant_color[]', hasFit: false };
+        return { type: 'default', col1: 'Variant / Size', col2: 'Color', dbCol1: 'variant_size[]', dbCol2: 'variant_color[]', hasFit: false };
     }
 
-    function renderCategoryUI(catId) {
-        activeSet1.clear();
-        activeSet2.clear();
-        activeSet3.clear();
-        tableBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-gray-400 text-sm font-medium">Click "Generate Table" to create inventory rows.</td></tr>`;
-        genBtn.classList.remove('hidden');
-        addManualBtn.classList.remove('hidden');
+    function renderCategoryUI(catId, preserveExisting = false) {
+        if (!preserveExisting) {
+            activeSet1.clear();
+            activeSet2.clear();
+            activeSet3.clear();
+            tableBody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-gray-400 text-sm font-medium" id="tableEmptyState">Select variant chips above and click "Add Selected Chips" or use "Add Custom Variant".</td></tr>`;
+        }
+
+        if (genBtn) genBtn.classList.remove('hidden');
+        if (addManualBtn) addManualBtn.classList.remove('hidden');
+        if (addManualBtnTop) addManualBtnTop.classList.remove('hidden');
+        if (bulkActionBar) {
+            bulkActionBar.classList.remove('hidden');
+            bulkActionBar.classList.add('flex');
+        }
 
         currentConfig = getCatConfig(catId);
         const data = categoryVariants[catId] || {};
 
-        let html = '<div class="grid grid-cols-1 lg:grid-cols-2 gap-10">';
+        let html = '<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-gray-50 p-6 rounded-2xl border border-gray-200">';
         
         // Render Column 1
         if (currentConfig.col1) {
-            html += `<div><label class="block text-sm font-bold text-navy uppercase tracking-wide mb-3">${currentConfig.col1}</label>`;
+            html += `<div>
+                <div class="flex items-center justify-between mb-3">
+                    <label class="block text-sm font-bold text-navy uppercase tracking-wide">${currentConfig.col1} Options</label>
+                    <span class="text-[11px] text-gray-400 font-medium">Click to select or type custom below</span>
+                </div>`;
             
             if (currentConfig.type === 'footwear') {
                 html += `<div class="flex gap-2 mb-3">
@@ -865,29 +1005,41 @@ sellInput.addEventListener('input', updateFinancials);
                 </div>`;
             }
 
-            const dbTypeKey = currentConfig.col1; 
-            let chips = data[dbTypeKey] || [];
+            const dbTypeKey = (currentConfig.col1 === 'Variant / Size') ? 'Variant' : currentConfig.col1; 
+            let chips = data[dbTypeKey] || data['Size'] || data['Variant'] || [];
             
-            html += `<div class="flex flex-wrap gap-2 mb-3">`;
+            html += `<div class="flex flex-wrap gap-2 mb-3" id="chipsContainer1">`;
             chips.forEach(c => {
                 let metaText = '';
                 if (c.meta && currentConfig.type === 'footwear') {
                     metaText = `UK ${c.meta.UK} / EU ${c.meta.EU}`;
                 }
+                const isSelected = activeSet1.has(c.value);
                 html += `
-                    <div class="border border-gray-200 rounded-lg px-4 py-2 cursor-pointer hover:border-[#0066FF] transition-colors bg-white var-chip set1-chip text-center" data-val="${c.value}">
-                        <span class="block text-sm font-bold text-navy">${c.value}</span>
+                    <div class="border rounded-xl px-4 py-2 cursor-pointer transition-all var-chip set1-chip text-center select-none shadow-xs ${isSelected ? 'bg-blue-50 border-[#0066FF] text-[#0066FF] font-bold' : 'bg-white border-gray-200 text-navy hover:border-[#0066FF]'}" data-val="${c.value}">
+                        <span class="block text-sm font-bold">${c.value}</span>
                         ${metaText ? `<span class="block text-[10px] text-gray-400">${metaText}</span>` : ''}
                     </div>
                 `;
             });
             html += `</div>`;
+
+            // Custom variant / size adder
+            html += `
+                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200/60">
+                    <input type="text" id="customChipInput1" placeholder="+ Type custom ${currentConfig.col1} (e.g. Short Handle, 2KG)" class="bg-white border border-gray-200 text-navy rounded-xl py-2 px-3 text-xs font-medium focus:border-[#0066FF] outline-none flex-1">
+                    <button type="button" id="addCustomChipBtn1" class="bg-blue-50 hover:bg-blue-100 text-[#0066FF] border border-[#0066FF]/30 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0">
+                        <i class="fas fa-plus me-1"></i> Add Chip
+                    </button>
+                </div>
+            `;
             
             if (currentConfig.hasFit) {
                 html += `<label class="block text-sm font-bold text-navy uppercase tracking-wide mb-2 mt-4">Fit Type</label>
                 <div class="flex flex-wrap gap-2">`;
-                (data['Fit Type'] || []).forEach(f => {
-                    html += `<div class="border border-gray-200 rounded-lg px-3 py-1 cursor-pointer hover:border-[#0066FF] transition-colors bg-white var-chip set3-chip text-xs font-bold text-navy" data-val="${f.value}">${f.value}</div>`;
+                (data['Fit Type'] || [{value:'Regular'}, {value:'Slim'}, {value:'Oversized'}]).forEach(f => {
+                    const isSelected = activeSet3.has(f.value);
+                    html += `<div class="border rounded-lg px-3 py-1 cursor-pointer transition-colors var-chip set3-chip text-xs font-bold select-none ${isSelected ? 'bg-blue-50 border-[#0066FF] text-[#0066FF]' : 'bg-white border-gray-200 text-navy hover:border-[#0066FF]'}" data-val="${f.value}">${f.value}</div>`;
                 });
                 html += `</div>`;
             }
@@ -896,43 +1048,49 @@ sellInput.addEventListener('input', updateFinancials);
 
         // Render Column 2
         if (currentConfig.col2) {
-            html += `<div><label class="block text-sm font-bold text-navy uppercase tracking-wide mb-3">${currentConfig.col2}</label>`;
+            html += `<div>
+                <div class="flex items-center justify-between mb-3">
+                    <label class="block text-sm font-bold text-navy uppercase tracking-wide">${currentConfig.col2} Options</label>
+                    <span class="text-[11px] text-gray-400 font-medium">Click to select or type custom below</span>
+                </div>`;
             
             if (currentConfig.col2 === 'Color') {
-                html += `<div class="flex flex-wrap gap-2.5 mb-4">`;
+                html += `<div class="flex flex-wrap gap-2.5 mb-3" id="chipsContainer2">`;
                 standardColors.forEach(c => {
-                    html += `<div class="w-8 h-8 rounded-full cursor-pointer transition-all flex items-center justify-center color-chip" data-val="${c.name}" data-hex="${c.hex}" style="background-color: ${c.hex}; ${c.hex==='#FFFFFF'?'border:1px solid #e5e7eb;':''}"></div>`;
+                    let isSelected = false;
+                    activeSet2.forEach(sc => { if(sc.name === c.name) isSelected = true; });
+                    const checkColor = c.hex.toUpperCase() === '#FFFFFF' ? '#000' : '#FFF';
+                    html += `<div class="w-8 h-8 rounded-full cursor-pointer transition-all flex items-center justify-center color-chip hover:scale-110 ${isSelected ? 'ring-2 ring-offset-2 ring-[#0066FF]' : ''}" data-val="${c.name}" data-hex="${c.hex}" title="${c.name}" style="background-color: ${c.hex}; ${c.hex==='#FFFFFF'?'border:1px solid #e5e7eb;':''}">${isSelected ? `<i class="fas fa-check text-[10px]" style="color: ${checkColor}"></i>` : ''}</div>`;
                 });
                 html += `</div>`;
             } else {
                 const dbTypeKey = currentConfig.col2; 
                 let chips = data[dbTypeKey] || [];
-                html += `<div class="flex flex-wrap gap-2 mb-3">`;
+                html += `<div class="flex flex-wrap gap-2 mb-3" id="chipsContainer2">`;
                 chips.forEach(c => {
-                    html += `<div class="border border-gray-200 rounded-lg px-4 py-2 cursor-pointer hover:border-[#0066FF] transition-colors bg-white var-chip set2-chip" data-val="${c.value}">${c.value}</div>`;
+                    const isSelected = activeSet2.has(c.value);
+                    html += `<div class="border rounded-xl px-4 py-2 cursor-pointer transition-colors var-chip set2-chip text-sm font-bold select-none ${isSelected ? 'bg-blue-50 border-[#0066FF] text-[#0066FF]' : 'bg-white border-gray-200 text-navy hover:border-[#0066FF]'}" data-val="${c.value}">${c.value}</div>`;
                 });
                 html += `</div>`;
             }
+
+            // Custom variant 2 adder (Color / Weight)
+            html += `
+                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200/60">
+                    <input type="text" id="customChipInput2" placeholder="+ Type custom ${currentConfig.col2} (e.g. Special Edition, 500g)" class="bg-white border border-gray-200 text-navy rounded-xl py-2 px-3 text-xs font-medium focus:border-[#0066FF] outline-none flex-1">
+                    <button type="button" id="addCustomChipBtn2" class="bg-blue-50 hover:bg-blue-100 text-[#0066FF] border border-[#0066FF]/30 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0">
+                        <i class="fas fa-plus me-1"></i> Add Chip
+                    </button>
+                </div>
+            `;
             html += `</div>`;
         }
 
         html += '</div>';
         dynamicUI.innerHTML = html;
 
-        // Build Table Headers
-        let th = '';
-        if (currentConfig.col1) th += `<th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">${currentConfig.col1}</th>`;
-        if (currentConfig.col2) th += `<th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">${currentConfig.col2}</th>`;
-        if (currentConfig.hasFit) th += `<th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Fit Type</th>`;
-        th += `<th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-28">Buy Price</th>
-               <th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-28">Sell Price</th>
-               <th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24">Profit</th>
-               <th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-20">Qty</th>
-               <th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-24">SKU</th>
-               <th class="p-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider w-8 text-center"></th>`;
-        tableHeader.innerHTML = th;
-
         bindChipEvents();
+        bindCustomChipAdders();
     }
 
     function bindChipEvents() {
@@ -943,12 +1101,12 @@ sellInput.addEventListener('input', updateFinancials);
                 
                 if (activeSet.has(val)) {
                     activeSet.delete(val);
-                    this.classList.remove('bg-blue-50', 'border-[#0066FF]', 'text-[#0066FF]');
-                    this.classList.add('bg-white', 'text-navy');
+                    this.classList.remove('bg-blue-50', 'border-[#0066FF]', 'text-[#0066FF]', 'font-bold');
+                    this.classList.add('bg-white', 'border-gray-200', 'text-navy');
                 } else {
                     activeSet.add(val);
-                    this.classList.add('bg-blue-50', 'border-[#0066FF]', 'text-[#0066FF]');
-                    this.classList.remove('bg-white', 'text-navy');
+                    this.classList.add('bg-blue-50', 'border-[#0066FF]', 'text-[#0066FF]', 'font-bold');
+                    this.classList.remove('bg-white', 'border-gray-200', 'text-navy');
                 }
             });
         });
@@ -975,6 +1133,95 @@ sellInput.addEventListener('input', updateFinancials);
         });
     }
 
+    function bindCustomChipAdders() {
+        const btn1 = document.getElementById('addCustomChipBtn1');
+        const inp1 = document.getElementById('customChipInput1');
+        const cont1 = document.getElementById('chipsContainer1');
+        if (btn1 && inp1 && cont1) {
+            const add1 = () => {
+                const val = inp1.value.trim();
+                if (!val) return;
+                activeSet1.add(val);
+                const chip = document.createElement('div');
+                chip.className = 'border rounded-xl px-4 py-2 cursor-pointer transition-all var-chip set1-chip text-center select-none shadow-xs bg-blue-50 border-[#0066FF] text-[#0066FF] font-bold';
+                chip.dataset.val = val;
+                chip.innerHTML = `<span class="block text-sm font-bold">${val}</span>`;
+                chip.addEventListener('click', function() {
+                    if (activeSet1.has(val)) {
+                        activeSet1.delete(val);
+                        this.classList.remove('bg-blue-50', 'border-[#0066FF]', 'text-[#0066FF]', 'font-bold');
+                        this.classList.add('bg-white', 'border-gray-200', 'text-navy');
+                    } else {
+                        activeSet1.add(val);
+                        this.classList.add('bg-blue-50', 'border-[#0066FF]', 'text-[#0066FF]', 'font-bold');
+                        this.classList.remove('bg-white', 'border-gray-200', 'text-navy');
+                    }
+                });
+                cont1.appendChild(chip);
+                inp1.value = '';
+            };
+            btn1.addEventListener('click', add1);
+            inp1.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add1(); } });
+        }
+
+        const btn2 = document.getElementById('addCustomChipBtn2');
+        const inp2 = document.getElementById('customChipInput2');
+        const cont2 = document.getElementById('chipsContainer2');
+        if (btn2 && inp2 && cont2) {
+            const add2 = () => {
+                const val = inp2.value.trim();
+                if (!val) return;
+                activeSet2.add({name: val, hex: '#4B5563'});
+                const chip = document.createElement('div');
+                chip.className = 'border rounded-xl px-4 py-2 cursor-pointer transition-all var-chip set2-chip text-center select-none shadow-xs bg-blue-50 border-[#0066FF] text-[#0066FF] font-bold text-xs';
+                chip.dataset.val = val;
+                chip.innerHTML = `<span class="block text-xs font-bold">${val}</span>`;
+                chip.addEventListener('click', function() {
+                    let exists = false;
+                    let objRef = null;
+                    activeSet2.forEach(c => { if(c.name === val) { exists = true; objRef = c; }});
+                    if (exists) {
+                        activeSet2.delete(objRef);
+                        this.classList.remove('bg-blue-50', 'border-[#0066FF]', 'text-[#0066FF]', 'font-bold');
+                        this.classList.add('bg-white', 'border-gray-200', 'text-navy');
+                    } else {
+                        activeSet2.add({name: val, hex: '#4B5563'});
+                        this.classList.add('bg-blue-50', 'border-[#0066FF]', 'text-[#0066FF]', 'font-bold');
+                        this.classList.remove('bg-white', 'border-gray-200', 'text-navy');
+                    }
+                });
+                cont2.appendChild(chip);
+                inp2.value = '';
+            };
+            btn2.addEventListener('click', add2);
+            inp2.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add2(); } });
+        }
+    }
+
+    categorySelect.addEventListener('change', (e) => {
+        const catId = e.target.value;
+        if (!catId) {
+            dynamicUI.innerHTML = `<div class="p-6 text-center text-gray-400 text-sm font-medium border-2 border-dashed border-gray-200 rounded-xl">Select a Category above to load Variant options.</div>`;
+            tableBody.innerHTML = `<tr><td colspan="9" class="p-8 text-center text-gray-400 text-sm font-medium" id="tableEmptyState">Select a Category first.</td></tr>`;
+            genBtn.classList.add('hidden');
+            addManualBtn.classList.add('hidden');
+            if (addManualBtnTop) addManualBtnTop.classList.add('hidden');
+            return;
+        }
+
+        const rowCount = tableBody.querySelectorAll('tr').length;
+        const hasEmptyState = tableBody.querySelector('#tableEmptyState');
+        if (rowCount > 0 && !hasEmptyState) {
+            if (confirm('Category has been changed. Would you like to keep existing variants? Click OK to keep them, or Cancel to reset the table.')) {
+                renderCategoryUI(catId, true);
+            } else {
+                renderCategoryUI(catId, false);
+            }
+        } else {
+            renderCategoryUI(catId, false);
+        }
+    });
+
     function generateSKU(v1, v2, v3) {
         let base = (productNameInput && productNameInput.value) ? productNameInput.value.substring(0, 4).toUpperCase() : 'PRD';
         if (!base) base = 'PRD';
@@ -994,162 +1241,130 @@ sellInput.addEventListener('input', updateFinancials);
         return sku;
     }
 
-    function createVariantRow(v1, v2, v3, isMobile = false) {
+    function createVariantRow(v1, v2, v3, isCustom = false) {
         const sku = generateSKU(v1, v2, v3);
+        const defCost = document.getElementById('cost_price')?.value || '';
+        const defSell = document.getElementById('selling_price')?.value || '';
         
-        // --- Desktop Row ---
-        if (!isMobile) {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-[#f0f7ff] transition-colors h-[60px] even:bg-[#fafafa]";
-            let html = '';
-            
-            // Size (Variant 1) - Chip
-            if (currentConfig.col1) {
-                html += `<td class="p-4 border-b border-gray-100">
-                    <div class="inline-block bg-blue-50 text-[#0066FF] border border-[#0066FF]/20 px-3 py-1.5 rounded-lg text-xs font-black min-w-[80px] text-center">
-                        ${v1||'-'}
-                        <input type="hidden" name="${currentConfig.dbCol1}" value="${v1||''}">
-                    </div>
-                </td>`;
-            }
-
-            // Color (Variant 2) - Circle + Name
-            if (currentConfig.col2) {
-                if (currentConfig.col2 === 'Color') {
-                    const colorName = v2 ? v2.name : '-';
-                    const colorHex = v2 ? v2.hex : 'transparent';
-                    html += `<td class="p-4 border-b border-gray-100">
-                        <div class="flex items-center gap-2">
-                            ${v2 ? `<span class="w-5 h-5 rounded-full border border-gray-200 block shrink-0 shadow-sm" style="background-color: ${colorHex};"></span>` : ''}
-                            <span class="text-xs font-bold text-navy">${colorName}</span>
-                            <input type="hidden" name="${currentConfig.dbCol2}" value="${colorName}">
-                        </div>
-                    </td>`;
-                } else {
-                    html += `<td class="p-4 border-b border-gray-100">
-                        <span class="text-xs font-bold text-navy">${v2||'-'}</span>
-                        <input type="hidden" name="${currentConfig.dbCol2}" value="${v2||''}">
-                    </td>`;
-                }
-            }
-
-            // Fit Type
-            if (currentConfig.hasFit) {
-                html += `<td class="p-4 border-b border-gray-100">
-                    <select name="variant_fit[]" class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 px-2 text-xs font-bold focus:border-[#0066FF] outline-none">
-                        <option value="Regular" ${v3==='Regular'?'selected':''}>Regular</option>
-                        <option value="Slim" ${v3==='Slim'?'selected':''}>Slim</option>
-                        <option value="Oversized" ${v3==='Oversized'?'selected':''}>Oversized</option>
-                        <option value="${v3||''}" ${v3 && v3!=='Regular' && v3!=='Slim' && v3!=='Oversized' ? 'selected':''} class="hidden">${v3||''}</option>
-                    </select>
-                </td>`;
-            }
-
-            // Buy Price
-            html += `<td class="p-4 border-b border-gray-100">
-                <div class="relative">
-                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">Rs.</span>
-                    <input type="number" step="0.01" min="0" name="variant_cost_price[]" value="" placeholder="0.00" required class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 pl-7 pr-2 text-xs font-bold focus:border-[#0066FF] outline-none var-buy" oninput="calculateVarProfit(this)">
-                </div>
-            </td>`;
-
-            // Sell Price
-            html += `<td class="p-4 border-b border-gray-100">
-                <div class="relative">
-                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">Rs.</span>
-                    <input type="number" step="0.01" min="0" name="variant_price[]" value="" placeholder="0.00" required class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 pl-7 pr-2 text-xs font-bold focus:border-[#0066FF] outline-none var-sell" oninput="calculateVarProfit(this)">
-                </div>
-            </td>`;
-
-            // Profit
-            html += `<td class="p-4 border-b border-gray-100">
-                <span class="text-xs font-black text-gray-400 var-profit">-</span>
-            </td>`;
-
-            // Qty Stepper
-            html += `<td class="p-4 border-b border-gray-100">
-                <div class="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden w-[80px]">
-                    <button type="button" class="px-2 py-1 bg-gray-50 text-gray-500 hover:bg-gray-100 font-bold border-r border-gray-200" onclick="const i=this.nextElementSibling; i.value=Math.max(0,(parseInt(i.value)||0)-1); updateTotalQty();">-</button>
-                    <input type="number" name="variant_qty[]" value="0" min="0" required class="w-full text-center py-1 text-xs font-bold focus:outline-none variant-qty-input" oninput="updateTotalQty()">
-                    <button type="button" class="px-2 py-1 bg-gray-50 text-gray-500 hover:bg-gray-100 font-bold border-l border-gray-200" onclick="const i=this.previousElementSibling; i.value=(parseInt(i.value)||0)+1; updateTotalQty();">+</button>
-                </div>
-            </td>`;
-
-            // SKU
-            html += `<td class="p-4 border-b border-gray-100">
-                <div class="relative">
-                    <input type="text" name="variant_sku[]" value="${sku}" required class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 px-2 text-xs font-bold focus:border-[#0066FF] outline-none uppercase pr-6">
-                    <i class="fas fa-pencil-alt absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-300"></i>
-                </div>
-            </td>`;
-
-            // Delete
-            html += `<td class="p-4 border-b border-gray-100 text-center">
-                <button type="button" class="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-colors shadow-sm" onclick="if(confirm('Remove this variant?')) { this.closest('tr').remove(); syncMobileCards(); updateTotalQty(); }"><i class="fas fa-trash-alt"></i></button>
-            </td>`;
-            
-            tr.innerHTML = html;
-            return tr;
-        } 
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-[#f0f7ff] transition-colors h-[60px] even:bg-[#fafafa]";
+        let html = '';
         
-        // --- Mobile Card ---
-        else {
-            const div = document.createElement('div');
-            div.className = "bg-white border border-gray-200 rounded-xl p-4 shadow-sm relative";
-            let html = `<button type="button" class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors" onclick="if(confirm('Remove this variant?')) { this.closest('.bg-white').remove(); /* Need proper sync to desktop table here ideally, but for now we rely on desktop sync generating this */ }"><i class="fas fa-trash-alt"></i></button>`;
-            
-            html += `<div class="flex flex-wrap items-center gap-3 mb-4 pr-10">`;
-            if (currentConfig.col1) {
-                html += `<div class="bg-blue-50 text-[#0066FF] px-2 py-1 rounded text-xs font-black">${v1||'-'}</div>`;
-            }
-            if (currentConfig.col2 && currentConfig.col2 === 'Color') {
-                const colorName = v2 ? v2.name : '-';
-                const colorHex = v2 ? v2.hex : 'transparent';
-                html += `<div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full border border-gray-200" style="background-color: ${colorHex};"></span><span class="text-xs font-bold text-navy">${colorName}</span></div>`;
-            }
-            if (currentConfig.hasFit) {
-                html += `<div class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold">${v3||'Regular'}</div>`;
-            }
-            html += `</div>`;
+        const col1Field = (currentConfig && currentConfig.dbCol1) ? currentConfig.dbCol1 : 'variant_size[]';
+        const col2Field = (currentConfig && currentConfig.dbCol2) ? currentConfig.dbCol2 : 'variant_color[]';
 
-            html += `<div class="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Buy Price (Rs)</label>
-                    <input type="number" step="0.01" value="" placeholder="0.00" class="w-full bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-xs font-bold" readonly>
+        // Variant 1 (Size / Flavor / Variant)
+        if (isCustom || !v1) {
+            html += `<td class="p-4 border-b border-gray-100">
+                <input type="text" name="${col1Field}" value="${v1 || ''}" placeholder="Size / Variant (e.g. Short Handle)" class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 px-2 text-xs font-bold focus:border-[#0066FF] outline-none" required>
+            </td>`;
+        } else {
+            html += `<td class="p-4 border-b border-gray-100">
+                <div class="inline-block bg-blue-50 text-[#0066FF] border border-[#0066FF]/20 px-3 py-1.5 rounded-lg text-xs font-black min-w-[80px] text-center">
+                    ${v1}
+                    <input type="hidden" name="${col1Field}" value="${v1}">
                 </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Sell Price (Rs)</label>
-                    <input type="number" step="0.01" value="" placeholder="0.00" class="w-full bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-xs font-bold" readonly>
-                </div>
-            </div>`;
-
-            html += `<div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg mb-3">
-                <span class="text-[10px] font-bold text-gray-500 uppercase">Profit</span>
-                <span class="text-xs font-black text-gray-400">-</span>
-            </div>`;
-
-            html += `<div class="grid grid-cols-2 gap-3 items-end">
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Qty</label>
-                    <input type="number" value="0" class="w-full bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-xs font-bold" readonly>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">SKU</label>
-                    <input type="text" value="${sku}" class="w-full bg-gray-50 border border-gray-200 rounded-lg py-1.5 px-3 text-xs font-bold uppercase" readonly>
-                </div>
-            </div>`;
-
-            div.innerHTML = html;
-            return div;
+            </td>`;
         }
+
+        // Variant 2 (Color / Weight)
+        if (isCustom || !v2) {
+            const colVal = v2 ? (typeof v2 === 'object' ? v2.name : v2) : '';
+            html += `<td class="p-4 border-b border-gray-100">
+                <input type="text" name="${col2Field}" value="${colVal}" placeholder="Color / Variant (e.g. Default)" class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 px-2 text-xs font-bold focus:border-[#0066FF] outline-none">
+            </td>`;
+        } else {
+            const colorName = typeof v2 === 'object' ? v2.name : v2;
+            const colorHex = typeof v2 === 'object' ? v2.hex : 'transparent';
+            html += `<td class="p-4 border-b border-gray-100">
+                <div class="flex items-center gap-2">
+                    ${colorHex !== 'transparent' ? `<span class="w-5 h-5 rounded-full border border-gray-200 block shrink-0 shadow-sm" style="background-color: ${colorHex};"></span>` : ''}
+                    <span class="text-xs font-bold text-navy">${colorName || 'Default'}</span>
+                    <input type="hidden" name="${col2Field}" value="${colorName || 'Default'}">
+                </div>
+            </td>`;
+        }
+
+        // Fit Type
+        html += `<td class="p-4 border-b border-gray-100">
+            <select name="variant_fit[]" class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 px-2 text-xs font-bold focus:border-[#0066FF] outline-none">
+                <option value="Regular" ${v3==='Regular'?'selected':''}>Regular</option>
+                <option value="Slim" ${v3==='Slim'?'selected':''}>Slim</option>
+                <option value="Oversized" ${v3==='Oversized'?'selected':''}>Oversized</option>
+                <option value="${v3||''}" ${v3 && v3!=='Regular' && v3!=='Slim' && v3!=='Oversized' ? 'selected':''} class="hidden">${v3||''}</option>
+            </select>
+        </td>`;
+
+        // Buy Price
+        html += `<td class="p-4 border-b border-gray-100">
+            <div class="relative">
+                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">Rs.</span>
+                <input type="number" step="0.01" min="0" name="variant_cost_price[]" value="${defCost}" placeholder="0.00" required class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 pl-7 pr-2 text-xs font-bold focus:border-[#0066FF] outline-none var-buy" oninput="calculateVarProfit(this)">
+            </div>
+        </td>`;
+
+        // Sell Price
+        html += `<td class="p-4 border-b border-gray-100">
+            <div class="relative">
+                <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">Rs.</span>
+                <input type="number" step="0.01" min="0" name="variant_price[]" value="${defSell}" placeholder="0.00" required class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 pl-7 pr-2 text-xs font-bold focus:border-[#0066FF] outline-none var-sell" oninput="calculateVarProfit(this)">
+            </div>
+        </td>`;
+
+        // Profit
+        html += `<td class="p-4 border-b border-gray-100">
+            <span class="text-xs font-black text-gray-400 var-profit">-</span>
+        </td>`;
+
+        // Qty Stepper
+        html += `<td class="p-4 border-b border-gray-100">
+            <div class="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden w-[80px]">
+                <button type="button" class="px-2 py-1 bg-gray-50 text-gray-500 hover:bg-gray-100 font-bold border-r border-gray-200" onclick="const i=this.nextElementSibling; i.value=Math.max(0,(parseInt(i.value)||0)-1); updateTotalQty();">-</button>
+                <input type="number" name="variant_qty[]" value="1" min="0" required class="w-full text-center py-1 text-xs font-bold focus:outline-none variant-qty-input" oninput="updateTotalQty()">
+                <button type="button" class="px-2 py-1 bg-gray-50 text-gray-500 hover:bg-gray-100 font-bold border-l border-gray-200" onclick="const i=this.previousElementSibling; i.value=(parseInt(i.value)||0)+1; updateTotalQty();">+</button>
+            </div>
+        </td>`;
+
+        // SKU
+        html += `<td class="p-4 border-b border-gray-100">
+            <div class="relative">
+                <input type="text" name="variant_sku[]" value="${sku}" class="w-full bg-white border border-gray-200 text-navy rounded-lg py-1.5 px-2 text-xs font-bold focus:border-[#0066FF] outline-none uppercase pr-6">
+                <i class="fas fa-pencil-alt absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-300"></i>
+            </div>
+        </td>`;
+
+        // Delete
+        html += `<td class="p-4 border-b border-gray-100 text-center">
+            <button type="button" class="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-colors shadow-sm" onclick="if(confirm('Remove this variant?')) { this.closest('tr').remove(); syncMobileCards(); updateTotalQty(); }"><i class="fas fa-trash-alt"></i></button>
+        </td>`;
+        
+        tr.innerHTML = html;
+        return tr;
     }
 
-    // Function to keep mobile cards synchronized with desktop table data (one-way sync for simplicity, actual submission relies on desktop table form fields)
-    // In a production app, the form fields would be in the mobile cards too, but here we just hide the table visually. 
-    // The form still submits the table's hidden inputs.
+    function handleAddCustomVariant() {
+        const emptyState = document.getElementById('tableEmptyState');
+        if (emptyState) {
+            const trParent = emptyState.closest('tr');
+            if (trParent) trParent.remove();
+        }
+        if (!currentConfig && categorySelect && categorySelect.value) {
+            currentConfig = getCatConfig(categorySelect.value);
+        }
+        if (!currentConfig) {
+            currentConfig = { type: 'default', col1: 'Variant / Size', col2: 'Color', dbCol1: 'variant_size[]', dbCol2: 'variant_color[]', hasFit: false };
+        }
+        const row = createVariantRow('', '', '', true);
+        tableBody.appendChild(row);
+        calculateVarProfit(row.querySelector('.var-buy'));
+        updateTotalQty();
+        syncMobileCards();
+    }
+
+    if (addManualBtn) addManualBtn.addEventListener('click', handleAddCustomVariant);
+    if (addManualBtnTop) addManualBtnTop.addEventListener('click', handleAddCustomVariant);
+
     function syncMobileCards() {
-        // Not fully implemented for two-way edit in this prototype. 
-        // We will just show a message on mobile.
         const cardsContainer = document.getElementById('mobileVariantCards');
         if(!cardsContainer) return;
         cardsContainer.innerHTML = '<div class="p-6 text-center text-gray-500 text-xs font-bold bg-yellow-50 border border-yellow-200 rounded-xl"><i class="fas fa-desktop mb-2 text-xl block"></i> Please use a Desktop device to easily edit variant prices and quantities.</div>';
@@ -1165,36 +1380,45 @@ sellInput.addEventListener('input', updateFinancials);
         if (arr3.length === 0) arr3 = [null];
 
         if (activeSet1.size === 0 && activeSet2.size === 0 && activeSet3.size === 0) {
-            alert('Please select at least one variant option to generate the table.');
+            alert('Please select at least one variant option chip above, or click "+ Add Custom Variant" to add a custom row directly.');
             return;
         }
 
         // Show bulk action bar
-        document.getElementById('bulkActionBar').classList.remove('hidden');
-        document.getElementById('bulkActionBar').classList.add('flex');
+        if (bulkActionBar) {
+            bulkActionBar.classList.remove('hidden');
+            bulkActionBar.classList.add('flex');
+        }
+
+        // Remove empty state if present
+        const emptyState = document.getElementById('tableEmptyState');
+        if (emptyState) {
+            const trParent = emptyState.closest('tr');
+            if (trParent) trParent.remove();
+        }
 
         // Check duplicates logic
         const existingRows = Array.from(tableBody.querySelectorAll('tr'));
         const existingCombinations = existingRows.map(tr => {
-            const inputs = tr.querySelectorAll('input[type="hidden"]');
-            if(inputs.length >= 2) return inputs[0].value + '|' + inputs[1].value;
+            const inputs = tr.querySelectorAll('input[type="hidden"], input[name="variant_size[]"], input[name="variant_color[]"], input[name="variant_flavor[]"], input[name="variant_weight[]"]');
+            if (inputs.length >= 2) return (inputs[0].value || '').trim().toUpperCase() + '|' + (inputs[1].value || '').trim().toUpperCase();
             return null;
         }).filter(Boolean);
-
-        const emptyState = document.getElementById('tableEmptyState');
-        if(emptyState) emptyState.parentElement.remove();
 
         let addedCount = 0;
 
         arr1.forEach(v1 => {
             arr2.forEach(v2 => {
                 arr3.forEach(v3 => {
-                    const v1Val = v1 || '';
-                    const v2Val = v2 ? (typeof v2 === 'object' ? v2.name : v2) : '';
+                    const v1Val = (v1 || '').trim().toUpperCase();
+                    const v2Val = (v2 ? (typeof v2 === 'object' ? v2.name : v2) : '').trim().toUpperCase();
                     const combo = v1Val + '|' + v2Val;
                     
                     if (!existingCombinations.includes(combo) || combo === '|') {
-                        tableBody.appendChild(createVariantRow(v1, v2, v3, false));
+                        const newRow = createVariantRow(v1, v2, v3, false);
+                        tableBody.appendChild(newRow);
+                        calculateVarProfit(newRow.querySelector('.var-buy'));
+                        existingCombinations.push(combo);
                         addedCount++;
                     }
                 });
@@ -1210,27 +1434,33 @@ sellInput.addEventListener('input', updateFinancials);
     });
 
     // Bulk Apply Logic
-    document.getElementById('applyBulkBtn').addEventListener('click', () => {
-        const bBuy = document.getElementById('bulkBuyPrice').value;
-        const bSell = document.getElementById('bulkSellPrice').value;
-        const bQty = document.getElementById('bulkQty').value;
-        
-        const rows = document.querySelectorAll('#variantTableBody tr');
-        rows.forEach(tr => {
-            if(bBuy !== '') tr.querySelector('.var-buy').value = bBuy;
-            if(bSell !== '') tr.querySelector('.var-sell').value = bSell;
-            if(bQty !== '') tr.querySelector('.variant-qty-input').value = bQty;
+    const applyBulkBtn = document.getElementById('applyBulkBtn');
+    if (applyBulkBtn) {
+        applyBulkBtn.addEventListener('click', () => {
+            const bBuy = document.getElementById('bulkBuyPrice').value;
+            const bSell = document.getElementById('bulkSellPrice').value;
+            const bQty = document.getElementById('bulkQty').value;
             
-            if(bBuy !== '' || bSell !== '') calculateVarProfit(tr.querySelector('.var-buy'));
+            const rows = document.querySelectorAll('#variantTableBody tr');
+            rows.forEach(tr => {
+                const buyInp = tr.querySelector('.var-buy');
+                const sellInp = tr.querySelector('.var-sell');
+                const qtyInp = tr.querySelector('.variant-qty-input');
+                if (bBuy !== '' && buyInp) buyInp.value = bBuy;
+                if (bSell !== '' && sellInp) sellInp.value = bSell;
+                if (bQty !== '' && qtyInp) qtyInp.value = bQty;
+                
+                if (buyInp && (bBuy !== '' || bSell !== '')) calculateVarProfit(buyInp);
+            });
+            updateTotalQty();
         });
-        updateTotalQty();
-    });
+    }
 
-    addManualBtn.addEventListener('click', () => {
-        if (tableBody.querySelector('td[colspan="9"]')) tableBody.innerHTML = '';
-        tableBody.appendChild(createVariantRow('', '', ''));
-        syncMobileCards();
-    });
+    // Auto-initialize variant chips and counters on page load
+    if (categorySelect && categorySelect.value) {
+        renderCategoryUI(categorySelect.value, true);
+        updateTotalQty();
+    }
 
     function updateTotalQty() {
         const rows = document.querySelectorAll('#variantTableBody tr');
@@ -1361,7 +1591,5 @@ sellInput.addEventListener('input', updateFinancials);
         calculateHotDealDiscount();
     });
 </script>
-
-
 
 <?php include('../include/footer.php'); ?>

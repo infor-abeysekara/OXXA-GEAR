@@ -62,9 +62,12 @@
         </div>
 
         <!-- Col 2 - Quick Links -->
-        <div class="space-y-4 text-left flex flex-col items-start w-full">
-          <h4 class="text-sm sm:text-lg font-bold font-space text-white tracking-widest uppercase">Quick Links</h4>
-          <ul class="space-y-2 sm:space-y-3">
+        <div class="space-y-0 sm:space-y-4 text-left flex flex-col items-start w-full border-b border-[#222222] sm:border-0">
+          <div class="footer-accordion-header flex justify-between items-center w-full cursor-pointer sm:cursor-default py-4 sm:py-0" data-target="footerQuickLinks">
+            <h4 class="text-sm sm:text-lg font-bold font-space text-white tracking-widest uppercase m-0 pointer-events-none">Quick Links</h4>
+            <i class="fas fa-chevron-down sm:hidden text-white transition-transform duration-300 pointer-events-none"></i>
+          </div>
+          <ul id="footerQuickLinks" class="hidden sm:block space-y-3 pb-4 sm:pb-0 w-full">
             <?php
             $current_dir = dirname($_SERVER['PHP_SELF']);
             $base_path = '';
@@ -72,25 +75,28 @@
               $base_path = '../';
             }
             ?>
-            <li><a href="<?php echo $base_path; ?>index.php" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">Home</a></li>
-            <li><a href="<?php echo $base_path; ?>site/shop.php" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">Products</a></li>
-            <li><a href="<?php echo $base_path; ?>site/my-orders.php" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">Track Order</a></li>
-            <li><a href="<?php echo $base_path; ?>site/shipping.php" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">Shipping Info</a></li>
-            <li><a href="<?php echo $base_path; ?>site/faqs.php" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">FAQs</a></li>
-            <li><a href="<?php echo $base_path; ?>index.php#contact" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">Contact Us</a></li>
+            <li><a href="<?php echo $base_path; ?>index.php" class="text-gray-400 hover:text-primary transition-all text-sm block py-1">Home</a></li>
+            <li><a href="<?php echo $base_path; ?>site/shop.php" class="text-gray-400 hover:text-primary transition-all text-sm block py-1">Products</a></li>
+            <li><a href="<?php echo $base_path; ?>site/my-orders.php" class="text-gray-400 hover:text-primary transition-all text-sm block py-1">Track Order</a></li>
+            <li><a href="<?php echo $base_path; ?>site/shipping.php" class="text-gray-400 hover:text-primary transition-all text-sm block py-1">Shipping Info</a></li>
+            <li><a href="<?php echo $base_path; ?>site/faqs.php" class="text-gray-400 hover:text-primary transition-all text-sm block py-1">FAQs</a></li>
+            <li><a href="<?php echo $base_path; ?>index.php#contact" class="text-gray-400 hover:text-primary transition-all text-sm block py-1">Contact Us</a></li>
           </ul>
         </div>
 
         <!-- Col 3 - Categories -->
-        <div class="space-y-4 text-left flex flex-col items-start w-full">
-          <h4 class="text-sm sm:text-lg font-bold font-space text-white tracking-widest uppercase">Categories</h4>
-          <ul class="space-y-2 sm:space-y-3">
-            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Sports+Wear" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">SPORTS WEAR</a></li>
-            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Footwear" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">FOOTWEAR</a></li>
-            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Fitness+%26+Gym" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">FITNESS & GYM</a></li>
-            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Nutrition" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">NUTRITION</a></li>
-            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Accessories" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">ACCESSORIES</a></li>
-            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Equipment" class="text-gray-400 hover:text-primary transition-all text-xs sm:text-sm">EQUIPMENT</a></li>
+        <div class="space-y-0 sm:space-y-4 text-left flex flex-col items-start w-full border-b border-[#222222] sm:border-0">
+          <div class="footer-accordion-header flex justify-between items-center w-full cursor-pointer sm:cursor-default py-4 sm:py-0" data-target="footerCategories">
+            <h4 class="text-sm sm:text-lg font-bold font-space text-white tracking-widest uppercase m-0 pointer-events-none">Categories</h4>
+            <i class="fas fa-chevron-down sm:hidden text-white transition-transform duration-300 pointer-events-none"></i>
+          </div>
+          <ul id="footerCategories" class="hidden sm:block space-y-3 pb-4 sm:pb-0 w-full">
+            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Sports+Wear" class="text-gray-400 hover:text-primary transition-all text-sm block py-1">SPORTS WEAR</a></li>
+            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Footwear" class="text-gray-400 hover:text-primary transition-all text-sm block py-1">FOOTWEAR</a></li>
+            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Fitness+%26+Gym" class="text-gray-400 hover:text-primary transition-all text-sm block py-1">FITNESS & GYM</a></li>
+            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Nutrition" class="text-gray-400 hover:text-primary transition-all text-sm block py-1">NUTRITION</a></li>
+            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Accessories" class="text-gray-400 hover:text-primary transition-all text-sm block py-1">ACCESSORIES</a></li>
+            <li><a href="<?php echo $base_path; ?>site/shop.php?category=Equipment" class="text-gray-400 hover:text-primary transition-all text-sm block py-1">EQUIPMENT</a></li>
           </ul>
         </div>
 
@@ -195,7 +201,7 @@
   <!-- Premium Slide-in Cart Drawer & Quick Add Modal -->
   <?php include(__DIR__ . '/../site/components/cart-drawer.php'); ?>
   <?php include(__DIR__ . '/../site/components/quick-add-modal.php'); ?>
-  <script src="<?php echo $base_path; ?>site/js/cart-manager.js"></script>
+  <script src="<?php echo $base_path; ?>site/js/cart-manager.js?v=<?php echo filemtime(__DIR__ . '/../site/js/cart-manager.js'); ?>"></script>
 
   <!-- Global Custom JS Functions -->
   <script>
@@ -242,6 +248,26 @@
         setTimeout(() => badge.classList.remove('animate__animated', 'animate__rubberBand'), 1000);
       }
     }
+
+    // 3. Footer Accordion for Mobile
+    document.addEventListener('DOMContentLoaded', () => {
+        const accordionHeaders = document.querySelectorAll('.footer-accordion-header');
+        accordionHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                if (window.innerWidth < 768) {
+                    const targetId = this.getAttribute('data-target');
+                    const targetEl = document.getElementById(targetId);
+                    const icon = this.querySelector('i');
+                    if (targetEl) {
+                        targetEl.classList.toggle('hidden');
+                    }
+                    if (icon) {
+                        icon.classList.toggle('rotate-180');
+                    }
+                }
+            });
+        });
+    });
 
     // 3. Cart Drawer Toggle & Legacy Aliases
     function toggleCartSidebar() {
@@ -338,6 +364,37 @@
 
   <!-- Global Auth Modals component -->
   <?php include(__DIR__ . '/../site/components/auth-modals.php'); ?>
+
+  <!-- Bottom Navigation (Mobile Only - Hidden on Checkout for focused order conversion) -->
+  <?php 
+  $current_script = basename($_SERVER['PHP_SELF']); 
+  if ($current_script !== 'checkout.php'): 
+  ?>
+  <nav class="lg:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-100 z-[80] pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+    <div class="flex justify-around items-center h-[60px] px-2">
+      <a href="<?php echo $base_path; ?>index.php" class="flex flex-col items-center justify-center w-full h-full space-y-1 <?php echo $current_script == 'index.php' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+        <i class="fas fa-home text-lg mb-0.5"></i>
+        <span class="text-[10px] font-bold">Home</span>
+      </a>
+      <a href="<?php echo $base_path; ?>site/shop.php" class="flex flex-col items-center justify-center w-full h-full space-y-1 <?php echo $current_script == 'shop.php' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+        <i class="fas fa-th-large text-lg mb-0.5"></i>
+        <span class="text-[10px] font-bold">Categories</span>
+      </a>
+      <a href="<?php echo $base_path; ?>site/hot-deals.php" class="flex flex-col items-center justify-center w-full h-full space-y-1 <?php echo $current_script == 'hot-deals.php' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+        <i class="fas fa-fire text-lg mb-0.5"></i>
+        <span class="text-[10px] font-bold">Hot Deals</span>
+      </a>
+      <a href="<?php echo $base_path; ?>site/wishlist.php" class="flex flex-col items-center justify-center w-full h-full space-y-1 <?php echo $current_script == 'wishlist.php' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+        <i class="fas fa-heart text-lg mb-0.5"></i>
+        <span class="text-[10px] font-bold">Wishlist</span>
+      </a>
+      <a href="<?php echo $base_path; ?>site/profile.php" class="flex flex-col items-center justify-center w-full h-full space-y-1 <?php echo in_array($current_script, ['profile.php', 'settings.php', 'my-orders.php', 'address-book.php']) ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+        <i class="fas fa-user text-lg mb-0.5"></i>
+        <span class="text-[10px] font-bold">Account</span>
+      </a>
+    </div>
+  </nav>
+  <?php endif; ?>
 
 </body>
 </html>

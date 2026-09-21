@@ -43,26 +43,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Regex Rules
     const rules = {
-        business_name: /^[a-zA-Z0-9 &'.-]{3,100}$/,
-        owner_name: /^[a-zA-Z\s]{3,100}$/,
-        br_number: /^[A-Z]{1,3}-[A-Z]?-?\d{4,6}$/,
+        business_name: /^.{3,100}$/,
+        owner_name: /^[a-zA-Z\s\.\']{3,100}$/,
+        br_number: /^[A-Za-z0-9\/\-\. ]{3,30}$/,
         nic: /^([0-9]{9}[vVxX]|[0-9]{12})$/,
-        personal_phone: /^07[0-8]\d{7}$/,
+        personal_phone: /^07[0-9]\d{7}$/,
         business_phone: /^0\d{9}$/,
         email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
         postal_code: /^[0-9]{5}$/,
         account_number: /^\d{10,16}$/,
-        url: /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/
+        url: /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i
     };
 
     // Helper: Show/Clear Error
     const showError = (fieldId, msg) => {
-        const errSpan = document.getElementById(`err_${fieldId}`);
+        let errSpan = document.getElementById(`err_${fieldId}`);
+        if (!errSpan && fieldId === 'br_number') errSpan = document.getElementById('err_business_reg_id');
+        if (!errSpan && fieldId === 'business_reg_id') errSpan = document.getElementById('err_br_number');
         if (errSpan) {
             errSpan.textContent = msg;
             errSpan.classList.remove('hidden');
         }
-        const input = document.getElementById(fieldId);
+        let input = document.getElementById(fieldId);
+        if (!input && fieldId === 'business_reg_id') input = document.getElementById('br_number');
         if (input) {
             input.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-100');
             input.classList.remove('border-gray-200', 'focus:border-[#0066FF]', 'focus:ring-[#0066FF]');
@@ -70,12 +73,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const clearError = (fieldId) => {
-        const errSpan = document.getElementById(`err_${fieldId}`);
+        let errSpan = document.getElementById(`err_${fieldId}`);
+        if (!errSpan && fieldId === 'br_number') errSpan = document.getElementById('err_business_reg_id');
+        if (!errSpan && fieldId === 'business_reg_id') errSpan = document.getElementById('err_br_number');
         if (errSpan) {
             errSpan.textContent = '';
             errSpan.classList.add('hidden');
         }
-        const input = document.getElementById(fieldId);
+        let input = document.getElementById(fieldId);
+        if (!input && fieldId === 'business_reg_id') input = document.getElementById('br_number');
         if (input) {
             input.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-100');
             input.classList.add('border-gray-200', 'focus:border-[#0066FF]', 'focus:ring-[#0066FF]');
@@ -85,10 +91,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Field Validation Handlers
     const validateField = (id) => {
         const el = inputs[id];
-        const val = el.value.trim();
+        if (!el) return true;
+        const val = el.value ? el.value.trim() : '';
         let isValid = true;
 
-        if (el.hasAttribute('required') && !val && id !== 'declaration') {
+        if (id === 'declaration') {
+            if (!el.checked) {
+                showError(id, 'You must agree to the declaration before submitting.');
+                return false;
+            } else {
+                clearError(id);
+                return true;
+            }
+        }
+
+        if (el.hasAttribute('required') && !val) {
             showError(id, 'This field is required');
             return false;
         }
@@ -96,14 +113,14 @@ document.addEventListener('DOMContentLoaded', () => {
         switch (id) {
             case 'business_name':
                 if (val && !rules.business_name.test(val)) {
-                    showError(id, 'Min 3 chars. Only letters, numbers, spaces, and & \'. - allowed.');
+                    showError(id, 'Min 3 characters required.');
                     isValid = false;
                 }
                 break;
             case 'br_number':
                 el.value = val.toUpperCase();
                 if (val && !rules.br_number.test(val)) {
-                    showError(id, 'Invalid BR format. E.g. WP-C-32194');
+                    showError(id, 'Invalid BR format. Min 3 characters required.');
                     isValid = false;
                 }
                 break;
@@ -124,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'owner_name':
                 if (val && !rules.owner_name.test(val)) {
-                    showError(id, 'Min 3 chars. Only letters and spaces allowed.');
+                    showError(id, 'Min 3 chars. Letters, spaces, and initials only.');
                     isValid = false;
                 }
                 break;
@@ -139,6 +156,12 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'district':
                 if (el.hasAttribute('required') && (!val || el.disabled)) {
                     showError(id, 'Please select a district.');
+                    isValid = false;
+                }
+                break;
+            case 'city':
+                if (el.hasAttribute('required') && (!val || el.disabled)) {
+                    showError(id, 'Please select a city.');
                     isValid = false;
                 }
                 break;
@@ -234,9 +257,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
             case 'social_website':
-                if (val && !rules.url.test(val)) {
-                    showError(id, 'Enter a valid URL (e.g. https://domain.com).');
-                    isValid = false;
+                if (val) {
+                    let testUrl = val;
+                    if (!/^https?:\/\//i.test(testUrl)) {
+                        testUrl = 'https://' + testUrl;
+                    }
+                    if (!rules.url.test(testUrl)) {
+                        showError(id, 'Enter a valid website or social page URL.');
+                        isValid = false;
+                    }
                 }
                 break;
         }
@@ -304,16 +333,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Categories Validation
     const validateCategories = () => {
         const checked = document.querySelectorAll('.category-checkbox:checked');
+        const container = document.getElementById('categories_container');
+        const errSpan = document.getElementById('err_categories');
         if (checked.length === 0) {
-            const errSpan = document.getElementById('err_categories');
             if(errSpan) {
-                errSpan.textContent = 'Please select at least one category.';
+                errSpan.textContent = 'Please select at least one category that you sell.';
                 errSpan.classList.remove('hidden');
+            }
+            if (container) {
+                container.classList.add('border-2', 'border-red-500', 'p-3', 'rounded-xl', 'bg-red-50/40');
             }
             return false;
         } else {
-            const errSpan = document.getElementById('err_categories');
             if(errSpan) errSpan.classList.add('hidden');
+            if (container) {
+                container.classList.remove('border-2', 'border-red-500', 'p-3', 'rounded-xl', 'bg-red-50/40');
+            }
             return true;
         }
     };
@@ -327,9 +362,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // File Upload Validation & UI
     const validateFile = (input) => {
-        const file = input.files[0];
-        const display = input.parentElement.querySelector('.file-name-display');
-        const icon = input.parentElement.querySelector('i');
+        const file = input.files ? input.files[0] : null;
+        const parentLabel = input.closest('label') || input.parentElement;
+        const display = parentLabel ? parentLabel.querySelector('.file-name-display') : null;
+        const icon = parentLabel ? parentLabel.querySelector('i') : null;
         const errSpan = document.getElementById(`err_${input.id}`);
         
         if (!file && input.hasAttribute('required')) {
@@ -337,10 +373,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 errSpan.textContent = 'This document is required.';
                 errSpan.classList.remove('hidden');
             }
+            if (parentLabel) {
+                parentLabel.classList.add('!border-red-500', '!bg-red-50/40');
+            }
             return false;
         }
 
-        if (!file) return true; // Optional file
+        if (!file) {
+            if (errSpan) errSpan.classList.add('hidden');
+            if (parentLabel) {
+                parentLabel.classList.remove('!border-red-500', '!bg-red-50/40');
+            }
+            return true;
+        }
 
         // Check Size
         const maxSizeMB = parseFloat(input.getAttribute('data-max-size') || 5);
@@ -349,18 +394,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 errSpan.textContent = `File too large. Maximum size is ${maxSizeMB}MB.`;
                 errSpan.classList.remove('hidden');
             }
+            if (parentLabel) {
+                parentLabel.classList.add('!border-red-500', '!bg-red-50/40');
+            }
             input.value = ''; // clear
             resetFileUI(input, display, icon);
             return false;
         }
 
         // Check Type
-        const acceptedTypes = input.getAttribute('accept').split(',');
+        const acceptedTypes = (input.getAttribute('accept') || '').split(',').map(t => t.trim().toLowerCase());
         const fileExt = '.' + file.name.split('.').pop().toLowerCase();
-        if (!acceptedTypes.includes(fileExt) && !acceptedTypes.includes(file.type)) {
+        if (acceptedTypes.length > 0 && !acceptedTypes.includes(fileExt) && !acceptedTypes.includes(file.type.toLowerCase())) {
             if(errSpan) {
                 errSpan.textContent = `Invalid format. Accepted: ${acceptedTypes.join(', ')}`;
                 errSpan.classList.remove('hidden');
+            }
+            if (parentLabel) {
+                parentLabel.classList.add('!border-red-500', '!bg-red-50/40');
             }
             input.value = ''; // clear
             resetFileUI(input, display, icon);
@@ -377,6 +428,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         errSpan.textContent = `Image dimensions must be at least 200x200px.`;
                         errSpan.classList.remove('hidden');
                     }
+                    if (parentLabel) {
+                        parentLabel.classList.add('!border-red-500', '!bg-red-50/40');
+                    }
                     input.value = '';
                     resetFileUI(input, display, icon);
                     URL.revokeObjectURL(objectUrl);
@@ -389,19 +443,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         preview.classList.remove('hidden');
                         wrapper.classList.add('hidden');
                     }
+                    if (parentLabel) {
+                        parentLabel.classList.remove('!border-red-500', '!bg-red-50/40');
+                    }
                 }
             };
             img.src = objectUrl;
         }
 
         if(errSpan) errSpan.classList.add('hidden');
+        if (parentLabel) {
+            parentLabel.classList.remove('!border-red-500', '!bg-red-50/40');
+            parentLabel.classList.add('border-[#0066FF]', 'bg-blue-50');
+        }
         
         // Update UI Success
         if (display && icon) {
             display.textContent = file.name;
             display.classList.add('text-[#0066FF]', 'font-bold');
             display.classList.remove('text-gray-500');
-            input.parentElement.classList.add('border-[#0066FF]', 'bg-blue-50');
             icon.classList.remove('fa-cloud-upload-alt', 'fa-image', 'fa-id-card', 'fa-store', 'fa-university', 'text-gray-400');
             icon.classList.add('fa-check-circle', 'text-[#0066FF]');
         }
@@ -411,14 +471,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const resetFileUI = (input, display, icon) => {
+        const parentLabel = input.closest('label') || input.parentElement;
         if(display) {
             display.textContent = 'Click to upload';
             display.classList.remove('text-[#0066FF]', 'font-bold');
             display.classList.add('text-gray-500');
         }
-        input.parentElement.classList.remove('border-[#0066FF]', 'bg-blue-50');
+        if (parentLabel) {
+            parentLabel.classList.remove('border-[#0066FF]', 'bg-blue-50');
+            parentLabel.classList.add('!border-red-500', '!bg-red-50/40');
+        }
         if(icon) {
-            icon.className = 'fas fa-exclamation-circle text-2xl text-red-400 mb-2'; // show error icon
+            icon.className = 'fas fa-exclamation-circle text-2xl text-red-400 mb-2';
         }
         
         if (input.getAttribute('data-is-logo') === 'true') {
@@ -464,27 +528,135 @@ document.addEventListener('DOMContentLoaded', () => {
             const errSpan = document.getElementById(`err_${fi?.id}`);
             if (errSpan && !errSpan.classList.contains('hidden')) valid = false;
         });
-
-        submitBtn.disabled = !valid;
     };
 
     window.checkSellerFormValidity = checkFormValidity;
+
+    // Field human readable labels
+    const fieldLabels = {
+        business_name: 'Business Name',
+        business_type: 'Business Type',
+        br_number: 'Business Registration Number (BR)',
+        date_of_incorporation: 'Date of Incorporation',
+        nature_of_business: 'Nature of Business',
+        owner_name: 'Owner Full Name',
+        owner_nic: 'Owner NIC Number',
+        personal_phone: 'Personal Phone',
+        personal_email: 'Personal Email',
+        business_phone: 'Business Phone',
+        business_email: 'Business Email',
+        address_line1: 'Address Line 1',
+        address_line2: 'Address Line 2',
+        province: 'Province',
+        district: 'District',
+        city: 'City',
+        postal_code: 'Postal Code',
+        bank_name: 'Bank Name',
+        branch_name: 'Branch Name',
+        account_number: 'Account Number',
+        account_holder_name: 'Account Holder Name',
+        social_website: 'Website / Facebook Page',
+        declaration: 'Declaration Agreement'
+    };
+
+    const fileLabels = {
+        certificate_file: 'BR Certificate (PDF required)',
+        nic_file: 'Owner NIC Copy (PDF required)',
+        logo_file: 'Business Logo (Min 200x200px image required)',
+        shop_photo_file: 'Shop Photo',
+        bank_book_file: 'Bank Book / Slip Photo'
+    };
 
     // AJAX Form Submission
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        // Final sanity check
         let allValid = true;
-        Object.keys(inputs).forEach(key => { if(!validateField(key)) allValid = false; });
-        if(!validateCategories()) allValid = false;
-        Object.values(fileInputs).forEach(fi => { if(!validateFile(fi)) allValid = false; });
+        const invalidFields = [];
+        let firstInvalidEl = null;
+
+        // 1. Check regular inputs
+        Object.keys(inputs).forEach(key => {
+            if (!validateField(key)) {
+                allValid = false;
+                const label = fieldLabels[key] || key;
+                let msg = '';
+                const errSpan = document.getElementById(`err_${key}`) || document.getElementById(`err_business_reg_id`);
+                if (errSpan && !errSpan.classList.contains('hidden') && errSpan.textContent.trim()) {
+                    msg = errSpan.textContent.trim();
+                }
+                invalidFields.push(`<strong>${label}</strong>: ${msg || 'Please fill this field correctly'}`);
+                if (!firstInvalidEl && inputs[key]) {
+                    firstInvalidEl = inputs[key];
+                }
+            }
+        });
+
+        // 2. Check categories
+        if (!validateCategories()) {
+            allValid = false;
+            invalidFields.push(`<strong>What do you sell?</strong>: Please select at least one category`);
+            if (!firstInvalidEl) {
+                firstInvalidEl = document.getElementById('categories_container');
+            }
+        }
+
+        // 3. Check required files
+        Object.keys(fileInputs).forEach(fileKey => {
+            const fi = fileInputs[fileKey];
+            if (fi && !validateFile(fi)) {
+                allValid = false;
+                const label = fileLabels[fileKey] || fileKey;
+                let msg = '';
+                const errSpan = document.getElementById(`err_${fi.id}`);
+                if (errSpan && !errSpan.classList.contains('hidden') && errSpan.textContent.trim()) {
+                    msg = errSpan.textContent.trim();
+                }
+                invalidFields.push(`<strong>${label}</strong>: ${msg || 'Document required'}`);
+                if (!firstInvalidEl) {
+                    firstInvalidEl = fi.closest('.file-upload-wrapper') || fi.closest('label') || fi;
+                }
+            }
+        });
 
         if (!allValid) {
-            formErrorText.textContent = "Please correct the highlighted errors before submitting.";
+            formErrorText.innerHTML = `
+                <div class="font-bold text-base text-red-800 mb-2">
+                    <i class="fas fa-exclamation-triangle me-1"></i> Please correct the following ${invalidFields.length} issue(s) before submitting:
+                </div>
+                <ul class="list-disc list-inside space-y-1.5 text-sm font-medium text-red-700 bg-red-100/50 p-3 rounded-xl border border-red-200 mt-2">
+                    ${invalidFields.map(f => `<li>${f}</li>`).join('')}
+                </ul>
+            `;
             formErrorBanner.classList.remove('hidden');
             formErrorBanner.classList.add('flex');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Incomplete Registration',
+                    html: `
+                        <div class="text-left text-sm">
+                            <p class="mb-3 font-semibold text-gray-700">Please complete the following required items:</p>
+                            <ul class="list-disc list-inside space-y-1.5 text-red-600 bg-red-50 p-3 rounded-xl border border-red-100 max-h-60 overflow-y-auto">
+                                ${invalidFields.map(f => `<li>${f}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `,
+                    confirmButtonColor: '#0066FF',
+                    confirmButtonText: 'Fix Highlighted Fields'
+                }).then(() => {
+                    if (firstInvalidEl) {
+                        firstInvalidEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        if (typeof firstInvalidEl.focus === 'function') firstInvalidEl.focus();
+                    }
+                });
+            } else {
+                if (firstInvalidEl) {
+                    firstInvalidEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (typeof firstInvalidEl.focus === 'function') firstInvalidEl.focus();
+                }
+            }
             return;
         }
 
@@ -508,13 +680,44 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 // Show errors
                 if (result.errors && typeof result.errors === 'object') {
-                    // Field specific errors
+                    const backendErrorList = [];
                     Object.keys(result.errors).forEach(key => {
                         showError(key, result.errors[key]);
+                        const label = fieldLabels[key] || fileLabels[key] || key;
+                        backendErrorList.push(`<strong>${label}</strong>: ${result.errors[key]}`);
                     });
-                    formErrorText.textContent = "We found some issues with your submission. Please check the fields below.";
+                    formErrorText.innerHTML = `
+                        <div class="font-bold text-base text-red-800 mb-2">
+                            <i class="fas fa-exclamation-circle me-1"></i> We found issues with your submission:
+                        </div>
+                        <ul class="list-disc list-inside space-y-1.5 text-sm font-medium text-red-700 bg-red-100/50 p-3 rounded-xl border border-red-200 mt-2">
+                            ${backendErrorList.map(f => `<li>${f}</li>`).join('')}
+                        </ul>
+                    `;
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Submission Issues',
+                            html: `
+                                <div class="text-left text-sm">
+                                    <ul class="list-disc list-inside space-y-1.5 text-red-600 bg-red-50 p-3 rounded-xl border border-red-100 max-h-60 overflow-y-auto">
+                                        ${backendErrorList.map(f => `<li>${f}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            `,
+                            confirmButtonColor: '#0066FF'
+                        });
+                    }
                 } else if (result.message) {
                     formErrorText.textContent = result.message;
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Submission Error',
+                            text: result.message,
+                            confirmButtonColor: '#0066FF'
+                        });
+                    }
                 } else {
                     formErrorText.textContent = "An unknown error occurred.";
                 }

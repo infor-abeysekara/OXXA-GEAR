@@ -18,18 +18,7 @@
         </button>
     </div>
 
-    <!-- Free Shipping Progress Bar -->
-    <div id="freeShippingBanner" class="px-6 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 shrink-0">
-        <div class="flex justify-between items-center text-xs font-bold mb-1.5">
-            <span id="freeShippingText" class="text-primary flex items-center gap-1.5">
-                <i class="fas fa-truck-fast"></i> Add Rs. 5,000 for FREE Shipping
-            </span>
-            <span id="freeShippingPercent" class="text-gray-500">0%</span>
-        </div>
-        <div class="w-full h-1.5 bg-blue-200/50 rounded-full overflow-hidden">
-            <div id="freeShippingBar" class="h-full bg-primary rounded-full transition-all duration-500" style="width: 0%;"></div>
-        </div>
-    </div>
+
 
     <!-- Drawer Body (Items List) -->
     <div class="flex-grow overflow-y-auto px-6 py-4 space-y-6" id="cartDrawerBody">
@@ -99,9 +88,9 @@
                 <span>Proceed to Checkout</span>
                 <i class="fas fa-arrow-right text-[11px]"></i>
             </a>
-            <button type="button" onclick="closeCartDrawer()" class="block w-full py-2.5 text-center text-gray-500 hover:text-navy font-bold text-xs uppercase tracking-wider transition-colors">
+            <a href="<?php echo isset($base_path) ? $base_path : ''; ?>site/shop.php" onclick="closeCartDrawer()" class="block w-full py-2.5 text-center text-gray-500 hover:text-navy font-bold text-xs uppercase tracking-wider transition-colors">
                 Continue Shopping
-            </button>
+            </a>
         </div>
 
     </div>

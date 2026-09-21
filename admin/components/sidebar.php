@@ -7,17 +7,51 @@ $admin_image = $_SESSION['profile_image'] ?? '';
     .admin-sidebar {
         background: linear-gradient(135deg, #0A0A0A 0%, #1A1A1A 100%);
         border-left: 4px solid #0066FF;
-        min-height: 100vh;
+        height: 100vh;
+        max-height: 100vh;
         position: fixed;
         top: 0;
+        bottom: 0;
         left: 0;
         width: 250px;
         z-index: 1000;
         box-shadow: 2px 0 15px rgba(0,0,0,0.5);
         transition: width 0.3s ease;
+        overflow: visible;
+        display: flex;
+        flex-direction: column;
     }
+
+    /* Inner scrollable area for navigation items */
+    .sidebar-scroll-wrapper {
+        flex: 1 1 auto;
+        height: 100%;
+        max-height: 100vh;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        overscroll-behavior-y: contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 102, 255, 0.4) rgba(255, 255, 255, 0.05);
+    }
+    .sidebar-scroll-wrapper::-webkit-scrollbar {
+        width: 6px;
+    }
+    .sidebar-scroll-wrapper::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.25);
+    }
+    .sidebar-scroll-wrapper::-webkit-scrollbar-thumb {
+        background: rgba(0, 102, 255, 0.4);
+        border-radius: 4px;
+    }
+    .sidebar-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+        background: #0066FF;
+    }
+
     .admin-sidebar.collapsed {
         width: 80px;
+    }
+    .admin-sidebar.collapsed .sidebar-scroll-wrapper {
+        overflow: visible !important;
     }
     
     /* Global class for main-content transition */
@@ -195,6 +229,11 @@ $admin_image = $_SESSION['profile_image'] ?? '';
             top: 50px;
             width: 200px;
         }
+        .sidebar-scroll-wrapper {
+            height: auto;
+            max-height: none;
+            overflow-y: visible !important;
+        }
     }
     
     /* Vanilla Dropdown Support (For pages without Bootstrap) */
@@ -204,11 +243,12 @@ $admin_image = $_SESSION['profile_image'] ?? '';
 </style>
 
 <nav class="admin-sidebar" id="adminSidebar">
-    <div class="sidebar-toggle-btn" id="sidebarInlineToggle">
+    <div class="sidebar-toggle-btn" id="sidebarInlineToggle" title="Toggle Sidebar">
         <i class="fas fa-chevron-left"></i>
     </div>
 
-    <div class="p-4 text-center sidebar-logo">
+    <div class="sidebar-scroll-wrapper" id="sidebarScrollWrapper">
+        <div class="p-4 text-center sidebar-logo">
         <a href="dashboard.php" class="text-decoration-none">
             <img src="../image/oxxa_gear_logo.png" alt="OXXA GEAR Logo" class="img-fluid mb-2" style="width: 140px; filter: brightness(0) invert(1); transition: width 0.3s ease;">
             <h5 class="fw-bold text-white mb-0 mt-2">OXXA GEAR</h5>
@@ -244,7 +284,7 @@ $admin_image = $_SESSION['profile_image'] ?? '';
         </ul>
     </div>
     
-    <ul class="nav flex-column mt-3">
+    <ul class="nav flex-column mt-3" style="padding-bottom: 80px;">
         <li class="nav-item">
             <a class="nav-link <?php echo ($current_page == 'dashboard.php') ? 'active' : ''; ?>" href="dashboard.php">
                 <i class="fas fa-tachometer-alt"></i> <span class="nav-text ms-2">Dashboard</span>
@@ -261,8 +301,18 @@ $admin_image = $_SESSION['profile_image'] ?? '';
             </a>
         </li>
         <li class="nav-item">
+            <a class="nav-link <?php echo ($current_page == 'manage-orders.php') ? 'active' : ''; ?>" href="manage-orders.php">
+                <i class="fas fa-shopping-cart"></i> <span class="nav-text ms-2">Manage Orders</span>
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link <?php echo ($current_page == 'finance.php') ? 'active' : ''; ?>" href="finance.php">
                 <i class="fas fa-chart-line"></i> <span class="nav-text ms-2">Finance Analytics</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo ($current_page == 'withdrawal-requests.php') ? 'active' : ''; ?>" href="withdrawal-requests.php">
+                <i class="fas fa-money-bill-wave"></i> <span class="nav-text ms-2">Withdrawals</span>
             </a>
         </li>
         <li class="nav-item">
@@ -291,12 +341,14 @@ $admin_image = $_SESSION['profile_image'] ?? '';
             </a>
         </li>
     </ul>
+    </div><!-- End .sidebar-scroll-wrapper -->
 </nav>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const sidebarInlineToggle = document.getElementById('sidebarInlineToggle');
     const adminSidebar = document.getElementById('adminSidebar');
+    const scrollWrapper = document.getElementById('sidebarScrollWrapper');
     
     // Check local storage for sidebar state
     if (localStorage.getItem('sidebarCollapsed') === 'true') {
@@ -316,6 +368,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('sidebarCollapsed', 'false');
             }
         });
+    }
+
+    // Smooth wheel scrolling fallback for all environments
+    if (adminSidebar && scrollWrapper) {
+        adminSidebar.addEventListener('wheel', function(e) {
+            if (scrollWrapper.scrollHeight > scrollWrapper.clientHeight) {
+                scrollWrapper.scrollTop += e.deltaY;
+                e.preventDefault();
+            }
+        }, { passive: false });
     }
 
     // Custom Profile Dropdown Logic (for both Bootstrap and Tailwind pages)

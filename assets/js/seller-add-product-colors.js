@@ -17,57 +17,320 @@ document.addEventListener('DOMContentLoaded', function() {
         'One Size': ['Standard']
     };
 
-    // Global Images Dropzone Logic
-    const globalFileInput = document.querySelector('.global-file-input');
+    // ==========================================
+    // GLOBAL PRODUCT IMAGES (DRAG & DROP + ACCUMULATIVE)
+    // ==========================================
+    const globalFileInput = document.getElementById('globalFileInput') || document.querySelector('.global-file-input');
     const globalPreviewContainer = document.querySelector('.global-preview-container');
-    const globalFileLabel = document.querySelector('.global-file-label');
+    const globalFileLabel = document.getElementById('globalDropzone') || document.querySelector('.global-file-label');
+    const globalDropzoneWrapper = document.getElementById('globalDropzoneWrapper');
+    const globalImageCountBadge = document.getElementById('globalImageCountBadge');
+    const imageUploadNotice = document.getElementById('imageUploadNotice');
 
+    let globalUploadedFiles = []; // Master list of files
+
+    // Helper: Extract File objects from DragEvent
+    function extractFilesFromEvent(e) {
+        let files = [];
+        if (e.dataTransfer) {
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                files = Array.from(e.dataTransfer.files);
+            } else if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+                for (let i = 0; i < e.dataTransfer.items.length; i++) {
+                    if (e.dataTransfer.items[i].kind === 'file') {
+                        const f = e.dataTransfer.items[i].getAsFile();
+                        if (f) files.push(f);
+                    }
+                }
+            }
+        }
+        return files;
+    }
+
+    // Helper: Sync globalUploadedFiles to <input type="file">
+    function syncFilesToInput() {
+        if (!globalFileInput) return;
+        try {
+            const dt = new DataTransfer();
+            globalUploadedFiles.forEach(file => dt.items.add(file));
+            globalFileInput.files = dt.files;
+        } catch (err) {
+            console.error('Error syncing files to globalFileInput:', err);
+        }
+    }
+
+    // Helper: Process new incoming files (from file picker OR drag-drop)
+    function handleNewIncomingFiles(fileList) {
+        if (!fileList || fileList.length === 0) return;
+
+        let addedCount = 0;
+        let oversizedCount = 0;
+        const maxFiles = 10;
+        const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+
+        Array.from(fileList).forEach(file => {
+            const isImage = (file.type && file.type.startsWith('image/')) || /\.(jpe?g|png|webp|gif|bmp|jfif|avif|heic|svg)$/i.test(file.name || '');
+            if (!isImage) return;
+            if (file.size > maxSizeBytes) {
+                oversizedCount++;
+                return;
+            }
+            if (globalUploadedFiles.length >= maxFiles) return;
+
+            // Check for duplicate file by name and size
+            const isDup = globalUploadedFiles.some(f => f.name === file.name && f.size === file.size);
+            if (isDup) return;
+
+            globalUploadedFiles.push(file);
+            addedCount++;
+        });
+
+        syncFilesToInput();
+        renderGlobalPreviews();
+
+        if (oversizedCount > 0) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'File Too Large',
+                    text: `${oversizedCount} photo(s) exceeded the 10MB limit and were skipped.`,
+                    confirmButtonColor: '#0066FF'
+                });
+            } else {
+                alert(`${oversizedCount} photo(s) exceeded the 10MB limit.`);
+            }
+        }
+    }
+
+    // Native file input change
     if (globalFileInput) {
         globalFileInput.addEventListener('change', (e) => {
-            const dt = new DataTransfer();
-            Array.from(globalFileInput.files).slice(0, 10).forEach(f => dt.items.add(f));
-            globalFileInput.files = dt.files;
-            renderGlobalPreviews();
+            if (e.target.files && e.target.files.length > 0) {
+                handleNewIncomingFiles(Array.from(e.target.files));
+            }
         });
+    }
+
+    // Prevent browser default on window for all drag & drop events (prevents browser navigating away or dropping outside)
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => {
+        window.addEventListener(ev, (e) => {
+            e.preventDefault();
+        }, false);
+    });
+
+    // Helper to toggle visual active state on dropzone
+    function setDropzoneHighlight(active) {
+        if (!globalFileLabel) return;
+        const dropText = globalFileLabel.querySelector('.dropzone-text');
+        if (active) {
+            globalFileLabel.classList.add('border-[#0066FF]', 'bg-blue-50/80', 'ring-4', 'ring-blue-100');
+            if (dropText) dropText.innerHTML = '<span class="text-[#0066FF] font-black text-base">Release mouse to drop photos now!</span>';
+        } else {
+            globalFileLabel.classList.remove('border-[#0066FF]', 'bg-blue-50/80', 'ring-4', 'ring-blue-100');
+            if (dropText) dropText.innerHTML = 'Drag & drop photos here, or <span class="text-[#0066FF] underline font-black">browse</span>';
+        }
+    }
+
+    // Main dropzone drag & drop with counter to prevent false dragleaves
+    let dropzoneCounter = 0;
+    const dropzoneTargets = [globalFileLabel, globalDropzoneWrapper].filter(Boolean);
+
+    dropzoneTargets.forEach(el => {
+        el.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzoneCounter++;
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+            setDropzoneHighlight(true);
+        }, false);
+
+        el.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+            setDropzoneHighlight(true);
+        }, false);
+
+        el.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzoneCounter--;
+            if (dropzoneCounter <= 0) {
+                dropzoneCounter = 0;
+                setDropzoneHighlight(false);
+            }
+        }, false);
+
+        el.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzoneCounter = 0;
+            setDropzoneHighlight(false);
+
+            const files = extractFilesFromEvent(e);
+            if (files.length > 0) {
+                handleNewIncomingFiles(files);
+            }
+        }, false);
+    });
+
+    // Drag and drop onto the preview container area
+    if (globalPreviewContainer) {
+        let previewCounter = 0;
+
+        globalPreviewContainer.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            previewCounter++;
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+            globalPreviewContainer.classList.add('ring-2', 'ring-[#0066FF]', 'rounded-xl', 'bg-blue-50/30');
+        }, false);
+
+        globalPreviewContainer.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+        }, false);
+
+        globalPreviewContainer.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            previewCounter--;
+            if (previewCounter <= 0) {
+                previewCounter = 0;
+                globalPreviewContainer.classList.remove('ring-2', 'ring-[#0066FF]', 'rounded-xl', 'bg-blue-50/30');
+            }
+        }, false);
+
+        globalPreviewContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            previewCounter = 0;
+            globalPreviewContainer.classList.remove('ring-2', 'ring-[#0066FF]', 'rounded-xl', 'bg-blue-50/30');
+            const files = extractFilesFromEvent(e);
+            if (files.length > 0) {
+                handleNewIncomingFiles(files);
+            }
+        }, false);
     }
 
     function renderGlobalPreviews() {
+        if (!globalPreviewContainer) return;
         globalPreviewContainer.innerHTML = '';
-        const files = Array.from(globalFileInput.files);
-        
-        if (files.length > 0) {
-            globalFileLabel.classList.add('hidden');
-        } else {
-            globalFileLabel.classList.remove('hidden');
+        const count = globalUploadedFiles.length;
+
+        // Update badge and status notice
+        if (globalImageCountBadge) {
+            if (count === 0) {
+                globalImageCountBadge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-gray-100 text-gray-500 border border-gray-200';
+                globalImageCountBadge.innerHTML = '<i class="fas fa-camera me-1"></i> 0 / 10 photos (Min 1 required)';
+            } else {
+                globalImageCountBadge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-green-50 text-green-700 border border-green-200';
+                globalImageCountBadge.innerHTML = `<i class="fas fa-check-circle me-1"></i> ${count} / 10 photos (Ready)`;
+            }
         }
-        
-        files.forEach((file, index) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const div = document.createElement('div');
-                div.className = 'relative w-full aspect-square rounded border border-gray-200 overflow-hidden bg-white shadow-sm group';
-                div.innerHTML = `
-                    <img src="${e.target.result}" class="w-full h-full object-cover">
-                    <button type="button" class="absolute top-2 right-2 w-7 h-7 bg-white rounded-full flex items-center justify-center text-red-500 shadow-md hover:bg-red-50 hover:scale-110 transition-all opacity-0 group-hover:opacity-100 z-10" onclick="removeGlobalImage(${index})">
-                        <i class="fas fa-times text-xs"></i>
-                    </button>
-                    ${index === 0 ? '<span class="absolute bottom-0 left-0 right-0 bg-[#0066FF] text-white text-[9px] font-black tracking-widest text-center py-1">PRIMARY</span>' : ''}
-                `;
-                globalPreviewContainer.appendChild(div);
-            };
-            reader.readAsDataURL(file);
+
+        if (imageUploadNotice) {
+            if (count === 0) {
+                imageUploadNotice.classList.remove('hidden');
+                imageUploadNotice.querySelector('span').textContent = `Minimum 1 photo required for store listing.`;
+            } else {
+                imageUploadNotice.classList.add('hidden');
+            }
+        }
+
+        // Show large dropzone when empty, hide when photos exist
+        if (globalDropzoneWrapper) {
+            if (count === 0) {
+                globalDropzoneWrapper.classList.remove('hidden');
+            } else {
+                globalDropzoneWrapper.classList.add('hidden');
+            }
+        }
+
+        // Render photo cards
+        globalUploadedFiles.forEach((file, index) => {
+            const objectUrl = URL.createObjectURL(file);
+            const div = document.createElement('div');
+            div.className = 'relative w-full aspect-square rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm group transition-all hover:shadow-md hover:border-gray-300';
+            div.innerHTML = `
+                <img src="${objectUrl}" class="w-full h-full object-cover">
+                
+                <button type="button" class="absolute top-2 right-2 w-7 h-7 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-red-500 shadow-md hover:bg-red-500 hover:text-white hover:scale-110 transition-all z-10" onclick="removeGlobalImage(${index})" title="Remove Photo">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+
+                <span class="absolute top-2 left-2 bg-black/60 backdrop-blur text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow">
+                    #${index + 1}
+                </span>
+
+                ${index === 0 
+                    ? '<span class="absolute bottom-0 left-0 right-0 bg-[#0066FF] text-white text-[10px] font-black tracking-wider text-center py-1.5 cursor-default flex items-center justify-center gap-1"><i class="fas fa-star text-xs"></i> PRIMARY</span>' 
+                    : `<button type="button" class="absolute bottom-0 left-0 right-0 bg-gray-900/80 hover:bg-[#0066FF] text-white text-[10px] font-bold tracking-wider text-center py-1.5 transition-colors opacity-90 group-hover:opacity-100 flex items-center justify-center gap-1" onclick="makeGlobalImagePrimary(${index})"><i class="far fa-star text-xs"></i> SET PRIMARY</button>`
+                }
+            `;
+            globalPreviewContainer.appendChild(div);
         });
+
+        // Add "+ Add More" slot if count is between 1 and 9
+        if (count > 0 && count < 10) {
+            const addSlot = document.createElement('label');
+            addSlot.className = 'border-2 border-dashed border-gray-300 hover:border-[#0066FF] rounded-xl flex flex-col items-center justify-center p-3 aspect-square cursor-pointer hover:bg-blue-50/40 transition-all text-center group';
+            addSlot.title = 'Add more photos (up to 10)';
+            addSlot.innerHTML = `
+                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-2 group-hover:bg-blue-100 group-hover:scale-110 transition-all">
+                    <i class="fas fa-plus text-gray-400 group-hover:text-[#0066FF] text-sm"></i>
+                </div>
+                <span class="text-xs font-bold text-navy group-hover:text-[#0066FF]">Add More</span>
+                <span class="text-[10px] text-gray-400 mt-0.5">${count} / 10</span>
+                <input type="file" multiple accept="image/*" class="hidden add-more-input">
+            `;
+
+            const addMoreInput = addSlot.querySelector('.add-more-input');
+            addMoreInput.addEventListener('change', (e) => {
+                handleNewIncomingFiles(e.target.files);
+                addMoreInput.value = '';
+            });
+
+            // Drag over / drop on Add More card
+            ['dragenter', 'dragover'].forEach(eventName => {
+                addSlot.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addSlot.classList.add('border-[#0066FF]', 'bg-blue-50');
+                });
+            });
+            ['dragleave', 'dragend'].forEach(eventName => {
+                addSlot.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addSlot.classList.remove('border-[#0066FF]', 'bg-blue-50');
+                });
+            });
+            addSlot.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                addSlot.classList.remove('border-[#0066FF]', 'bg-blue-50');
+                if (e.dataTransfer && e.dataTransfer.files) {
+                    handleNewIncomingFiles(e.dataTransfer.files);
+                }
+            });
+
+            globalPreviewContainer.appendChild(addSlot);
+        }
     }
 
     window.removeGlobalImage = function(indexToRemove) {
-        const dt = new DataTransfer();
-        const files = Array.from(globalFileInput.files);
-        files.forEach((file, index) => {
-            if (index !== indexToRemove) {
-                dt.items.add(file);
-            }
-        });
-        globalFileInput.files = dt.files;
+        globalUploadedFiles.splice(indexToRemove, 1);
+        syncFilesToInput();
+        renderGlobalPreviews();
+    };
+
+    window.makeGlobalImagePrimary = function(indexToPrimary) {
+        if (indexToPrimary <= 0 || indexToPrimary >= globalUploadedFiles.length) return;
+        const selected = globalUploadedFiles.splice(indexToPrimary, 1)[0];
+        globalUploadedFiles.unshift(selected); // Move to front
+        syncFilesToInput();
         renderGlobalPreviews();
     };
 
@@ -179,9 +442,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 if (allowedSystems.includes(currentVal)) {
                     select.value = currentVal;
-                } else {
-                    select.dispatchEvent(new Event('change'));
                 }
+                select.dispatchEvent(new Event('change'));
             });
         });
         // Initial state
@@ -231,12 +493,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         <input type="text" name="colors[${cId}][name]" required placeholder="e.g. ${variantTerm === 'Flavor' ? 'Chocolate' : 'Green'}" class="color-name-input w-full bg-white border border-gray-200 rounded-lg py-2 px-3 text-sm font-bold text-navy focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">${variantTerm} Thumbnail *</label>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">${variantTerm} Thumbnail</label>
                         <div class="flex items-center gap-3">
                             <label class="w-10 h-10 rounded border border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-50 overflow-hidden relative" title="Upload Swatch/Thumbnail">
                                 <i class="fas fa-image text-gray-400"></i>
                                 <img src="" class="thumbnail-preview hidden absolute inset-0 w-full h-full object-cover">
-                                <input type="file" name="thumbnail_${cId}" required accept="image/*" class="thumbnail-input hidden">
+                                <input type="file" name="thumbnail_${cId}" accept="image/*" class="thumbnail-input hidden">
                             </label>
                             <span class="text-xs text-gray-400 font-bold">Buyer selection icon</span>
                         </div>
@@ -405,23 +667,65 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Thumbnail Preview
+        // Thumbnail Preview with Drag & Drop
         const thumbnailInput = block.querySelector('.thumbnail-input');
         const thumbnailPreview = block.querySelector('.thumbnail-preview');
-        thumbnailInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    thumbnailPreview.src = e.target.result;
-                    thumbnailPreview.classList.remove('hidden');
-                };
-                reader.readAsDataURL(file);
-            } else {
-                thumbnailPreview.classList.add('hidden');
-            }
-        });
+        const thumbnailLabel = thumbnailInput ? thumbnailInput.closest('label') : null;
 
+        if (thumbnailInput) {
+            thumbnailInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    thumbnailPreview.src = URL.createObjectURL(file);
+                    thumbnailPreview.classList.remove('hidden');
+                } else {
+                    thumbnailPreview.classList.add('hidden');
+                }
+            });
+        }
+
+        if (thumbnailLabel && thumbnailInput) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                thumbnailLabel.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    thumbnailLabel.classList.add('border-[#0066FF]', 'bg-blue-50');
+                });
+            });
+            ['dragleave', 'dragend'].forEach(eventName => {
+                thumbnailLabel.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    thumbnailLabel.classList.remove('border-[#0066FF]', 'bg-blue-50');
+                });
+            });
+            thumbnailLabel.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                thumbnailLabel.classList.remove('border-[#0066FF]', 'bg-blue-50');
+                if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    const file = e.dataTransfer.files[0];
+                    if (file.type.startsWith('image/')) {
+                        const dt = new DataTransfer();
+                        dt.items.add(file);
+                        thumbnailInput.files = dt.files;
+                        thumbnailPreview.src = URL.createObjectURL(file);
+                        thumbnailPreview.classList.remove('hidden');
+                    }
+                }
+            });
+        }
+
+
+        // Initialize Master prices from Base Pricing if present
+        const baseBuyPrice = document.getElementById('baseBuyPrice');
+        const baseSellPrice = document.getElementById('baseSellPrice');
+        if (baseBuyPrice && baseBuyPrice.value && masterCostInput && !masterCostInput.value) {
+            masterCostInput.value = baseBuyPrice.value;
+        }
+        if (baseSellPrice && baseSellPrice.value && masterSellingInput && !masterSellingInput.value) {
+            masterSellingInput.value = baseSellPrice.value;
+        }
 
         // Sizing System Dropdown
         const sizingSelect = block.querySelector('.sizing-system-select');
@@ -434,6 +738,9 @@ document.addEventListener('DOMContentLoaded', function() {
         block.addEventListener('input', (e) => {
             if(e.target.classList.contains('qty-input')) updateSummary();
         });
+
+        // Trigger initial sizing system render immediately!
+        sizingSelect.dispatchEvent(new Event('change'));
     }
 
     function renderSizesForBlock(block, system) {
@@ -449,13 +756,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const sizes = SIZING_SYSTEMS[system];
 
-        // If generic/one-size
+        // If generic/one-size: auto-select Standard and render inventory row immediately
         if (sizes.length === 1 && sizes[0].toLowerCase() === 'standard') {
             const chip = createASICSChip(sizes[0], '1');
             sizeContainer.appendChild(chip);
             renderTableForBlock(block);
             return;
         }
+
+        // Multi-size toolbar (Select All / Clear All)
+        const toolbar = document.createElement('div');
+        toolbar.className = 'w-full flex justify-between items-center mb-2 pb-1 border-b border-gray-100';
+        toolbar.innerHTML = `
+            <span class="text-[11px] font-bold text-gray-500"><i class="fas fa-hand-pointer text-[#0066FF] me-1"></i> Click sizes you have in stock to enter QTY:</span>
+            <div class="flex gap-2">
+                <button type="button" class="select-all-sizes-btn text-[11px] font-bold text-[#0066FF] hover:underline cursor-pointer">Select All</button>
+                <span class="text-gray-300">|</span>
+                <button type="button" class="clear-all-sizes-btn text-[11px] font-bold text-gray-400 hover:underline cursor-pointer">Clear All</button>
+            </div>
+        `;
+        toolbar.querySelector('.select-all-sizes-btn').addEventListener('click', () => {
+            sizeContainer.querySelectorAll('.size-chip').forEach(chip => {
+                chip.dataset.active = '1';
+                chip.className = 'size-chip bg-white text-navy border-blue-600 text-center px-5 py-3 rounded-full text-base font-medium cursor-pointer border-2 shadow-[inset_0_0_0_1px_rgba(37,99,235,1)] transition-colors select-none flex items-center justify-center';
+            });
+            renderTableForBlock(block);
+        });
+        toolbar.querySelector('.clear-all-sizes-btn').addEventListener('click', () => {
+            sizeContainer.querySelectorAll('.size-chip').forEach(chip => {
+                chip.dataset.active = '0';
+                chip.className = 'size-chip bg-white text-navy border-gray-200 hover:border-gray-400 hover:bg-gray-50 text-center px-5 py-3 rounded-full text-base font-medium cursor-pointer border transition-colors select-none flex items-center justify-center';
+            });
+            renderTableForBlock(block);
+        });
+        sizeContainer.appendChild(toolbar);
 
         sizes.forEach(sizeVal => {
             const chip = createASICSChip(sizeVal, '0');
@@ -521,9 +855,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         tbody.innerHTML = '';
         
-        // Use Master price if available and diff_price is false
-        const defaultCost = masterCostInput.value;
-        const defaultSelling = masterSellingInput.value;
+        // Use Master price if available, or fallback to Base prices
+        const baseBuyPrice = document.getElementById('baseBuyPrice');
+        const baseSellPrice = document.getElementById('baseSellPrice');
+        const defaultCost = masterCostInput.value || (baseBuyPrice ? baseBuyPrice.value : '');
+        const defaultSelling = masterSellingInput.value || (baseSellPrice ? baseSellPrice.value : '');
 
         activeChips.forEach(chip => {
             const size = chip.dataset.val;
@@ -540,7 +876,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input type="hidden" name="colors[${cId}][sizes][${safeSize}][active]" value="1">
                 </td>
                 <td class="p-2 border-r border-gray-100">
-                    <input type="number" name="colors[${cId}][sizes][${safeSize}][qty]" value="${prev.qty}" required min="0" class="qty-input w-full bg-white border border-gray-200 rounded py-2 px-3 text-sm font-bold text-navy focus:border-[#0066FF] outline-none">
+                    <input type="number" name="colors[${cId}][sizes][${safeSize}][qty]" value="${prev.qty}" required min="0" placeholder="Enter Qty" class="qty-input w-full bg-white border border-gray-200 rounded py-2 px-3 text-sm font-bold text-navy focus:border-[#0066FF] outline-none">
                 </td>
                 <td class="p-2 border-r border-gray-100 price-col ${showPrice ? '' : 'hidden'}">
                     <div class="relative">
@@ -582,5 +918,37 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('summaryTotalColors').textContent = totalColors;
         document.getElementById('summaryTotalVariants').textContent = totalVariants;
         document.getElementById('summaryTotalQty').textContent = totalQty;
+    }
+
+    // Form submission validation for photos
+    const addProductForm = document.getElementById('addProductForm');
+    if (addProductForm) {
+        addProductForm.addEventListener('submit', function(e) {
+            // Validate minimum 1 image
+            if (globalUploadedFiles.length < 1) {
+                e.preventDefault();
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Photo Required',
+                        text: `Please upload at least 1 photo for this product.`,
+                        confirmButtonColor: '#0066FF'
+                    });
+                } else {
+                    alert(`Please upload at least 1 photo for this product.`);
+                }
+
+                const imgCard = document.getElementById('productImagesCard');
+                if (imgCard) {
+                    imgCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    imgCard.classList.add('ring-4', 'ring-amber-300');
+                    setTimeout(() => imgCard.classList.remove('ring-4', 'ring-amber-300'), 2500);
+                }
+                return false;
+            }
+
+            // Sync files one last time right before submitting
+            syncFilesToInput();
+        });
     }
 });

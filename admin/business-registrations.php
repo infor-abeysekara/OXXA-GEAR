@@ -209,7 +209,7 @@ function resolveDocUrl($filename, $type = 'cert') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Business Registrations - Admin Panel</title>
+    <title>Business Registrations | OXXA GEAR Control Center</title>
     <link rel="icon" type="image/png" href="../image/oxxa_gear_logo.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -816,11 +816,19 @@ function resolveDocUrl($filename, $type = 'cert') {
                 </div>
             <?php endif; ?>
 
-            <!-- TOP OVERVIEW HEADER -->
-            <div class="page-header">
-                <div>
-                    <h1 class="page-title">Business Registrations Management</h1>
-                    <p class="page-subtitle mb-0">Manage seller business registration requests - approve, reject, activate or deactivate</p>
+            <!-- Standardized Page Header -->
+            <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4 pb-1">
+                <div class="d-flex align-items-center gap-3">
+                    <span style="width: 42px; height: 42px; border-radius: 12px; background: #EFF6FF; color: #0066FF; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; font-weight: 900; box-shadow: 0 1px 2px rgba(0,0,0,0.05); flex-shrink: 0;">
+                        <i class="fas fa-building-circle-check"></i>
+                    </span>
+                    <div>
+                        <h1 class="d-flex align-items-center gap-2 mb-0" style="font-size: 1.35rem; font-weight: 900; color: #0F172A; letter-spacing: -0.025em; line-height: 1.2;">
+                            Business Registrations
+                            <span style="font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 9999px; background: #DBEAFE; color: #1E40AF; letter-spacing: 0.05em; text-transform: uppercase;">Merchant Compliance</span>
+                        </h1>
+                        <p class="mb-0" style="color: #64748B; font-size: 0.78rem; font-weight: 500; margin-top: 2px;">Seller incorporation compliance, certificate vetting & legal KYC verification.</p>
+                    </div>
                 </div>
                 <div class="d-flex align-items-center gap-3">
                     <a href="business-registrations.php?action=export_csv" class="btn-action-outline">
@@ -829,6 +837,7 @@ function resolveDocUrl($filename, $type = 'cert') {
                     </a>
                 </div>
             </div>
+
 
             <!-- 4 TOP STATS CARDS ROW -->
             <div class="row g-4">
@@ -1067,7 +1076,7 @@ function resolveDocUrl($filename, $type = 'cert') {
                                                     <!-- Pending: Approve & Reject buttons directly -->
                                                     <form method="POST" class="d-inline">
                                                         <input type="hidden" name="user_id" value="<?php echo $user_id; ?>">
-                                                        <button type="submit" name="action" value="approve" class="btn-tbl-action btn-tbl-approve" onclick="return confirm('Approve business \'<?php echo $biz_name; ?>\'?')">
+                                                        <button type="submit" name="action" value="approve" class="btn-tbl-action btn-tbl-approve">
                                                             <i class="fas fa-check"></i> Approve
                                                         </button>
                                                         <button type="button" class="btn-tbl-action btn-tbl-reject" onclick="openRejectPrompt(<?php echo $user_id; ?>, '<?php echo $biz_name; ?>')">
@@ -1472,7 +1481,7 @@ function resolveDocUrl($filename, $type = 'cert') {
 
                                                                     <div class="d-flex flex-column gap-2">
                                                                         <?php if($is_app == 0): ?>
-                                                                            <button type="submit" name="action" value="approve" class="btn btn-success fw-bold py-2 shadow-sm" onclick="return confirm('Approve this business registration?')">
+                                                                            <button type="submit" name="action" value="approve" class="btn btn-success fw-bold py-2 shadow-sm">
                                                                                 <i class="fas fa-check-circle me-1"></i> Approve Registration
                                                                             </button>
                                                                             <button type="submit" name="action" value="reject" class="btn btn-danger fw-bold py-2 shadow-sm" onclick="return confirm('Reject this business registration application?')">

@@ -29,10 +29,17 @@ include("../include/header.php");
 <div class="bg-gray-50 min-h-screen py-10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <div class="mb-6 flex items-center text-sm font-medium text-slate">
-            <a href="index.php" class="hover:text-primary transition-colors">Home</a>
-            <i class="fas fa-chevron-right mx-2 text-[10px]"></i>
-            <span class="text-navy">Address Book</span>
+        <div class="mb-6 flex items-center justify-between">
+            <div class="flex items-center text-sm font-medium text-slate">
+                <a href="index.php" class="hover:text-primary transition-colors">Home</a>
+                <i class="fas fa-chevron-right mx-2 text-[10px]"></i>
+                <span class="text-navy">Address Book</span>
+            </div>
+            <?php if (isset($_GET['return']) && $_GET['return'] === 'checkout'): ?>
+                <a href="checkout.php" class="flex items-center gap-2 text-sm font-bold text-[#0A6CFF] hover:underline">
+                    <i class="fas fa-arrow-left text-xs"></i> Back to Checkout
+                </a>
+            <?php endif; ?>
         </div>
 
         <div class="flex flex-col lg:flex-row gap-8">
@@ -51,33 +58,33 @@ include("../include/header.php");
                         <p class="text-sm text-gray-500">@<?php echo htmlspecialchars($user['username']); ?></p>
                     </div>
                     
-                    <div class="p-3 flex flex-col gap-1">
-                        <a href="profile.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                    <div class="p-2 lg:p-3 flex overflow-x-auto lg:flex-col gap-3 lg:gap-1 hide-scrollbar">
+                        <a href="profile.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="far fa-user-circle w-6 text-lg"></i> My Profile
                         </a>
-                        <a href="address-book.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm bg-blue-50 text-[#0066FF] transition-colors">
+                        <a href="address-book.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm bg-blue-50 text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="far fa-address-book w-6 text-lg"></i> Address Book
                         </a>
-                        <a href="my-orders.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="my-orders.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="fas fa-shopping-bag w-6 text-lg"></i> My Orders
                         </a>
-                        <a href="wishlist.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="wishlist.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="far fa-heart w-6 text-lg"></i> Wishlist
                         </a>
-                        <a href="reviews.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="reviews.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="far fa-star w-6 text-lg"></i> My Reviews
                         </a>
-                        <a href="returns.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="returns.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="fas fa-undo-alt w-6 text-lg"></i> My Returns
                         </a>
-                        <a href="coupons.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors">
+                        <a href="coupons.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap">
                             <i class="fas fa-ticket-alt w-6 text-lg"></i> My Coupons
                         </a>
-                        <a href="recently-viewed.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors border-b border-gray-100 pb-4 mb-1">
+                        <a href="recently-viewed.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap lg:border-b border-gray-100 lg:pb-4 lg:mb-1">
                             <i class="far fa-eye w-6 text-lg"></i> Recently Viewed
                         </a>
                         <?php if($user['user_type'] == 'seller'): ?>
-                        <a href="seller-dashboard.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors mt-2 border-t border-gray-100 pt-3">
+                        <a href="seller-dashboard.php" class="flex items-center px-4 py-3 rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 hover:text-[#0066FF] transition-colors shrink-0 whitespace-nowrap lg:mt-2 lg:border-t border-gray-100 lg:pt-3">
                             <i class="fas fa-store w-6 text-lg"></i> Seller Dashboard
                         </a>
                         <?php endif; ?>
@@ -254,15 +261,7 @@ include("../include/header.php");
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">City <span class="text-[#0066FF]">*</span></label>
-                            <input type="text" name="city" id="city" class="w-full bg-gray-50 border border-gray-200 text-navy font-medium rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-colors" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Postal Code</label>
-                            <input type="text" name="postal_code" id="postal_code" class="w-full bg-gray-50 border border-gray-200 text-navy font-medium rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-colors">
-                        </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Province <span class="text-[#0066FF]">*</span></label>
                             <div class="relative">
@@ -274,6 +273,28 @@ include("../include/header.php");
                                 </select>
                                 <span class="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 pointer-events-none"><i class="fas fa-chevron-down text-xs"></i></span>
                             </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">District <span class="text-[#0066FF]">*</span></label>
+                            <div class="relative">
+                                <select name="district" id="district" class="w-full bg-gray-50 border border-gray-200 text-navy font-medium rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-colors appearance-none disabled:opacity-50 disabled:cursor-not-allowed" required disabled>
+                                    <option value="" disabled selected>Select District</option>
+                                </select>
+                                <span class="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 pointer-events-none"><i class="fas fa-chevron-down text-xs"></i></span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">City <span class="text-[#0066FF]">*</span></label>
+                            <div class="relative">
+                                <select name="city" id="city" class="w-full bg-gray-50 border border-gray-200 text-navy font-medium rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-colors appearance-none disabled:opacity-50 disabled:cursor-not-allowed" required disabled>
+                                    <option value="" disabled selected>Select City</option>
+                                </select>
+                                <span class="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 pointer-events-none"><i class="fas fa-chevron-down text-xs"></i></span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 uppercase tracking-wide mb-2">Postal Code</label>
+                            <input type="text" name="postal_code" id="postal_code" class="w-full bg-gray-50 border border-gray-200 text-navy font-medium rounded-xl py-3 px-4 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-colors">
                         </div>
                     </div>
                     
@@ -334,12 +355,32 @@ function openAddressModal(mode = 'add', data = null) {
         document.getElementById('address_line1').value = data.address_line1;
         document.getElementById('address_line2').value = data.address_line2 || '';
         document.getElementById('city').value = data.city;
-        document.getElementById('postal_code').value = data.postal_code || '';
-        document.getElementById('province').value = data.province;
+        document.getElementById('province').value = data.province || '';
+        document.getElementById('district').innerHTML = `<option value="${data.district || ''}">${data.district || 'Select District'}</option>`;
+        document.getElementById('district').disabled = false;
+        document.getElementById('district').value = data.district || '';
         
-        // Select label
-        const labels = document.getElementsByName('label');
-        for (let i = 0; i < labels.length; i++) {
+        document.getElementById('city').innerHTML = `<option value="${data.city || ''}">${data.city || 'Select City'}</option>`;
+        document.getElementById('city').disabled = false;
+        document.getElementById('city').value = data.city || '';
+        
+        // Load proper lists if province is set
+        if (data.province) {
+            loadDistricts(data.province).then(() => {
+                document.getElementById('district').value = data.district || '';
+                if (data.district) {
+                    loadCities(data.province, data.district).then(() => {
+                        document.getElementById('city').value = data.city || '';
+                    });
+                }
+            });
+        }
+        
+        document.getElementById('postal_code').value = data.postal_code || '';
+        
+        // Reset and set correct label
+        const labels = document.querySelectorAll('input[name="label"]');
+        for(let i=0; i<labels.length; i++) {
             if (labels[i].value === data.label) {
                 labels[i].checked = true;
             }
@@ -349,6 +390,57 @@ function openAddressModal(mode = 'add', data = null) {
             document.getElementById('is_default').checked = true;
         }
     }
+    
+    async function loadDistricts(province) {
+        const districtEl = document.getElementById('district');
+        districtEl.innerHTML = '<option value="" disabled selected>Select District</option>';
+        districtEl.disabled = true;
+        
+        try {
+            const res = await fetch(`../Backend/get-location-data.php?action=districts&province=${encodeURIComponent(province)}`);
+            const data = await res.json();
+            if (data.success && data.districts) {
+                data.districts.forEach(d => {
+                    districtEl.innerHTML += `<option value="${d}">${d}</option>`;
+                });
+                districtEl.disabled = false;
+            }
+        } catch(e) {}
+    }
+    
+    async function loadCities(province, district) {
+        const cityEl = document.getElementById('city');
+        cityEl.innerHTML = '<option value="" disabled selected>Select City</option>';
+        cityEl.disabled = true;
+        
+        if (!district) return;
+        try {
+            const res = await fetch(`../Backend/get-location-data.php?action=cities&province=${encodeURIComponent(province)}&district=${encodeURIComponent(district)}`);
+            const data = await res.json();
+            if (data.success && data.cities) {
+                data.cities.forEach(c => {
+                    cityEl.innerHTML += `<option value="${c}">${c}</option>`;
+                });
+                cityEl.disabled = false;
+            }
+        } catch(e) {}
+    }
+    
+    document.getElementById('province').addEventListener('change', function() {
+        const districtEl = document.getElementById('district');
+        const cityEl = document.getElementById('city');
+        districtEl.innerHTML = '<option value="" disabled selected>Select District</option>';
+        districtEl.disabled = true;
+        cityEl.innerHTML = '<option value="" disabled selected>Select City</option>';
+        cityEl.disabled = true;
+        
+        if (this.value) loadDistricts(this.value);
+    });
+    
+    document.getElementById('district').addEventListener('change', function() {
+        const province = document.getElementById('province').value;
+        if (this.value && province) loadCities(province, this.value);
+    });
     
     // Animate in
     setTimeout(() => {
@@ -534,5 +626,14 @@ function setDefaultAddress(id) {
     });
 }
 </script>
+
+<?php if (isset($_GET['add']) && $_GET['add'] == '1'): ?>
+<script>
+    // Auto-open the Add New Address modal when redirected from checkout
+    document.addEventListener('DOMContentLoaded', function() {
+        openAddressModal();
+    });
+</script>
+<?php endif; ?>
 
 <?php include("../include/footer.php"); ?>
