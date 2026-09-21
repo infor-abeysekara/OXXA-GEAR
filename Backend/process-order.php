@@ -114,11 +114,9 @@ try {
         if ($paymentMethod === 'CARD') {
             $gatewayName = 'PayHere';
             $gatewayFee = round($netBaseTotal * 0.03, 2); // 3.0% gateway fee
-            $paymentStatus = 'paid';
-            $rawCardNum = preg_replace('/\s+/', '', $_POST['cardNumber'] ?? '4242424242424242');
-            $cardLast4 = substr($rawCardNum, -4) ?: '4242';
-            $firstDigit = substr($rawCardNum, 0, 1);
-            $cardType = ($firstDigit === '5') ? 'Mastercard' : (($firstDigit === '3') ? 'Amex' : 'Visa');
+            $paymentStatus = 'pending'; // PayHere payment is pending until webhook or success callback
+            $cardLast4 = null;
+            $cardType = null;
         } elseif ($paymentMethod === 'KOKO') {
             $gatewayName = 'KOKO Pay in 3';
             $gatewayFee = round($netBaseTotal * 0.05, 2); // 5.0% gateway fee
@@ -159,19 +157,69 @@ try {
 
         $totalAmount = $netBaseTotal + $gatewayFee;
 
+        $payhereConfig = null;
+        if ($paymentMethod === 'CARD') {
+            $merchant_id = "1231869";
+            $merchant_secret = "MjcyNjcyODQ4OTI1MzQ3NjI1NzgzMjc4NzIwNTI2NDI2ODc3MjQwOQ==";
+            $currency = "LKR";
+            $amount_formatted = number_format($totalAmount, 2, '.', '');
+            $hash = strtoupper(md5($merchant_id . $orderCode . $amount_formatted . $currency . strtoupper(md5($merchant_secret))));
+            
+            $payhereConfig = [
+                "sandbox" => true,
+                "merchant_id" => $merchant_id,
+                "return_url" => "http://localhost/OXXA GEAR/site/shop.php",
+                "cancel_url" => "http://localhost/OXXA GEAR/site/checkout.php",
+                "notify_url" => "http://localhost/OXXA GEAR/Backend/payhere-notify.php",
+                "order_id" => $orderCode,
+                "items" => "OXXA GEAR Order " . $orderCode,
+                "amount" => $amount_formatted,
+                "currency" => $currency,
+                "hash" => $hash,
+                "first_name" => explode(' ', $customerName)[0],
+                "last_name" => count(explode(' ', $customerName)) > 1 ? explode(' ', $customerName)[1] : '',
+                "email" => "customer@oxxagear.com",
+                "phone" => $contact1,
+                "address" => $address,
+                "city" => $city,
+                "country" => "Sri Lanka"
+            ];
+        }
+
         // DB Transaction
         $pdo->beginTransaction();
 
         try {
-            // 1. Insert Shipping Address to user_addresses
-            $addrStmt = $pdo->prepare("
-                INSERT INTO user_addresses (user_id, full_name, address_line1, city, province, postal_code, phone1, phone2, is_default_shipping)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-            ");
-            $addrStmt->execute([$user_id, $customerName, $address, $city, $province, $postalCode, $contact1, $contact2]);
-            $addressId = $pdo->lastInsertId();
+            // 1. Manage Shipping Address in user_addresses
+            // First, make all existing addresses non-default
+            $pdo->prepare("UPDATE user_addresses SET is_default_shipping = 0 WHERE user_id = ?")->execute([$user_id]);
+
+            $submitted_address_id = $_POST['address_id'] ?? '';
+            $addressId = null;
+
+            if (!empty($submitted_address_id)) {
+                $checkAddrStmt = $pdo->prepare("SELECT id FROM user_addresses WHERE id = ? AND user_id = ? LIMIT 1");
+                $checkAddrStmt->execute([$submitted_address_id, $user_id]);
+                if ($existingAddr = $checkAddrStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $addressId = $existingAddr['id'];
+                    $updateStmt = $pdo->prepare("UPDATE user_addresses SET phone2 = ?, is_default_shipping = 1 WHERE id = ?");
+                    $updateStmt->execute([$contact2, $addressId]);
+                }
+            }
+
+            if (!$addressId) {
+                // Insert new Shipping Address
+                $addrStmt = $pdo->prepare("
+                    INSERT INTO user_addresses (user_id, full_name, address_line1, city, province, postal_code, phone1, phone2, is_default_shipping)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+                ");
+                $addrStmt->execute([$user_id, $customerName, $address, $city, $province, $postalCode, $contact1, $contact2]);
+                $addressId = $pdo->lastInsertId();
+            }
 
             // 2. Insert into orders (Header)
+            $orderStatus = ($paymentMethod === 'CARD') ? 'pending_payment' : 'pending';
+
             $orderStmt = $pdo->prepare("
                 INSERT INTO orders (
                     order_code, user_id, shipping_address_id, subtotal, delivery_fee, 
@@ -179,13 +227,13 @@ try {
                     payment_status, gateway, gateway_fee, card_last4, card_type, 
                     koko_order_id, koko_installments, cod_collected, bank_slip_path, status
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             $orderStmt->execute([
                 $orderCode, $user_id, $addressId, $subtotal, $deliveryFee, 
                 $couponCode, $couponDiscount, $totalAmount, $paymentMethod,
                 $paymentStatus, $gatewayName, $gatewayFee, $cardLast4, $cardType,
-                $kokoOrderId, $kokoInstallments, $codCollected, $bankSlipPath
+                $kokoOrderId, $kokoInstallments, $codCollected, $bankSlipPath, $orderStatus
             ]);
             $orderId = $pdo->lastInsertId();
 
@@ -253,35 +301,39 @@ try {
                     // Fail-safe if seller_payouts already tracked elsewhere
                 }
 
-                // Update product stock
-                if ($item['variant_id']) {
-                    $stockStmt = $pdo->prepare("UPDATE color_sizes SET qty = qty - ? WHERE id = ?");
-                    $stockStmt->execute([$item['quantity'], $item['variant_id']]);
-                    
-                    // Check if stock is low
-                    $checkStock = $pdo->prepare("SELECT qty FROM color_sizes WHERE id = ?");
-                    $checkStock->execute([$item['variant_id']]);
-                    if ($stockRow = $checkStock->fetch(PDO::FETCH_ASSOC)) {
-                        if ($stockRow['qty'] > 0 && $stockRow['qty'] <= 5) {
-                            addNotification($mysql, $item['seller_id'], "Low Stock Alert! - {$item['name']} ({$item['size']}) - Only {$stockRow['qty']} left.", 'warning', 'Business', 'site/seller-products.php');
-                        } elseif ($stockRow['qty'] <= 0) {
-                            addNotification($mysql, $item['seller_id'], "Out of Stock! - {$item['name']} ({$item['size']}) is out of stock.", 'error', 'Business', 'site/seller-products.php');
+                // Update product stock (only if not CARD, CARD will deduct upon successful webhook)
+                if ($paymentMethod !== 'CARD' && $paymentMethod !== 'KOKO') {
+                    if ($item['variant_id']) {
+                        $stockStmt = $pdo->prepare("UPDATE color_sizes SET qty = qty - ? WHERE id = ?");
+                        $stockStmt->execute([$item['quantity'], $item['variant_id']]);
+                        
+                        // Check if stock is low
+                        $checkStock = $pdo->prepare("SELECT qty FROM color_sizes WHERE id = ?");
+                        $checkStock->execute([$item['variant_id']]);
+                        if ($stockRow = $checkStock->fetch(PDO::FETCH_ASSOC)) {
+                            if ($stockRow['qty'] > 0 && $stockRow['qty'] <= 5) {
+                                addNotification($mysql, $item['seller_id'], "Low Stock Alert! - {$item['name']} ({$item['size']}) - Only {$stockRow['qty']} left.", 'warning', 'Business', 'site/seller-products.php');
+                            } elseif ($stockRow['qty'] <= 0) {
+                                addNotification($mysql, $item['seller_id'], "Out of Stock! - {$item['name']} ({$item['size']}) is out of stock.", 'error', 'Business', 'site/seller-products.php');
+                            }
                         }
                     }
+                    
+                    // Update total_qty in products table
+                    $mainStockStmt = $pdo->prepare("UPDATE products SET total_qty = total_qty - ? WHERE id = ?");
+                    $mainStockStmt->execute([$item['quantity'], $item['product_id']]);
                 }
-                
-                // Update total_qty in products table
-                $mainStockStmt = $pdo->prepare("UPDATE products SET total_qty = total_qty - ? WHERE id = ?");
-                $mainStockStmt->execute([$item['quantity'], $item['product_id']]);
             }
 
-            // 4. Empty Cart
-            $emptyCartStmt = $pdo->prepare("DELETE FROM cart WHERE user_id = ?");
-            $emptyCartStmt->execute([$user_id]);
+            // 4. Empty Cart (only if not CARD/KOKO, those wait for payment success)
+            if ($paymentMethod !== 'CARD' && $paymentMethod !== 'KOKO') {
+                $emptyCartStmt = $pdo->prepare("DELETE FROM cart WHERE user_id = ?");
+                $emptyCartStmt->execute([$user_id]);
+            }
 
             $pdo->commit();
 
-            echo json_encode([
+            $response = [
                 'success' => true, 
                 'message' => 'Order placed successfully!',
                 'orderCode' => $orderCode,
@@ -291,7 +343,13 @@ try {
                 'gatewayFee' => number_format($gatewayFee, 2),
                 'status' => ($paymentStatus === 'paid' ? 'Paid' : ($paymentStatus === 'pending_verification' ? 'Pending Slip Verification' : 'Pending')),
                 'redirect' => 'order-success.php?id=' . $orderCode
-            ]);
+            ];
+
+            if ($payhereConfig) {
+                $response['payhereConfig'] = $payhereConfig;
+            }
+
+            echo json_encode($response);
 
         } catch (Exception $e) {
             $pdo->rollBack();

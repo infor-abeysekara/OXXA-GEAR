@@ -134,6 +134,8 @@ if ($paymentStatusParam !== '' && $paymentStatusParam !== 'ALL') {
         $where[] = "(UPPER(ord.payment_status) = 'PAID' OR UPPER(ord.status) IN ('CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'RETURN_WINDOW', 'COMPLETED'))";
     } elseif ($paymentStatusParam === 'PENDING_COLLECTION') {
         $where[] = "(UPPER(ord.payment_method) = 'COD' AND COALESCE(ord.cod_collected, 0) = 0)";
+    } elseif ($paymentStatusParam === 'REFUND_PENDING') {
+        $where[] = "UPPER(ord.payment_status) = 'REFUND_PENDING'";
     }
 }
 
@@ -589,6 +591,7 @@ $filteredCount = count($orders);
                                 <option value="ALL">Payment Status: All</option>
                                 <option value="PAID" <?= $paymentStatusParam === 'PAID' ? 'selected' : '' ?>>Paid (Settled / Verified)</option>
                                 <option value="PENDING_COLLECTION" <?= $paymentStatusParam === 'PENDING_COLLECTION' ? 'selected' : '' ?>>Pending COD Collection</option>
+                                <option value="REFUND_PENDING" <?= $paymentStatusParam === 'REFUND_PENDING' ? 'selected' : '' ?>>Refund Pending</option>
                             </select>
                         </div>
 
@@ -787,9 +790,21 @@ $filteredCount = count($orders);
                                             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 badge-pulse uppercase tracking-wider">
                                                 <i class="fas fa-hourglass-half text-[9px]"></i> Pending
                                             </span>
+                                        <?php elseif ($st === 'ACCEPTED'): ?>
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-100 text-purple-700 border border-purple-200 uppercase tracking-wider">
+                                                <i class="fas fa-thumbs-up text-[9px]"></i> Accepted
+                                            </span>
                                         <?php elseif ($st === 'CONFIRMED'): ?>
                                             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase tracking-wider">
                                                 <i class="fas fa-check-circle text-[9px]"></i> Confirmed
+                                            </span>
+                                        <?php elseif ($st === 'HANDOVER_TO_CENTER'): ?>
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-orange-100 text-orange-700 border border-orange-200 uppercase tracking-wider">
+                                                <i class="fas fa-hand-holding-box text-[9px]"></i> Handed Over
+                                            </span>
+                                        <?php elseif ($st === 'RECEIVED_AT_CENTER'): ?>
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-300 uppercase tracking-wider">
+                                                <i class="fas fa-building-circle-check text-[9px]"></i> At Center
                                             </span>
                                         <?php elseif ($st === 'PACKED'): ?>
                                             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 uppercase tracking-wider">
@@ -870,6 +885,9 @@ $filteredCount = count($orders);
                                                     <i class="fas fa-ellipsis-vertical text-xs"></i>
                                                 </button>
                                                 <div id="dropdownMenu_<?= $ord['id'] ?>" class="hidden absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-30 py-1 text-left text-xs font-semibold">
+                                                    <a href="javascript:void(0)" onclick="quickUpdateStatus(<?= $ord['id'] ?>, 'RECEIVED_AT_CENTER')" class="px-3 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700">
+                                                        <i class="fas fa-building-circle-check text-indigo-500 w-4"></i> Receive at Center
+                                                    </a>
                                                     <a href="javascript:void(0)" onclick="quickUpdateStatus(<?= $ord['id'] ?>, 'PACKED')" class="px-3 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700">
                                                         <i class="fas fa-box text-blue-500 w-4"></i> Mark as Packed
                                                     </a>
@@ -1012,6 +1030,14 @@ $filteredCount = count($orders);
             <!-- TAB 1: DETAILS -->
             <div id="tab_details" class="space-y-6 drawer-tab-pane">
                 
+                <!-- Cancellation Reason (If Cancelled) -->
+                <div id="drawer_cancellation_reason_box" class="hidden p-4 rounded-xl bg-red-50 border border-red-200">
+                    <div class="flex items-center gap-2 font-bold text-red-900 mb-1">
+                        <i class="fas fa-exclamation-triangle"></i> Seller Rejection Reason
+                    </div>
+                    <p class="text-sm text-red-700 font-medium" id="drawer_cancellation_reason_text"></p>
+                </div>
+
                 <!-- Customer & Shipping Section -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     
@@ -1191,7 +1217,10 @@ $filteredCount = count($orders);
                     <select name="status" id="quick_status_select" onchange="toggleQuickCourierFields()" required 
                             class="w-full bg-slate-50 border border-slate-200 text-slate-900 font-bold rounded-xl px-3 py-2.5 text-xs focus:border-[#0066FF] outline-none">
                         <option value="PENDING">Pending (Need Action)</option>
+                        <option value="ACCEPTED">Accepted by Seller</option>
                         <option value="CONFIRMED">Confirmed (Ready to Pack)</option>
+                        <option value="HANDOVER_TO_CENTER">Handed to Collecting Center</option>
+                        <option value="RECEIVED_AT_CENTER">Received at Collecting Center</option>
                         <option value="PACKED">Packed (Ready to Ship)</option>
                         <option value="SHIPPED">Shipped (In Transit)</option>
                         <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
@@ -1510,9 +1539,36 @@ $filteredCount = count($orders);
 
             // Header info
             document.getElementById('drawer_order_code').textContent = ord.order_code || 'ORD-' + ord.id;
-            document.getElementById('drawer_status_badge').textContent = ord.status || 'PENDING';
+            
+            // Format Badge Color
+            let badgeClass = 'bg-slate-100 text-slate-700';
+            const st = (ord.status || '').toUpperCase();
+            if (st === 'PENDING') badgeClass = 'bg-amber-100 text-amber-800';
+            else if (st === 'ACCEPTED') badgeClass = 'bg-purple-100 text-purple-800';
+            else if (st === 'HANDOVER_TO_CENTER') badgeClass = 'bg-orange-100 text-orange-800';
+            else if (st === 'RECEIVED_AT_CENTER') badgeClass = 'bg-indigo-100 text-indigo-800';
+            else if (st === 'SHIPPED' || st === 'PACKED' || st === 'CONFIRMED') badgeClass = 'bg-blue-100 text-blue-800';
+            else if (st === 'OUT_FOR_DELIVERY') badgeClass = 'bg-teal-100 text-teal-800';
+            else if (st === 'DELIVERED' || st === 'COMPLETED') badgeClass = 'bg-emerald-100 text-emerald-800';
+            else if (st === 'CANCELLED') badgeClass = 'bg-rose-100 text-rose-800';
+
+            const badgeEl = document.getElementById('drawer_status_badge');
+            badgeEl.textContent = ord.status || 'PENDING';
+            badgeEl.className = `px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${badgeClass}`;
+
             document.getElementById('drawer_created_at').textContent = 'Placed on ' + (ord.created_at || 'Recently');
             document.getElementById('drawer_invoice_link').href = 'order-invoice.php?id=' + ord.id;
+
+            // Handle Cancellation Reason
+            const cancelBox = document.getElementById('drawer_cancellation_reason_box');
+            if (cancelBox) {
+                if (st === 'CANCELLED' && ord.cancellation_reason) {
+                    cancelBox.classList.remove('hidden');
+                    document.getElementById('drawer_cancellation_reason_text').textContent = ord.cancellation_reason;
+                } else {
+                    cancelBox.classList.add('hidden');
+                }
+            }
 
             // Details tab
             const buyer = ord.shipping_name || ((ord.first_name || '') + ' ' + (ord.last_name || '')).trim() || 'Valued Buyer';

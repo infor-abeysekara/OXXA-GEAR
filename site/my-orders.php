@@ -21,6 +21,8 @@ $params = [$userid];
 if ($filter !== 'all') {
     $query .= " AND status = ?";
     $params[] = $filter;
+} else {
+    $query .= " AND status != 'pending_payment'";
 }
 
 $query .= " ORDER BY created_at DESC";
@@ -120,6 +122,7 @@ include("../include/header.php");
                                     $statusClass = '';
                                     switch($status) {
                                         case 'pending': $statusClass = 'bg-orange-50 text-orange-500 border-orange-100'; break;
+                                        case 'pending_payment': $statusClass = 'bg-yellow-50 text-yellow-600 border-yellow-200'; $status = 'Payment Pending'; break;
                                         case 'confirmed': $statusClass = 'bg-blue-50 text-[#0066FF] border-blue-100'; break;
                                         case 'shipped': $statusClass = 'bg-purple-50 text-purple-600 border-purple-100'; break;
                                         case 'delivered': $statusClass = 'bg-lime/20 text-lime border-lime/30'; break;

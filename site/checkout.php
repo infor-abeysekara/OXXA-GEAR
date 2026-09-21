@@ -103,7 +103,7 @@ $page_title = "Secure Checkout - OXXA GEAR";
 include('../include/header.php');
 ?>
 
-    <div class="container my-10 max-w-7xl mx-auto px-4">
+    <div class="my-10 max-w-7xl mx-auto px-4">
         <!-- Breadcrumbs -->
         <div class="mb-6 flex items-center text-sm font-medium text-slate">
             <a href="index.php" class="hover:text-primary transition-colors">Home</a>
@@ -170,7 +170,7 @@ include('../include/header.php');
             <div class="grid lg:grid-cols-12 gap-8 pb-36 lg:pb-12">
                 <!-- Left Column - Shipping & Payment (60%) -->
                 <div class="lg:col-span-7 flex flex-col gap-6">
-                    
+                    <input type="hidden" name="address_id" id="address_id" value="">
                     <!-- Delivery Details -->
                     <div class="bg-white rounded-2xl p-6 md:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-gray-100">
                         <h4 class="font-black text-navy text-lg uppercase tracking-wide flex items-center mb-6 pb-4 border-b border-gray-100">
@@ -368,46 +368,12 @@ include('../include/header.php');
                                     </div>
                                 </div>
 
-                                <!-- Card Input Fields (Accordion) -->
+                                <!-- Card Input Fields placeholder removed to avoid confusion -->
                                 <div class="payment-extra-content hidden mt-3.5 pt-3.5 border-t border-gray-100 space-y-3" id="cardExtraFields">
-                                    <div class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-xl p-3.5 sm:p-4 shadow-md mb-2">
-                                        <div class="flex justify-between items-center mb-3">
-                                            <span class="text-[9px] uppercase font-bold tracking-widest text-blue-200">Secure Card Processing</span>
-                                            <i class="fas fa-wifi text-blue-200 text-xs"></i>
-                                        </div>
-                                        <div class="font-mono text-base sm:text-lg font-bold tracking-widest mb-2" id="previewCardNum">•••• •••• •••• 4242</div>
-                                        <div class="flex justify-between items-end text-xs">
-                                            <div>
-                                                <div class="text-[8px] uppercase text-blue-300 font-medium">Cardholder</div>
-                                                <div class="font-bold tracking-wide text-[11px]" id="previewCardHolder">CUSTOMER NAME</div>
-                                            </div>
-                                            <div>
-                                                <div class="text-[8px] uppercase text-blue-300 font-medium">Expires</div>
-                                                <div class="font-bold text-[11px]" id="previewCardExp">12/28</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                        <div class="sm:col-span-2">
-                                            <label class="block text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1">Card Number</label>
-                                            <div class="relative">
-                                                <input type="text" name="cardNumber" id="cardNumber" placeholder="4242 4242 4242 4242" maxlength="19" class="w-full h-10 sm:h-11 bg-gray-50 border border-gray-200 rounded-xl px-3 font-mono text-xs sm:text-sm focus:border-blue-600 focus:bg-white outline-none" value="4242 4242 4242 4242" oninput="formatCardNumber(this)">
-                                                <i class="fas fa-credit-card absolute right-3 top-3 text-gray-400 text-xs"></i>
-                                            </div>
-                                        </div>
-                                        <div class="sm:col-span-2">
-                                            <label class="block text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1">Name on Card</label>
-                                            <input type="text" name="cardHolder" id="cardHolder" placeholder="Cardholder Name" class="w-full h-10 sm:h-11 bg-gray-50 border border-gray-200 rounded-xl px-3 text-xs sm:text-sm focus:border-blue-600 focus:bg-white outline-none" value="<?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?>" oninput="document.getElementById('previewCardHolder').textContent = this.value.toUpperCase() || 'CUSTOMER NAME'">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1">Expiry Date</label>
-                                            <input type="text" name="cardExp" id="cardExp" placeholder="MM/YY" maxlength="5" class="w-full h-10 sm:h-11 bg-gray-50 border border-gray-200 rounded-xl px-3 text-xs sm:text-sm focus:border-blue-600 focus:bg-white outline-none" value="12/28" oninput="formatCardExp(this)">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1">CVV</label>
-                                            <input type="password" name="cardCvv" id="cardCvv" placeholder="•••" maxlength="4" class="w-full h-10 sm:h-11 bg-gray-50 border border-gray-200 rounded-xl px-3 text-xs sm:text-sm focus:border-blue-600 focus:bg-white outline-none" value="123">
-                                        </div>
+                                    <div class="bg-blue-50/50 rounded-xl p-4 border border-blue-100 text-center">
+                                        <i class="fas fa-shield-alt text-blue-500 text-2xl mb-2"></i>
+                                        <p class="text-xs font-bold text-navy">You will be redirected to PayHere's secure payment modal to enter your card details.</p>
+                                        <p class="text-[10px] text-gray-500 mt-1">This ensures your payment information is 100% secure and PCI compliant.</p>
                                     </div>
                                     <div class="text-[10px] text-gray-400 flex flex-wrap items-center justify-between pt-1 gap-1">
                                         <span><i class="fas fa-lock text-green-500 me-1"></i> PayHere 256-bit SSL Certified</span>
@@ -473,9 +439,7 @@ include('../include/header.php');
                         </div>
                     </div>
                 </div>
-                        </div>
-                    </div>
-                </div>
+
 
                 <!-- Right Column - Order Summary Sticky (40%) -->
                 <div class="lg:col-span-5">
@@ -841,6 +805,7 @@ include('../include/header.php');
             
             if (address.postal_code) document.getElementById('postalCode').value = address.postal_code;
             if (address.province) document.getElementById('province').value = address.province;
+            document.getElementById('address_id').value = address.id;
         }
 
         function goToHome() {
@@ -891,11 +856,40 @@ include('../include/header.php');
             })
             .then(response => response.json())
             .then(data => {
-                placeOrderBtn.disabled = false;
-                spinner.classList.add('hidden');
                 if (data.success) {
-                    openOrderSuccessModal(data);
+                    if (data.paymentMethod === 'CARD' && data.payhereConfig) {
+                        // Handle PayHere Payment
+                        payhere.onCompleted = function onCompleted(orderId) {
+                            placeOrderBtn.disabled = false;
+                            spinner.classList.add('hidden');
+                            data.status = 'Paid'; // Optimistically show paid
+                            openOrderSuccessModal(data);
+                        };
+
+                        payhere.onDismissed = function onDismissed() {
+                            placeOrderBtn.disabled = false;
+                            spinner.classList.add('hidden');
+                            if(typeof showToast === 'function') showToast('Payment popup closed. You can try again or choose another payment method.', 'warning'); else alert('Payment popup closed. You can try again or choose another payment method.');
+                            // Removed redirect to my-orders.php so the cart stays intact
+                        };
+
+                        payhere.onError = function onError(error) {
+                            placeOrderBtn.disabled = false;
+                            spinner.classList.add('hidden');
+                            if(typeof showToast === 'function') showToast('Payment error: ' + error, 'error'); else alert('Payment error: ' + error);
+                            window.location.href = 'my-orders.php';
+                        };
+
+                        payhere.startPayment(data.payhereConfig);
+                    } else {
+                        // Normal COD/KOKO flow
+                        placeOrderBtn.disabled = false;
+                        spinner.classList.add('hidden');
+                        openOrderSuccessModal(data);
+                    }
                 } else {
+                    placeOrderBtn.disabled = false;
+                    spinner.classList.add('hidden');
                     if(typeof showToast === 'function') showToast(data.message, 'error'); else alert(data.message);
                 }
             })
@@ -906,6 +900,7 @@ include('../include/header.php');
             });
         });
     </script>
+    <script type="text/javascript" src="https://www.payhere.lk/lib/payhere.js"></script>
     
     <!-- Order Success Modal -->
     <div id="orderSuccessModal" class="fixed inset-0 z-50 hidden">

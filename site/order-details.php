@@ -38,10 +38,21 @@ $user = $userStmt->fetch();
 include("../include/header.php");
 
 // Determine Timeline Progress
-$statusList = ['pending', 'confirmed', 'shipped', 'delivered', 'completed'];
-$currentStatusIndex = array_search($order['status'], $statusList);
-if ($currentStatusIndex === false && $order['status'] == 'cancelled') {
+$status = strtolower($order['status']);
+$currentStatusIndex = 0; // Default: Ordered
+
+if ($status === 'cancelled') {
     $currentStatusIndex = -1;
+} elseif (in_array($status, ['completed', 'delivered', 'return_window'])) {
+    $currentStatusIndex = 4; // Delivered
+} elseif (in_array($status, ['out_for_delivery', 'shipped'])) {
+    $currentStatusIndex = 3; // Shipped
+} elseif (in_array($status, ['packed', 'received_at_center', 'handover_to_center'])) {
+    $currentStatusIndex = 2; // At Center / Packed
+} elseif (in_array($status, ['confirmed', 'accepted'])) {
+    $currentStatusIndex = 1; // Accepted
+} else {
+    $currentStatusIndex = 0; // Pending
 }
 ?>
 
@@ -80,41 +91,49 @@ if ($currentStatusIndex === false && $order['status'] == 'cancelled') {
                         <i class="fas fa-times-circle me-2"></i> This order has been cancelled.
                     </div>
                 <?php else: ?>
-                    <div class="relative flex justify-between items-center w-full max-w-4xl mx-auto">
+                    <div class="relative flex justify-between items-center w-full max-w-4xl mx-auto px-4 md:px-0">
                         <!-- Progress Line -->
-                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-gray-200 rounded-full z-0"></div>
-                        <div class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-[#0066FF] rounded-full z-0 transition-all duration-1000" style="width: <?php echo ($currentStatusIndex >= 3 ? '100' : ($currentStatusIndex * 33.33)); ?>%;"></div>
+                        <div class="absolute left-4 right-4 md:left-0 md:right-0 top-1/2 -translate-y-1/2 h-1 bg-gray-200 rounded-full z-0"></div>
+                        <div class="absolute left-4 md:left-0 top-1/2 -translate-y-1/2 h-1 bg-[#0066FF] rounded-full z-0 transition-all duration-1000" style="width: <?php echo ($currentStatusIndex >= 4 ? 'calc(100% - 2rem)' : ($currentStatusIndex * 25) . '%'); ?>; md:width: <?php echo ($currentStatusIndex >= 4 ? '100' : ($currentStatusIndex * 25)); ?>%;"></div>
                         
-                        <!-- Step 1: Pending -->
-                        <div class="relative z-10 flex flex-col items-center">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors <?php echo $currentStatusIndex >= 0 ? 'bg-[#0066FF] text-white shadow-lg shadow-blue-500/30' : 'bg-white border-2 border-gray-200 text-gray-400'; ?>">
-                                <i class="fas fa-clipboard-list"></i>
+                        <!-- Step 1: Ordered -->
+                        <div class="relative z-10 flex flex-col items-center bg-gray-50 md:bg-transparent">
+                            <div class="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors <?php echo $currentStatusIndex >= 0 ? 'bg-[#0066FF] text-white shadow-lg shadow-blue-500/30' : 'bg-white border-2 border-gray-200 text-gray-400'; ?>">
+                                <i class="fas fa-clipboard-list text-xs md:text-sm"></i>
                             </div>
-                            <p class="text-xs font-bold mt-3 uppercase tracking-wide <?php echo $currentStatusIndex >= 0 ? 'text-navy' : 'text-gray-400'; ?>">Ordered</p>
+                            <p class="text-[9px] md:text-xs font-bold mt-2 md:mt-3 uppercase tracking-wide text-center <?php echo $currentStatusIndex >= 0 ? 'text-navy' : 'text-gray-400'; ?>">Ordered</p>
                         </div>
                         
-                        <!-- Step 2: Confirmed/Packed -->
-                        <div class="relative z-10 flex flex-col items-center">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors <?php echo $currentStatusIndex >= 1 ? 'bg-[#0066FF] text-white shadow-lg shadow-blue-500/30' : 'bg-white border-2 border-gray-200 text-gray-400'; ?>">
-                                <i class="fas fa-box"></i>
+                        <!-- Step 2: Accepted -->
+                        <div class="relative z-10 flex flex-col items-center bg-gray-50 md:bg-transparent">
+                            <div class="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors <?php echo $currentStatusIndex >= 1 ? 'bg-[#0066FF] text-white shadow-lg shadow-blue-500/30' : 'bg-white border-2 border-gray-200 text-gray-400'; ?>">
+                                <i class="fas fa-thumbs-up text-xs md:text-sm"></i>
                             </div>
-                            <p class="text-xs font-bold mt-3 uppercase tracking-wide <?php echo $currentStatusIndex >= 1 ? 'text-navy' : 'text-gray-400'; ?>">Packed</p>
+                            <p class="text-[9px] md:text-xs font-bold mt-2 md:mt-3 uppercase tracking-wide text-center <?php echo $currentStatusIndex >= 1 ? 'text-navy' : 'text-gray-400'; ?>">Accepted</p>
+                        </div>
+
+                        <!-- Step 3: At Center -->
+                        <div class="relative z-10 flex flex-col items-center bg-gray-50 md:bg-transparent">
+                            <div class="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors <?php echo $currentStatusIndex >= 2 ? 'bg-[#0066FF] text-white shadow-lg shadow-blue-500/30' : 'bg-white border-2 border-gray-200 text-gray-400'; ?>">
+                                <i class="fas fa-building-circle-check text-xs md:text-sm"></i>
+                            </div>
+                            <p class="text-[9px] md:text-xs font-bold mt-2 md:mt-3 uppercase tracking-wide text-center <?php echo $currentStatusIndex >= 2 ? 'text-navy' : 'text-gray-400'; ?>">At Center</p>
                         </div>
                         
-                        <!-- Step 3: Shipped -->
-                        <div class="relative z-10 flex flex-col items-center">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors <?php echo $currentStatusIndex >= 2 ? 'bg-[#0066FF] text-white shadow-lg shadow-blue-500/30' : 'bg-white border-2 border-gray-200 text-gray-400'; ?>">
-                                <i class="fas fa-truck-fast"></i>
+                        <!-- Step 4: Shipped -->
+                        <div class="relative z-10 flex flex-col items-center bg-gray-50 md:bg-transparent">
+                            <div class="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors <?php echo $currentStatusIndex >= 3 ? 'bg-[#0066FF] text-white shadow-lg shadow-blue-500/30' : 'bg-white border-2 border-gray-200 text-gray-400'; ?>">
+                                <i class="fas fa-truck-fast text-xs md:text-sm"></i>
                             </div>
-                            <p class="text-xs font-bold mt-3 uppercase tracking-wide <?php echo $currentStatusIndex >= 2 ? 'text-navy' : 'text-gray-400'; ?>">Shipped</p>
+                            <p class="text-[9px] md:text-xs font-bold mt-2 md:mt-3 uppercase tracking-wide text-center <?php echo $currentStatusIndex >= 3 ? 'text-navy' : 'text-gray-400'; ?>">Shipped</p>
                         </div>
                         
-                        <!-- Step 4: Delivered -->
-                        <div class="relative z-10 flex flex-col items-center">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors <?php echo $currentStatusIndex >= 3 ? 'bg-green-500 text-white shadow-lg shadow-green-500/30' : 'bg-white border-2 border-gray-200 text-gray-400'; ?>">
-                                <i class="fas fa-check-circle"></i>
+                        <!-- Step 5: Delivered -->
+                        <div class="relative z-10 flex flex-col items-center bg-gray-50 md:bg-transparent">
+                            <div class="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors <?php echo $currentStatusIndex >= 4 ? 'bg-green-500 text-white shadow-lg shadow-green-500/30' : 'bg-white border-2 border-gray-200 text-gray-400'; ?>">
+                                <i class="fas fa-check-circle text-xs md:text-sm"></i>
                             </div>
-                            <p class="text-xs font-bold mt-3 uppercase tracking-wide <?php echo $currentStatusIndex >= 3 ? 'text-green-500' : 'text-gray-400'; ?>">Delivered</p>
+                            <p class="text-[9px] md:text-xs font-bold mt-2 md:mt-3 uppercase tracking-wide text-center <?php echo $currentStatusIndex >= 4 ? 'text-green-500' : 'text-gray-400'; ?>">Delivered</p>
                         </div>
                     </div>
                 <?php endif; ?>

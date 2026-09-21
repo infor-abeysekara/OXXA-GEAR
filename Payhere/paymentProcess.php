@@ -4,7 +4,7 @@ $merchant_id = "1231869";
 $order_id = uniqid();
 $amount = 4000;
 $currency = "LKR";
-$merchant_secret = "NzQyNDI5MDI4MjcxOTY5MTYzMjIzNjM0NzA0NTAyNTAzNjM0NzY3==";
+$merchant_secret = "MjcyNjcyODQ4OTI1MzQ3NjI1NzgzMjc4NzIwNTI2NDI2ODc3MjQwOQ==";
 $item=array('jjjjj','kkjkkk');
 $hash = strtoupper(
     md5(

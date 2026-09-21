@@ -46,6 +46,23 @@ try {
     $pdo->beginTransaction();
 
     switch ($action) {
+        case 'mark_accepted':
+            $stmt = $pdo->prepare("UPDATE orders SET status = 'ACCEPTED' WHERE id IN ($idPlaceholders)");
+            $stmt->execute($order_ids);
+            $msg = count($order_ids) . " order(s) marked as ACCEPTED";
+            break;
+
+        case 'mark_handover_to_center':
+            $stmt = $pdo->prepare("UPDATE orders SET status = 'HANDOVER_TO_CENTER' WHERE id IN ($idPlaceholders)");
+            $stmt->execute($order_ids);
+            $msg = count($order_ids) . " order(s) marked as HANDOVER_TO_CENTER";
+            break;
+
+        case 'mark_received_at_center':
+            $stmt = $pdo->prepare("UPDATE orders SET status = 'RECEIVED_AT_CENTER' WHERE id IN ($idPlaceholders)");
+            $stmt->execute($order_ids);
+            $msg = count($order_ids) . " order(s) marked as RECEIVED_AT_CENTER";
+            break;
         case 'mark_packed':
             $stmt = $pdo->prepare("UPDATE orders SET status = 'PACKED', packed_at = NOW() WHERE id IN ($idPlaceholders)");
             $stmt->execute($order_ids);

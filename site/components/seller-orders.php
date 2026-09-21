@@ -114,10 +114,11 @@ if (!function_exists('sortLink')) {
                 <select name="status" onchange="this.form.submit()" class="bg-white border border-gray-200 text-sm font-bold text-navy rounded-xl px-4 py-2 focus:outline-none focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] transition-all cursor-pointer">
                     <option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All Statuses</option>
                     <option value="pending" <?= $status === 'pending' ? 'selected' : '' ?>>Pending</option>
-                    <option value="confirmed" <?= $status === 'confirmed' ? 'selected' : '' ?>>Confirmed</option>
-                    <option value="ready_to_delivery" <?= $status === 'ready_to_delivery' ? 'selected' : '' ?>>Ready to Delivery</option>
                     <option value="accepted" <?= $status === 'accepted' ? 'selected' : '' ?>>Accepted</option>
+                    <option value="handover_to_center" <?= $status === 'handover_to_center' ? 'selected' : '' ?>>Handed to Center</option>
+                    <option value="received_at_center" <?= $status === 'received_at_center' ? 'selected' : '' ?>>Received at Center</option>
                     <option value="shipped" <?= $status === 'shipped' ? 'selected' : '' ?>>Shipped</option>
+                    <option value="out_for_delivery" <?= $status === 'out_for_delivery' ? 'selected' : '' ?>>Out for Delivery</option>
                     <option value="delivered" <?= $status === 'delivered' ? 'selected' : '' ?>>Delivered</option>
                     <option value="completed" <?= $status === 'completed' ? 'selected' : '' ?>>Completed</option>
                     <option value="cancelled" <?= $status === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
@@ -187,18 +188,22 @@ if (!function_exists('sortLink')) {
                         <?= htmlspecialchars($ord['shipping_name'] ?? ($ord['first_name'] . ' ' . $ord['last_name'])) ?>
                     </td>
                     <td class="p-4 border-t border-[#F1F5F9] text-center">
-                        <?php if ($ord['status'] == 'pending'): ?>
+                        <?php if (strtoupper($ord['status']) == 'PENDING'): ?>
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-800 uppercase tracking-wider">Pending</span>
-                        <?php elseif ($ord['status'] == 'confirmed'): ?>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 uppercase tracking-wider">Confirmed</span>
-                        <?php elseif ($ord['status'] == 'ready_to_delivery'): ?>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 uppercase tracking-wider">Ready</span>
-                        <?php elseif ($ord['status'] == 'accepted'): ?>
+                        <?php elseif (strtoupper($ord['status']) == 'ACCEPTED'): ?>
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 uppercase tracking-wider">Accepted</span>
-                        <?php elseif ($ord['status'] == 'shipped'): ?>
+                        <?php elseif (strtoupper($ord['status']) == 'HANDOVER_TO_CENTER'): ?>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 uppercase tracking-wider">Handed to Center</span>
+                        <?php elseif (strtoupper($ord['status']) == 'RECEIVED_AT_CENTER'): ?>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 uppercase tracking-wider">At Center</span>
+                        <?php elseif (strtoupper($ord['status']) == 'SHIPPED'): ?>
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 uppercase tracking-wider">Shipped</span>
-                        <?php elseif (in_array($ord['status'], ['delivered', 'completed'])): ?>
+                        <?php elseif (strtoupper($ord['status']) == 'OUT_FOR_DELIVERY'): ?>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 uppercase tracking-wider">Out for Delivery</span>
+                        <?php elseif (in_array(strtoupper($ord['status']), ['DELIVERED', 'COMPLETED'])): ?>
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-800 uppercase tracking-wider"><?= htmlspecialchars($ord['status']) ?></span>
+                        <?php elseif (strtoupper($ord['status']) == 'CANCELLED'): ?>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-800 uppercase tracking-wider">Cancelled</span>
                         <?php else: ?>
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-800 uppercase tracking-wider"><?= htmlspecialchars($ord['status']) ?></span>
                         <?php endif; ?>
@@ -231,8 +236,8 @@ if (!function_exists('sortLink')) {
                             ], JSON_HEX_APOS | JSON_HEX_QUOT)) ?>)' class="w-8 h-8 rounded-full bg-white hover:bg-gray-100 text-gray-400 hover:text-navy transition-all shadow-sm flex items-center justify-center" title="View Details">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <?php if(in_array($ord['status'], ['pending', 'confirmed'])): ?>
-                            <button onclick="openSellerStatusModal('<?= $ord['order_id'] ?>', '<?= $ord['status'] ?>', '<?= htmlspecialchars($ord['order_code']) ?>')" class="w-8 h-8 rounded-full bg-white hover:bg-blue-50 text-gray-400 hover:text-[#0066FF] transition-all shadow-sm flex items-center justify-center" title="Update Status">
+                            <?php if(in_array(strtoupper($ord['status']), ['PENDING', 'ACCEPTED'])): ?>
+                            <button onclick="openSellerStatusModal('<?= $ord['order_id'] ?>', '<?= strtoupper($ord['status']) ?>', '<?= htmlspecialchars($ord['order_code']) ?>')" class="w-8 h-8 rounded-full bg-white hover:bg-blue-50 text-gray-400 hover:text-[#0066FF] transition-all shadow-sm flex items-center justify-center" title="Update Status">
                                 <i class="fas fa-edit"></i>
                             </button>
                             <?php endif; ?>
@@ -262,18 +267,22 @@ if (!function_exists('sortLink')) {
                     <p class="text-xs text-gray-500 font-bold"><?= date('M d, Y h:i A', strtotime($ord['order_date'])) ?></p>
                 </div>
                 <div>
-                    <?php if ($ord['status'] == 'pending'): ?>
+                    <?php if (strtoupper($ord['status']) == 'PENDING'): ?>
                         <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-yellow-100 text-yellow-800 uppercase tracking-wide">Pending</span>
-                    <?php elseif ($ord['status'] == 'confirmed'): ?>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-100 text-indigo-800 uppercase tracking-wide">Confirmed</span>
-                    <?php elseif ($ord['status'] == 'ready_to_delivery'): ?>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-100 text-orange-800 uppercase tracking-wide">Ready</span>
-                    <?php elseif ($ord['status'] == 'accepted'): ?>
+                    <?php elseif (strtoupper($ord['status']) == 'ACCEPTED'): ?>
                         <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800 uppercase tracking-wide">Accepted</span>
-                    <?php elseif ($ord['status'] == 'shipped'): ?>
+                    <?php elseif (strtoupper($ord['status']) == 'HANDOVER_TO_CENTER'): ?>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-orange-100 text-orange-800 uppercase tracking-wide">Handed to Center</span>
+                    <?php elseif (strtoupper($ord['status']) == 'RECEIVED_AT_CENTER'): ?>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-100 text-indigo-800 uppercase tracking-wide">At Center</span>
+                    <?php elseif (strtoupper($ord['status']) == 'SHIPPED'): ?>
                         <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-800 uppercase tracking-wide">Shipped</span>
-                    <?php elseif (in_array($ord['status'], ['delivered', 'completed'])): ?>
+                    <?php elseif (strtoupper($ord['status']) == 'OUT_FOR_DELIVERY'): ?>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-100 text-teal-800 uppercase tracking-wide">Out for Delivery</span>
+                    <?php elseif (in_array(strtoupper($ord['status']), ['DELIVERED', 'COMPLETED'])): ?>
                         <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-green-100 text-green-800 uppercase tracking-wide"><?= htmlspecialchars($ord['status']) ?></span>
+                    <?php elseif (strtoupper($ord['status']) == 'CANCELLED'): ?>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-100 text-red-800 uppercase tracking-wide">Cancelled</span>
                     <?php else: ?>
                         <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 text-gray-800 uppercase tracking-wide"><?= htmlspecialchars($ord['status']) ?></span>
                     <?php endif; ?>
@@ -316,8 +325,8 @@ if (!function_exists('sortLink')) {
                 ], JSON_HEX_APOS | JSON_HEX_QUOT)) ?>)' class="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs font-bold transition-colors flex items-center gap-1">
                     <i class="fas fa-eye"></i> View
                 </button>
-                <?php if(in_array($ord['status'], ['pending', 'confirmed'])): ?>
-                <button onclick="openSellerStatusModal('<?= $ord['order_id'] ?>', '<?= $ord['status'] ?>', '<?= htmlspecialchars($ord['order_code']) ?>')" class="px-3 py-1.5 rounded-lg bg-blue-50 text-[#0066FF] hover:bg-blue-100 text-xs font-bold transition-colors flex items-center gap-1">
+                <?php if(in_array(strtoupper($ord['status']), ['PENDING', 'ACCEPTED'])): ?>
+                <button onclick="openSellerStatusModal('<?= $ord['order_id'] ?>', '<?= strtoupper($ord['status']) ?>', '<?= htmlspecialchars($ord['order_code']) ?>')" class="px-3 py-1.5 rounded-lg bg-blue-50 text-[#0066FF] hover:bg-blue-100 text-xs font-bold transition-colors flex items-center gap-1">
                     <i class="fas fa-edit"></i> Status
                 </button>
                 <?php endif; ?>
@@ -421,8 +430,7 @@ if (!function_exists('sortLink')) {
             <button onclick="closeSellerStatusModal()" class="text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-times text-xl"></i></button>
         </div>
         
-        <form action="../Backend/shop-ajax-backend.php" method="POST" class="p-6" id="sellerStatusForm">
-            <input type="hidden" name="action" value="seller_update_order_status">
+        <form action="../Backend/seller-order-action.php" method="POST" class="p-6" id="sellerStatusForm">
             <input type="hidden" name="order_id" id="status_order_id">
             
             <div class="mb-6 text-center">
@@ -434,22 +442,37 @@ if (!function_exists('sortLink')) {
                 <label class="block text-xs font-black text-navy uppercase tracking-widest mb-3">Status Option</label>
                 
                 <div class="space-y-3">
-                    <label class="flex items-center p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors relative group" id="status_option_confirmed_container">
-                        <input type="radio" name="new_status" value="confirmed" id="status_option_confirmed" class="w-5 h-5 text-[#0066FF] border-gray-300 focus:ring-[#0066FF]">
+                    <label class="flex items-center p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors relative group" id="status_option_accepted_container">
+                        <input type="radio" name="new_status" value="accepted" id="status_option_accepted" class="w-5 h-5 text-[#0066FF] border-gray-300 focus:ring-[#0066FF]">
                         <div class="ml-3">
-                            <span class="block text-sm font-bold text-navy">Confirmed</span>
-                            <span class="block text-xs text-gray-500">I acknowledge this order and have stock.</span>
+                            <span class="block text-sm font-bold text-navy">Accept Order</span>
+                            <span class="block text-xs text-gray-500">I acknowledge this order and have stock to pack.</span>
+                        </div>
+                    </label>
+
+                    <label class="flex items-center p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors relative group" id="status_option_reject_container">
+                        <input type="radio" name="new_status" value="cancelled" id="status_option_reject" class="w-5 h-5 text-[#0066FF] border-gray-300 focus:ring-[#0066FF]" onchange="toggleRejectionReason()">
+                        <div class="ml-3">
+                            <span class="block text-sm font-bold text-red-600">Reject Order</span>
+                            <span class="block text-xs text-gray-500">I cannot fulfill this order (Out of stock, etc).</span>
                         </div>
                     </label>
                     
-                    <label class="flex items-center p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors relative group" id="status_option_ready_container">
-                        <input type="radio" name="new_status" value="ready_to_delivery" id="status_option_ready" class="w-5 h-5 text-[#0066FF] border-gray-300 focus:ring-[#0066FF]">
+                    <label class="flex items-center p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors relative group" id="status_option_handover_container">
+                        <input type="radio" name="new_status" value="handover_to_center" id="status_option_handover" class="w-5 h-5 text-[#0066FF] border-gray-300 focus:ring-[#0066FF]">
                         <div class="ml-3">
-                            <span class="block text-sm font-bold text-navy">Ready for Handover</span>
-                            <span class="block text-xs text-gray-500">I have handed over the item to the collection center.</span>
+                            <span class="block text-sm font-bold text-navy">Handing over to Collecting Center</span>
+                            <span class="block text-xs text-gray-500">I have handed over the item to the OXXA collection center.</span>
                         </div>
                     </label>
                 </div>
+            </div>
+
+            <!-- Rejection Reason Text Area -->
+            <div id="rejection_reason_container" class="mb-8 hidden">
+                <label class="block text-xs font-black text-navy uppercase tracking-widest mb-2">Rejection Reason <span class="text-red-500">*</span></label>
+                <textarea name="cancellation_reason" id="cancellation_reason" rows="3" placeholder="Please state why you are rejecting this order. (Required)" class="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all"></textarea>
+                <p class="text-xs text-gray-500 mt-1">If the buyer paid via Card, a 100% refund will be issued.</p>
             </div>
             
             <button type="submit" class="w-full bg-[#0066FF] hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/30">
@@ -470,12 +493,14 @@ function openOrderDetailsModal(order) {
     let badgeClass = '';
     let badgeText = order.status;
     
-    if (order.status === 'pending') badgeClass = 'bg-yellow-100 text-yellow-800';
-    else if (order.status === 'confirmed') badgeClass = 'bg-indigo-100 text-indigo-800';
-    else if (order.status === 'ready_to_delivery') { badgeClass = 'bg-orange-100 text-orange-800'; badgeText = 'Ready'; }
-    else if (order.status === 'accepted') badgeClass = 'bg-purple-100 text-purple-800';
-    else if (order.status === 'shipped') badgeClass = 'bg-blue-100 text-blue-800';
-    else if (order.status === 'delivered' || order.status === 'completed') badgeClass = 'bg-green-100 text-green-800';
+    if (order.status.toUpperCase() === 'PENDING') badgeClass = 'bg-yellow-100 text-yellow-800';
+    else if (order.status.toUpperCase() === 'ACCEPTED') badgeClass = 'bg-purple-100 text-purple-800';
+    else if (order.status.toUpperCase() === 'HANDOVER_TO_CENTER') { badgeClass = 'bg-orange-100 text-orange-800'; badgeText = 'Handed to Center'; }
+    else if (order.status.toUpperCase() === 'RECEIVED_AT_CENTER') { badgeClass = 'bg-indigo-100 text-indigo-800'; badgeText = 'At Center'; }
+    else if (order.status.toUpperCase() === 'SHIPPED') badgeClass = 'bg-blue-100 text-blue-800';
+    else if (order.status.toUpperCase() === 'OUT_FOR_DELIVERY') badgeClass = 'bg-teal-100 text-teal-800';
+    else if (order.status.toUpperCase() === 'DELIVERED' || order.status.toUpperCase() === 'COMPLETED') badgeClass = 'bg-green-100 text-green-800';
+    else if (order.status.toUpperCase() === 'CANCELLED') badgeClass = 'bg-red-100 text-red-800';
     else badgeClass = 'bg-gray-100 text-gray-800';
     
     badgeContainer.innerHTML = `<span class="px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${badgeClass}">${badgeText}</span>`;
@@ -539,17 +564,26 @@ function openSellerStatusModal(id, currentStatus, orderCode) {
     document.getElementById('status_order_code_display').textContent = orderCode;
     
     // Handle available options based on current status
-    const confirmedContainer = document.getElementById('status_option_confirmed_container');
-    const confirmedInput = document.getElementById('status_option_confirmed');
-    const readyInput = document.getElementById('status_option_ready');
+    const acceptedContainer = document.getElementById('status_option_accepted_container');
+    const rejectContainer = document.getElementById('status_option_reject_container');
+    const handoverContainer = document.getElementById('status_option_handover_container');
     
-    if (currentStatus === 'pending') {
-        confirmedContainer.style.display = 'flex';
-        confirmedInput.checked = true;
-    } else if (currentStatus === 'confirmed') {
-        confirmedContainer.style.display = 'none';
-        readyInput.checked = true;
+    const acceptedInput = document.getElementById('status_option_accepted');
+    const rejectInput = document.getElementById('status_option_reject');
+    const handoverInput = document.getElementById('status_option_handover');
+    
+    if (currentStatus === 'PENDING') {
+        acceptedContainer.style.display = 'flex';
+        rejectContainer.style.display = 'flex';
+        handoverContainer.style.display = 'none';
+        acceptedInput.checked = true;
+    } else if (currentStatus === 'ACCEPTED') {
+        acceptedContainer.style.display = 'none';
+        rejectContainer.style.display = 'none';
+        handoverContainer.style.display = 'flex';
+        handoverInput.checked = true;
     }
+    toggleRejectionReason();
     
     // Show modal
     const modal = document.getElementById('sellerStatusModal');
@@ -587,6 +621,65 @@ document.querySelectorAll('input[type="radio"]').forEach(radio => {
             this.closest('label').classList.remove('border-gray-200');
             this.closest('label').classList.add('border-[#0066FF]', 'bg-blue-50/50');
         }
+        
+        toggleRejectionReason();
     });
 });
+
+function toggleRejectionReason() {
+    const rejectInput = document.getElementById('status_option_reject');
+    const reasonContainer = document.getElementById('rejection_reason_container');
+    const reasonTextarea = document.getElementById('cancellation_reason');
+    
+    if (rejectInput && rejectInput.checked) {
+        reasonContainer.classList.remove('hidden');
+        reasonTextarea.required = true;
+    } else {
+        reasonContainer.classList.add('hidden');
+        reasonTextarea.required = false;
+        reasonTextarea.value = '';
+    }
+}
+
+// Add ajax submit for sellerStatusForm
+document.getElementById('sellerStatusForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('../Backend/seller-order-action.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                title: 'Success!',
+                text: data.message,
+                icon: 'success',
+                confirmButtonColor: '#0066FF'
+            }).then(() => {
+                window.location.reload();
+            });
+        } else {
+            Swal.fire({
+                title: 'Error!',
+                text: data.message,
+                icon: 'error',
+                confirmButtonColor: '#d33'
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+            title: 'Error!',
+            text: 'An unexpected error occurred.',
+            icon: 'error',
+            confirmButtonColor: '#d33'
+        });
+    });
+});
+
 </script>
