@@ -544,7 +544,7 @@ include(__DIR__ . '/../include/header.php');
     <section class="mb-16 mx-4">
         <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-0 rounded-[32px] overflow-hidden shadow-2xl">
             <!-- Left Panel (Dark) -->
-            <div class="bg-[#111111] p-12 relative flex flex-col justify-center text-white">
+            <div class="bg-[#111111] p-6 lg:p-12 relative flex flex-col justify-center text-white">
                 <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-20"></div>
                 <div class="relative z-10">
                     <h2 class="text-4xl font-bold uppercase tracking-wide mb-4 font-space">
@@ -580,7 +580,7 @@ include(__DIR__ . '/../include/header.php');
             </div>
 
             <!-- Right Panel (White Form) -->
-            <div class="bg-white p-12">
+            <div class="bg-white p-6 lg:p-12">
                 <form id="contactHubForm" class="space-y-6">
                     <div class="relative">
                         <input type="text" list="subjectOptions" id="subject" name="subject" class="block px-2.5 pb-2.5 pt-6 w-full text-sm text-gray-900 bg-transparent rounded-lg border-2 border-gray-200 appearance-none focus:outline-none focus:ring-0 focus:border-primary peer" placeholder=" " required />

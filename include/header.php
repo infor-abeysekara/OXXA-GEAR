@@ -386,52 +386,7 @@ if (isset($_SESSION['userid'])) {
   <!-- Spacer to prevent content from hiding under fixed header -->
   <div class="h-[112px]"></div>
 
-  <!-- Mobile Bottom Navigation (5 Icons: Home, Categories, Wishlist, Profile, Cart) -->
-  <div class="lg:hidden fixed bottom-0 left-0 w-full bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-[95] border-t border-gray-100 pb-safe">
-      <div class="flex justify-around items-center h-16">
-          <?php 
-          $current_page = basename($_SERVER['PHP_SELF'], '.php');
-          $is_shop = ($current_page == 'shop' || $current_page == 'products');
-          ?>
-          
-          <!-- Home -->
-          <a href="<?php echo $base_path; ?>index.php" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_page == 'index') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
-              <i class="fas fa-home text-xl mb-1"></i>
-              <?php if($current_page == 'index'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
-          </a>
-          
-          <!-- Categories / Shop -->
-          <a href="<?php echo $base_path; ?>site/shop.php" class="flex flex-col items-center justify-center w-full h-full <?php echo $is_shop ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
-              <i class="fas fa-border-all text-xl mb-1"></i>
-              <?php if($is_shop): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
-          </a>
-          
-          <!-- Notifications -->
-          <a href="<?php echo isset($_SESSION['userid']) ? $base_path . 'site/notifications.php' : 'javascript:openAuthModal(\'login\')'; ?>" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_page == 'notifications') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?> relative">
-              <i class="far fa-bell text-xl mb-1"></i>
-              <?php if ($notificationCount > 0): ?>
-                <span class="absolute top-1 right-2 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white">
-                  <?php echo $notificationCount > 99 ? '99+' : $notificationCount; ?>
-                </span>
-              <?php endif; ?>
-              <?php if($current_page == 'notifications'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
-          </a>
-          
-          <!-- Profile -->
-          <a href="<?php echo isset($_SESSION['userid']) ? $base_path . 'site/profile.php' : 'javascript:openAuthModal(\'login\')'; ?>" class="flex flex-col items-center justify-center w-full h-full <?php echo ($current_page == 'profile') ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
-              <i class="far fa-user text-xl mb-1"></i>
-              <?php if($current_page == 'profile'): ?><span class="w-1.5 h-1.5 rounded-full bg-primary mt-0.5"></span><?php endif; ?>
-          </a>
-          
-          <!-- Cart -->
-          <button onclick="openCartDrawer()" class="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-gray-600 relative" aria-label="Cart">
-              <i class="fas fa-shopping-bag text-xl mb-1"></i>
-              <span class="cart-badge absolute top-1 right-2 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold bg-primary border-2 border-white <?php echo ($cartCount ?? 0) <= 0 ? 'hidden' : ''; ?>" id="mobileCartBadge">
-                <?php echo ($cartCount ?? 0) > 9 ? '9+' : ($cartCount ?? 0); ?>
-              </span>
-          </button>
-      </div>
-  </div>
+  <!-- Mobile Bottom Navigation was here, moved to footer.php -->
 
   <!-- Main Content Container -->
   <!-- Main Content Container -->

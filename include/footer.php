@@ -384,11 +384,14 @@
         <i class="fas fa-fire text-lg mb-0.5"></i>
         <span class="text-[10px] font-bold">Hot Deals</span>
       </a>
-      <a href="<?php echo $base_path; ?>site/wishlist.php" class="flex flex-col items-center justify-center w-full h-full space-y-1 <?php echo $current_script == 'wishlist.php' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
-        <i class="fas fa-heart text-lg mb-0.5"></i>
-        <span class="text-[10px] font-bold">Wishlist</span>
-      </a>
-      <a href="<?php echo $base_path; ?>site/profile.php" class="flex flex-col items-center justify-center w-full h-full space-y-1 <?php echo in_array($current_script, ['profile.php', 'settings.php', 'my-orders.php', 'address-book.php']) ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
+      <button onclick="openCartDrawer()" class="flex flex-col items-center justify-center w-full h-full space-y-1 text-gray-400 hover:text-gray-600 relative" aria-label="Cart">
+        <i class="fas fa-shopping-bag text-lg mb-0.5"></i>
+        <span class="text-[10px] font-bold">Cart</span>
+        <span class="cart-badge absolute top-1 right-3 text-white text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold bg-primary border border-white <?php echo (isset($cartCount) && $cartCount > 0) ? '' : 'hidden'; ?>" id="mobileCartBadge">
+          <?php echo (isset($cartCount) && $cartCount > 9) ? '9+' : ($cartCount ?? 0); ?>
+        </span>
+      </button>
+      <a href="<?php echo isset($_SESSION['userid']) ? $base_path . 'site/profile.php' : 'javascript:openAuthModal(\'login\')'; ?>" class="flex flex-col items-center justify-center w-full h-full space-y-1 <?php echo in_array($current_script, ['profile.php', 'settings.php', 'my-orders.php', 'address-book.php']) ? 'text-primary' : 'text-gray-400 hover:text-gray-600'; ?>">
         <i class="fas fa-user text-lg mb-0.5"></i>
         <span class="text-[10px] font-bold">Account</span>
       </a>
