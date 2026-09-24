@@ -110,7 +110,8 @@ if (!function_exists('sortLink')) {
 ?>
 
 <!-- Load Export Utilities -->
-<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 <script src="js/export-utils.js"></script>
 
 <div class="space-y-6">
@@ -125,8 +126,8 @@ if (!function_exists('sortLink')) {
             <button type="button" onclick="openExportModal('reviews', 'Reviews', 'csv', [{value: 'pending', label: 'Pending Reply'}, {value: 'replied', label: 'Replied'}, {value: 'reported', label: 'Reported'}])" class="h-10 px-4 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl text-sm font-bold text-gray-700 transition-colors flex items-center gap-2 shadow-sm">
                 <i class="fas fa-file-csv text-gray-400"></i> Export CSV
             </button>
-            <button type="button" onclick="openExportModal('reviews', 'Reviews', 'excel', [{value: 'pending', label: 'Pending Reply'}, {value: 'replied', label: 'Replied'}, {value: 'reported', label: 'Reported'}])" class="h-10 px-4 bg-black text-white hover:bg-gray-800 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-sm shadow-black/10">
-                <i class="fas fa-file-excel text-gray-300"></i> Export Excel
+            <button type="button" onclick="openExportModal('reviews', 'Reviews', 'pdf', [{value: 'pending', label: 'Pending Reply'}, {value: 'replied', label: 'Replied'}, {value: 'reported', label: 'Reported'}])" class="h-10 px-4 bg-black text-white hover:bg-gray-800 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-sm shadow-black/10">
+                <i class="fas fa-file-pdf text-red-400"></i> Export PDF
             </button>
         </div>
     </div>

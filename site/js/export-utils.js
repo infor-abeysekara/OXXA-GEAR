@@ -47,14 +47,13 @@ function exportToCSV(data, filename) {
 }
 
 /**
- * Export data to Excel format using SheetJS
+ * Export data to PDF format using jsPDF & autoTable
  * @param {Array} data - Array of objects containing data
- * @param {Object} summaryData - Object containing summary info (Key: Value)
  * @param {String} filename - Name of the file
  */
-function exportToExcel(data, summaryData, filename) {
-    if (typeof XLSX === 'undefined') {
-        alert("Excel export library is not loaded. Please try again or refresh the page.");
+function exportToPDF(data, filename, title = "OXXA GEAR Report") {
+    if (typeof window.jspdf === 'undefined') {
+        alert("PDF export library is not loaded. Please try again or refresh the page.");
         return;
     }
     
@@ -63,31 +62,31 @@ function exportToExcel(data, summaryData, filename) {
         return;
     }
 
-    const wb = XLSX.utils.book_new();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('landscape'); // use landscape for tables with many columns
     
-    // Sheet 1: Data List
-    const wsData = XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(wb, wsData, "Data List");
+    doc.setFontSize(18);
+    doc.text(title, 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${getFormattedDate()}`, 14, 30);
     
-    // Sheet 2: Summary (if provided)
-    if (summaryData && Object.keys(summaryData).length > 0) {
-        const summaryRows = [];
-        summaryRows.push({ A: "OXXA GEAR - Report Summary" });
-        summaryRows.push({}); 
-        
-        for (const [key, value] of Object.entries(summaryData)) {
-            summaryRows.push({ A: key, B: value });
-        }
-        
-        const wsSummary = XLSX.utils.json_to_sheet(summaryRows, { skipHeader: true });
-        
-        if(!wsSummary["!merges"]) wsSummary["!merges"] = [];
-        wsSummary["!merges"].push({s:{r:0,c:0}, e:{r:0,c:3}});
-        
-        XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
-    }
+    const headers = Object.keys(data[0]);
+    const body = data.map(row => headers.map(h => {
+        const val = row[h];
+        return val === null || val === undefined ? '' : String(val);
+    }));
 
-    XLSX.writeFile(wb, `${filename}-${getFormattedDate()}.xlsx`);
+    doc.autoTable({
+        startY: 36,
+        head: [headers],
+        body: body,
+        theme: 'grid',
+        headStyles: { fillColor: [0, 102, 255] },
+        styles: { fontSize: 8 }
+    });
+
+    doc.save(`${filename}-${getFormattedDate()}.pdf`);
 }
 
 /**
@@ -121,8 +120,8 @@ async function handleExport(type, format, endpointUrl, summaryData = {}, buttonE
 
         if (format === 'csv') {
             exportToCSV(dataRows, filename);
-        } else if (format === 'excel') {
-            exportToExcel(dataRows, summaryData, filename);
+        } else if (format === 'pdf') {
+            exportToPDF(dataRows, filename, `OXXA GEAR - ${type.toUpperCase()}`);
         }
         
         closeExportModal();
@@ -187,9 +186,9 @@ function createExportModal() {
                             </div>
                         </label>
                         <label class="flex-1 cursor-pointer">
-                            <input type="radio" name="exportFormat" value="excel" class="peer sr-only">
-                            <div class="p-3 text-center rounded-xl border-2 border-gray-100 peer-checked:border-gray-900 peer-checked:bg-gray-50 text-gray-600 peer-checked:text-gray-900 font-medium transition-all">
-                                <i class="fas fa-file-excel mr-2"></i>Excel
+                            <input type="radio" name="exportFormat" value="pdf" class="peer sr-only">
+                            <div class="p-3 text-center rounded-xl border-2 border-gray-100 peer-checked:border-[#ef4444] peer-checked:bg-[#ef4444]/5 text-gray-600 peer-checked:text-[#ef4444] font-medium transition-all">
+                                <i class="fas fa-file-pdf mr-2"></i>PDF
                             </div>
                         </label>
                     </div>

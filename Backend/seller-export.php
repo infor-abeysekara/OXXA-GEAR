@@ -37,10 +37,9 @@ $response = [
 switch ($type) {
     case 'products':
         $params = [$seller_id];
-        $sql = "SELECT p.pname as 'Product Name', p.product_code as 'Code', c.name as 'Category', 
-                       p.price as 'Selling Price', p.cost_price as 'Cost Price', 
-                       p.total_qty as 'Stock', p.status as 'Status', DATE(p.created_at) as 'Created At', 
-                       p.views as 'Views', p.sales as 'Sales'
+        $sql = "SELECT p.name as 'Product Name', p.product_code as 'Code', c.name as 'Category', 
+                       p.base_price as 'Selling Price', p.cost_price as 'Cost Price', 
+                       p.total_qty as 'Stock', p.status as 'Status', DATE(p.created_at) as 'Created At'
                 FROM products p 
                 LEFT JOIN categories c ON p.category_id = c.id 
                 WHERE p.seller_id = ?";

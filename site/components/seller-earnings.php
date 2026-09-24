@@ -74,7 +74,8 @@ if (!function_exists('sortLink')) {
 ?>
 
 <!-- Load Export Utilities -->
-<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 <script src="js/export-utils.js"></script>
 
 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
@@ -149,8 +150,8 @@ if (!function_exists('sortLink')) {
                 <button type="button" onclick="openExportModal('withdrawals', 'Withdrawals', 'csv', [{value: 'pending', label: 'Pending'}, {value: 'approved', label: 'Approved'}, {value: 'paid', label: 'Paid'}, {value: 'rejected', label: 'Rejected'}])" class="h-10 px-4 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl text-sm font-bold text-gray-700 transition-colors flex items-center gap-2">
                     <i class="fas fa-file-csv text-gray-400"></i> Export CSV
                 </button>
-                <button type="button" onclick="openExportModal('withdrawals', 'Withdrawals', 'excel', [{value: 'pending', label: 'Pending'}, {value: 'approved', label: 'Approved'}, {value: 'paid', label: 'Paid'}, {value: 'rejected', label: 'Rejected'}])" class="h-10 px-4 bg-black text-white hover:bg-gray-800 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-lg shadow-black/10">
-                    <i class="fas fa-file-excel text-gray-300"></i> Export Excel
+                <button type="button" onclick="openExportModal('withdrawals', 'Withdrawals', 'pdf', [{value: 'pending', label: 'Pending'}, {value: 'approved', label: 'Approved'}, {value: 'paid', label: 'Paid'}, {value: 'rejected', label: 'Rejected'}])" class="h-10 px-4 bg-black text-white hover:bg-gray-800 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-lg shadow-black/10">
+                    <i class="fas fa-file-pdf text-red-400"></i> Export PDF
                 </button>
             </div>
         </div>
