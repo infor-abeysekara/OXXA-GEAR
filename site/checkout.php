@@ -47,6 +47,7 @@ $cartItems = $cartStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Calculate totals
 $subtotal = 0;
+$deliveryFee = 0;
 $allFreeShipping = true;
 
 // Normalize price and group by seller
@@ -77,6 +78,14 @@ foreach ($cartItems as &$item) {
     $subtotal += ($item['price'] * $item['qty']);
     if (empty($item['is_free_shipping'])) {
         $allFreeShipping = false;
+        
+        $baseShipping = (float)$item['shipping_cost'];
+        if ($baseShipping <= 0) $baseShipping = 300.00;
+        
+        $qty = (int)$item['qty'];
+        if ($qty > 0) {
+            $deliveryFee += $baseShipping + ($baseShipping * 0.20 * ($qty - 1));
+        }
     }
 }
 unset($item); // clear the reference just to be safe
@@ -88,7 +97,7 @@ if (empty($cartItems)) {
 }
 
 $isFreeShipping = ($allFreeShipping && count($cartItems) > 0);
-$deliveryFee = ($subtotal > 0 && !$isFreeShipping) ? 300.00 : 0.00;
+if ($subtotal == 0) $deliveryFee = 0;
 
 $discount = 0;
 $couponCode = '';

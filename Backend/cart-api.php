@@ -265,16 +265,24 @@ if ($action === 'get_cart') {
 
     // Shipping calculation
     
+    $shippingFee = 0;
     $allFreeShipping = true;
     foreach ($items as $item) {
         if (empty($item['is_free_shipping'])) {
             $allFreeShipping = false;
-            break;
+            
+            $baseShipping = (float)$item['shipping_cost'];
+            if ($baseShipping <= 0) $baseShipping = 300.00;
+            
+            $qty = (int)$item['quantity'];
+            if ($qty > 0) {
+                $shippingFee += $baseShipping + ($baseShipping * 0.20 * ($qty - 1));
+            }
         }
     }
 
     $isFreeShipping = ($allFreeShipping && count($items) > 0);
-    $shippingFee = ($subtotal > 0 && !$isFreeShipping) ? 300.00 : 0.00;
+    if ($subtotal == 0) $shippingFee = 0;
     $freeShippingRemaining = 0;
 
     // Coupon calculation

@@ -71,6 +71,7 @@ try {
 
         // Calculate Subtotal and Shipping
         $subtotal = 0;
+        $deliveryFee = 0;
         $allFreeShipping = true;
         foreach ($cartItems as &$item) {
             $basePrice = (!empty($item['variant_price']) && $item['variant_price'] > 0) ? (float)$item['variant_price'] : (float)$item['base_price'];
@@ -85,15 +86,22 @@ try {
             $item['unit_price'] = $unitPrice;
             $item['total_price'] = $unitPrice * $item['quantity'];
             $subtotal += $item['total_price'];
-            
             if (empty($item['is_free_shipping'])) {
                 $allFreeShipping = false;
+                
+                $baseShipping = (float)$item['shipping_cost'];
+                if ($baseShipping <= 0) $baseShipping = 300.00;
+                
+                $qty = (int)$item['quantity'];
+                if ($qty > 0) {
+                    $deliveryFee += $baseShipping + ($baseShipping * 0.20 * ($qty - 1));
+                }
             }
         }
         unset($item);
         
         $isFreeShipping = ($allFreeShipping && count($cartItems) > 0);
-        $deliveryFee = ($subtotal > 0 && !$isFreeShipping) ? 300.00 : 0.00;
+        if ($subtotal == 0) $deliveryFee = 0;
 
         $netBaseTotal = ($subtotal + $deliveryFee) - $couponDiscount;
         if ($netBaseTotal < 0) $netBaseTotal = 0;
