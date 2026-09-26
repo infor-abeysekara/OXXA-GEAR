@@ -5,7 +5,7 @@ require '../include/functions.php';
 
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['userid']) || $_SESSION['user_type'] !== 'seller') {
+if (!isset($_SESSION['userid']) || $_SESSION['type'] !== 'seller') {
     echo json_encode(['error' => 'Unauthorized']);
     exit();
 }
@@ -51,7 +51,7 @@ switch ($type) {
         }
 
         if (!empty($search)) {
-            $sql .= " AND (p.pname LIKE ? OR p.product_code LIKE ?)";
+            $sql .= " AND (p.name LIKE ? OR p.product_code LIKE ?)";
             $params[] = "%$search%";
             $params[] = "%$search%";
         }
@@ -76,24 +76,24 @@ switch ($type) {
 
     case 'withdrawals':
         $params = [$seller_id];
-        $sql = "SELECT DATE(created_at) as 'Date', id as 'Withdrawal ID', amount as 'Amount', bank_name as 'Bank', 
-                       account_number as 'Account No', status as 'Status', 
-                       0 as 'Fee', amount as 'Net Received', DATE(processed_at) as 'Processed Date'
-                FROM withdrawal_requests 
+        $sql = "SELECT DATE(requested_at) as 'Date', withdrawal_code as 'Withdrawal ID', amount as 'Amount', bank_name as 'Bank', 
+                       bank_account_no_masked as 'Account No', status as 'Status', 
+                       fee as 'Fee', net_amount as 'Net Received', DATE(completed_at) as 'Processed Date'
+                FROM withdrawals 
                 WHERE seller_id = ?";
 
         if (!empty($date_from) && !empty($date_to)) {
-            $sql .= " AND DATE(created_at) BETWEEN ? AND ?";
+            $sql .= " AND DATE(requested_at) BETWEEN ? AND ?";
             $params[] = $date_from;
             $params[] = $date_to;
         }
 
         if (!empty($status)) {
             $sql .= " AND status = ?";
-            $params[] = $status;
+            $params[] = strtoupper($status);
         }
 
-        $sql .= " ORDER BY id DESC";
+        $sql .= " ORDER BY requested_at DESC";
         
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
@@ -174,7 +174,7 @@ switch ($type) {
 
     case 'reviews':
         $params = [$seller_id];
-        $sql = "SELECT DATE(r.created_at) as 'Date', p.pname as 'Product', 
+        $sql = "SELECT DATE(r.created_at) as 'Date', p.name as 'Product', 
                        CONCAT(u.first_name, ' ', u.last_name) as 'Customer', 
                        r.rating as 'Rating', r.review_text as 'Review Text', 
                        r.seller_reply as 'Reply', DATE(r.updated_at) as 'Reply Date'

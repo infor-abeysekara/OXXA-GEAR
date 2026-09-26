@@ -58,11 +58,11 @@ try {
         $updatePayout = $pdo->prepare("UPDATE seller_payouts SET payout_status = 'pending' WHERE order_item_id = ?");
         $updatePayout->execute([$item['order_item_id']]);
 
-        // 3. Move funds from locked to pending
+        // 3. Move funds from locked to available
         $updateWallet = $pdo->prepare("
-            UPDATE seller_wallets 
-            SET locked_balance = GREATEST(0, locked_balance - ?),
-                pending_balance = pending_balance + ?
+            UPDATE seller_balances 
+            SET return_window_hold = GREATEST(0, return_window_hold - ?),
+                available_balance = available_balance + ?
             WHERE seller_id = ?
         ");
         $updateWallet->execute([$amount, $amount, $seller_id]);

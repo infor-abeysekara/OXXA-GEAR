@@ -20,7 +20,7 @@ $params = [$_SESSION['userid']];
 $where = "WHERE p.seller_id = ?";
 
 if (!empty($search)) {
-    $where .= " AND (ord.order_code LIKE ? OR u.first_name LIKE ? OR p.pname LIKE ?)";
+    $where .= " AND (ord.order_code LIKE ? OR u.first_name LIKE ? OR p.name LIKE ?)";
     $params[] = "%$search%";
     $params[] = "%$search%";
     $params[] = "%$search%";
@@ -44,14 +44,36 @@ $countQuery->execute($params);
 $total_orders = $countQuery->fetchColumn();
 $total_pages = ceil($total_orders / $limit);
 
+// Address formatting helper
+if (!function_exists('cleanAddress')) {
+    function cleanAddress($ord) {
+        $parts = [];
+        // Split line1 if it already contains commas
+        if(!empty($ord['address_line1'])) {
+            $line1Parts = array_map('trim', explode(',', $ord['address_line1']));
+            $parts = array_merge($parts, $line1Parts);
+        }
+        if(!empty($ord['address_line2'])) $parts[] = $ord['address_line2'];
+        if(!empty($ord['city'])) $parts[] = $ord['city'];
+        if(!empty($ord['province'])) $parts[] = $ord['province'];
+        
+        // Remove empty strings and trim
+        $parts = array_filter(array_map('trim', $parts));
+        
+        // array_unique preserves keys, re-index it and join
+        return implode(', ', array_unique($parts));
+    }
+}
+
 // Fetch orders
 $sql = "
-    SELECT o.*, ord.id as order_id, ord.order_code, ord.status, ord.tracking_number, ord.courier_company, ord.created_at as order_date,
-           u.first_name, u.last_name,
-           ua.full_name as shipping_name, ua.address_line1, ua.city, ua.province, ua.postal_code, ua.phone1, ua.phone2,
+    SELECT o.*, ord.id as order_id, ord.order_code, ord.status, ord.tracking_number, ord.courier_company, ord.created_at as order_date, ord.payment_method, ord.payment_status,
+           u.first_name, u.last_name, u.email as buyer_email,
+           ua.full_name as shipping_name, ua.address_line1, ua.address_line2, ua.city, ua.province, ua.postal_code, ua.phone1, ua.phone2,
            b.name as brand_name,
            pc.color_name,
-           p.pname as product_name
+           p.name as product_name, p.total_qty as current_stock, cs.sku,
+           (SELECT image_path FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as product_image
     FROM order_items o
     JOIN orders ord ON o.order_id = ord.id
     JOIN products p ON o.product_id = p.id
@@ -73,6 +95,14 @@ $orderStmt->bindValue($paramIndex++, $limit, PDO::PARAM_INT);
 $orderStmt->bindValue($paramIndex++, $offset, PDO::PARAM_INT);
 $orderStmt->execute();
 $orders = $orderStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Normalize status if webhook missed
+foreach ($orders as &$ord_ref) {
+    if (strtoupper($ord_ref['status']) === 'PENDING_PAYMENT' && strtoupper($ord_ref['payment_status'] ?? '') === 'PAID') {
+        $ord_ref['status'] = 'PAID';
+    }
+}
+unset($ord_ref);
 
 // Helper function to build sort links
 if (!function_exists('sortLink')) {
@@ -151,104 +181,150 @@ if (!function_exists('sortLink')) {
         <table class="w-full text-left border-collapse rounded-2xl overflow-hidden border border-[#F1F5F9]" style="border-spacing: 0;">
             <thead>
                 <tr>
-                    <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 px-4 border-b border-[#F1F5F9]">
-                        <?= sortLink('ord.created_at', 'Date', $sort, $dir, $search, $status) ?>
-                    </th>
-                    <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 border-b border-[#F1F5F9]">
-                        <?= sortLink('ord.order_code', 'Order ID', $sort, $dir, $search, $status) ?>
-                    </th>
-                    <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 border-b border-[#F1F5F9]">
-                        <?= sortLink('product_name', 'Product', $sort, $dir, $search, $status) ?>
-                    </th>
-                    <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 text-center border-b border-[#F1F5F9]">Qty</th>
+                    <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 px-4 border-b border-[#F1F5F9]">Date</th>
+                    <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 border-b border-[#F1F5F9]">Order ID & Payment</th>
+                    <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 border-b border-[#F1F5F9]">Product & Variant</th>
+                    <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 text-center border-b border-[#F1F5F9]">Qty & Stock</th>
+                    <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 border-b border-[#F1F5F9]">Total & Earn</th>
                     <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 border-b border-[#F1F5F9]">Buyer</th>
-                    <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 text-center border-b border-[#F1F5F9]">
-                        <?= sortLink('ord.status', 'Status', $sort, $dir, $search, $status) ?>
-                    </th>
-                    <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 text-right pr-4 border-b border-[#F1F5F9]">Action</th>
+                    <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 text-center border-b border-[#F1F5F9]">Status</th>
+                    <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 text-center border-b border-[#F1F5F9]">SLA</th>
+                    <th class="bg-[#F8FAFC] text-[11px] uppercase tracking-[0.1em] font-extrabold text-[#64748B] p-3 text-center border-b border-[#F1F5F9]">Action</th>
                 </tr>
             </thead>
             <tbody class="text-sm">
                 <?php if (count($orders) > 0): foreach ($orders as $ord): ?>
-                <tr class="hover:bg-[#F8FAFC] transition-colors group">
-                    <td class="p-4 border-t border-[#F1F5F9]">
-                        <p class="font-bold text-navy"><?= date('M d, Y', strtotime($ord['order_date'])) ?></p>
-                        <p class="text-[11px] text-gray-400 font-bold tracking-wide"><?= date('h:i A', strtotime($ord['order_date'])) ?></p>
+                <tr class="hover:bg-slate-50/70 transition-colors group h-[72px]">
+                    <td class="p-3 px-4 border-t border-[#F1F5F9] whitespace-nowrap">
+                        <p class="font-medium text-slate-800 text-sm"><?= date('M d, Y', strtotime($ord['order_date'])) ?></p>
+                        <p class="text-[11px] text-slate-500 font-medium"><?= date('h:i A', strtotime($ord['order_date'])) ?></p>
                     </td>
-                    <td class="p-4 border-t border-[#F1F5F9]">
-                        <span class="font-black text-[#0066FF] bg-blue-50 px-2 py-1 rounded-md text-xs tracking-wider"><?= htmlspecialchars($ord['order_code']) ?></span>
-                    </td>
-                    <td class="p-4 border-t border-[#F1F5F9]">
-                        <p class="font-bold text-navy line-clamp-1" title="<?= htmlspecialchars($ord['product_name']) ?>"><?= htmlspecialchars($ord['product_name']) ?></p>
-                        <p class="text-[10px] text-gray-500 font-bold uppercase mt-0.5">Size: <?= htmlspecialchars($ord['size']) ?></p>
-                    </td>
-                    <td class="p-4 border-t border-[#F1F5F9] text-center font-bold text-gray-700">
-                        <?= $ord['quantity'] ?>
-                    </td>
-                    <td class="p-4 border-t border-[#F1F5F9] text-gray-600 font-medium">
-                        <?= htmlspecialchars($ord['shipping_name'] ?? ($ord['first_name'] . ' ' . $ord['last_name'])) ?>
-                    </td>
-                    <td class="p-4 border-t border-[#F1F5F9] text-center">
-                        <?php if (strtoupper($ord['status']) == 'PENDING'): ?>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-800 uppercase tracking-wider">Pending</span>
-                        <?php elseif (strtoupper($ord['status']) == 'ACCEPTED'): ?>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 uppercase tracking-wider">Accepted</span>
-                        <?php elseif (strtoupper($ord['status']) == 'HANDOVER_TO_CENTER'): ?>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 uppercase tracking-wider">Handed to Center</span>
-                        <?php elseif (strtoupper($ord['status']) == 'RECEIVED_AT_CENTER'): ?>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 uppercase tracking-wider">At Center</span>
-                        <?php elseif (strtoupper($ord['status']) == 'SHIPPED'): ?>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 uppercase tracking-wider">Shipped</span>
-                        <?php elseif (strtoupper($ord['status']) == 'OUT_FOR_DELIVERY'): ?>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 uppercase tracking-wider">Out for Delivery</span>
-                        <?php elseif (in_array(strtoupper($ord['status']), ['DELIVERED', 'COMPLETED'])): ?>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-800 uppercase tracking-wider"><?= htmlspecialchars($ord['status']) ?></span>
-                        <?php elseif (strtoupper($ord['status']) == 'CANCELLED'): ?>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-800 uppercase tracking-wider">Cancelled</span>
-                        <?php else: ?>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-800 uppercase tracking-wider"><?= htmlspecialchars($ord['status']) ?></span>
-                        <?php endif; ?>
-                        
-                        <?php if(!empty($ord['tracking_number'])): ?>
-                            <div class="mt-1 text-[9px] font-bold text-gray-500 uppercase leading-tight line-clamp-1" title="<?= htmlspecialchars($ord['courier_company']) ?>: <?= htmlspecialchars($ord['tracking_number']) ?>">
-                                <?= htmlspecialchars($ord['courier_company']) ?>: <?= htmlspecialchars($ord['tracking_number']) ?>
-                            </div>
-                        <?php endif; ?>
-                    </td>
-                    <td class="p-4 border-t border-[#F1F5F9] text-right">
-                        <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick='openOrderDetailsModal(<?= htmlspecialchars(json_encode([
-                                "order_id" => $ord["order_code"],
-                                "date" => date("M d, Y h:i A", strtotime($ord["order_date"])),
-                                "status" => $ord["status"],
-                                "tracking_number" => $ord["tracking_number"] ?? "",
-                                "courier_company" => $ord["courier_company"] ?? "",
-                                "product_name" => $ord["product_name"],
-                                "brand_name" => $ord["brand_name"] ?? "",
-                                "color_name" => $ord["color_name"] ?? "",
-                                "product_image" => $ord["product_image"],
-                                "size" => $ord["size"],
-                                "qty" => $ord["quantity"],
-                                "price" => $ord["unit_price"],
-                                "total" => $ord["total_price"],
-                                "buyer_name" => $ord["shipping_name"] ?? ($ord["first_name"] . " " . $ord["last_name"]),
-                                "address" => ($ord["address_line1"] ?? "") . ", " . ($ord["city"] ?? "") . ", " . ($ord["province"] ?? ""),
-                                "phone" => $ord["phone1"] ?? ""
-                            ], JSON_HEX_APOS | JSON_HEX_QUOT)) ?>)' class="w-8 h-8 rounded-full bg-white hover:bg-gray-100 text-gray-400 hover:text-navy transition-all shadow-sm flex items-center justify-center" title="View Details">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <?php if(in_array(strtoupper($ord['status']), ['PENDING', 'ACCEPTED'])): ?>
-                            <button onclick="openSellerStatusModal('<?= $ord['order_id'] ?>', '<?= strtoupper($ord['status']) ?>', '<?= htmlspecialchars($ord['order_code']) ?>')" class="w-8 h-8 rounded-full bg-white hover:bg-blue-50 text-gray-400 hover:text-[#0066FF] transition-all shadow-sm flex items-center justify-center" title="Update Status">
-                                <i class="fas fa-edit"></i>
-                            </button>
+                    <td class="p-3 border-t border-[#F1F5F9] whitespace-nowrap">
+                        <span class="font-bold text-[#0066FF] cursor-pointer hover:underline text-sm"><?= htmlspecialchars($ord['order_code']) ?></span>
+                        <div class="mt-1">
+                            <?php if (strtoupper($ord['payment_status'] ?? '') === 'PAID'): ?>
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
+                                    <i class="fas fa-credit-card text-green-500"></i> <?= htmlspecialchars($ord['payment_method'] ?? 'CARD') ?> PAID
+                                </span>
+                            <?php else: ?>
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                    <i class="fas fa-clock text-slate-400"></i> <?= htmlspecialchars($ord['payment_method'] ?? 'CARD') ?> PENDING
+                                </span>
                             <?php endif; ?>
+                        </div>
+                    </td>
+                    <td class="p-3 border-t border-[#F1F5F9] min-w-[250px]">
+                        <div class="flex items-center gap-3">
+                            <img src="../assets/uploads/products/<?= htmlspecialchars($ord['product_image'] ?? 'no-image.jpg') ?>" class="w-10 h-10 rounded-lg object-cover border border-slate-200" onerror="this.src='../image/placeholder.png'">
+                            <div>
+                                <p class="font-semibold text-slate-800 text-sm line-clamp-2 leading-tight" title="<?= htmlspecialchars($ord['product_name']) ?>"><?= htmlspecialchars($ord['product_name']) ?></p>
+                                <p class="text-[11px] text-slate-500 mt-0.5">Size: <?= htmlspecialchars($ord['size']) ?> | Color: <?= htmlspecialchars($ord['color_name'] ?? 'N/A') ?> | SKU: <?= htmlspecialchars($ord['sku'] ?? 'N/A') ?></p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-3 border-t border-[#F1F5F9] text-center">
+                        <p class="font-bold text-slate-800 text-sm"><?= $ord['quantity'] ?></p>
+                        <p class="text-[10px] font-medium <?= ($ord['current_stock'] > 5) ? 'text-green-600' : 'text-red-500' ?> mt-0.5">Stock: <?= $ord['current_stock'] ?? 0 ?></p>
+                    </td>
+                    <td class="p-3 border-t border-[#F1F5F9] whitespace-nowrap">
+                        <p class="font-bold text-slate-800 text-sm">Rs. <?= number_format($ord['total_price'], 2) ?></p>
+                        <p class="text-[11px] font-medium text-emerald-600 mt-0.5">Earn Rs. <?= number_format($ord['seller_earning'] * $ord['quantity'], 2) ?></p>
+                    </td>
+                    <td class="p-3 border-t border-[#F1F5F9]">
+                        <p class="font-semibold text-slate-800 text-sm flex items-center gap-1">
+                            <?= htmlspecialchars($ord['shipping_name'] ?? ($ord['first_name'] . ' ' . $ord['last_name'])) ?>
+                        </p>
+                        <div class="flex items-center gap-2 mt-0.5">
+                            <span class="inline-block px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-medium truncate max-w-[80px]" title="<?= htmlspecialchars($ord['city'] ?? '') ?>"><?= htmlspecialchars($ord['city'] ?? 'N/A') ?></span>
+                            <a href="tel:<?= htmlspecialchars($ord['phone1'] ?? '') ?>" class="text-blue-500 hover:text-blue-700" title="Call Buyer"><i class="fas fa-phone text-[10px]"></i></a>
+                        </div>
+                    </td>
+                    <td class="p-3 border-t border-[#F1F5F9] text-center whitespace-nowrap">
+                        <?php 
+                            $statusMap = [
+                                'PENDING_PAYMENT' => ['bg' => 'bg-slate-100', 'text' => 'text-slate-600', 'dot' => 'bg-slate-400', 'label' => 'Awaiting Payment'],
+                                'PAID' => ['bg' => 'bg-yellow-50', 'text' => 'text-yellow-700', 'dot' => 'bg-yellow-500 animate-pulse', 'label' => 'Paid - Action Req'],
+                                'PENDING' => ['bg' => 'bg-yellow-50', 'text' => 'text-yellow-700', 'dot' => 'bg-yellow-500 animate-pulse', 'label' => 'Pending'],
+                                'ACCEPTED' => ['bg' => 'bg-blue-50', 'text' => 'text-blue-700', 'dot' => 'bg-blue-500', 'label' => 'Confirmed'],
+                                'PACKED' => ['bg' => 'bg-indigo-50', 'text' => 'text-indigo-700', 'dot' => 'bg-indigo-500', 'label' => 'Packed'],
+                                'SHIPPED' => ['bg' => 'bg-purple-50', 'text' => 'text-purple-700', 'dot' => 'bg-purple-500', 'label' => 'Shipped'],
+                                'DELIVERED' => ['bg' => 'bg-emerald-50', 'text' => 'text-emerald-700', 'dot' => 'bg-emerald-500', 'label' => 'Delivered'],
+                                'COMPLETED' => ['bg' => 'bg-slate-100', 'text' => 'text-slate-600', 'dot' => 'bg-slate-400', 'label' => 'Completed'],
+                                'CANCELLED' => ['bg' => 'bg-red-50', 'text' => 'text-red-700', 'dot' => 'bg-red-500', 'label' => 'Cancelled']
+                            ];
+                            $s = strtoupper($ord['status']);
+                            if ($s === 'PENDING_PAYMENT' && strtoupper($ord['payment_status'] ?? '') === 'PAID') {
+                                // Fallback if webhook missed
+                                $s = 'PAID';
+                            }
+                            $st = $statusMap[$s] ?? ['bg' => 'bg-gray-100', 'text' => 'text-gray-700', 'dot' => 'bg-gray-400', 'label' => $s];
+                        ?>
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold <?= $st['bg'] ?> <?= $st['text'] ?>">
+                            <span class="w-1.5 h-1.5 rounded-full <?= $st['dot'] ?>"></span>
+                            <?= $st['label'] ?>
+                        </div>
+                    </td>
+                    <td class="p-3 border-t border-[#F1F5F9] text-center whitespace-nowrap">
+                        <?php if (in_array($s, ['PAID', 'PENDING'])): ?>
+                            <span class="text-xs font-bold text-red-500"><i class="far fa-clock"></i> 23h left</span>
+                        <?php else: ?>
+                            <span class="text-xs text-slate-400">-</span>
+                        <?php endif; ?>
+                    </td>
+                    <td class="p-3 border-t border-[#F1F5F9] text-center whitespace-nowrap">
+                        <div class="flex items-center justify-center gap-2">
+                            <?php 
+                                $orderJson = htmlspecialchars(json_encode([
+                                    "order_id" => $ord["order_code"],
+                                    "date" => date("M d, Y h:i A", strtotime($ord["order_date"])),
+                                    "status" => $s,
+                                    "tracking_number" => $ord["tracking_number"] ?? "",
+                                    "courier_company" => $ord["courier_company"] ?? "",
+                                    "product_name" => $ord["product_name"],
+                                    "brand_name" => $ord["brand_name"] ?? "",
+                                    "color_name" => $ord["color_name"] ?? "",
+                                    "product_image" => $ord["product_image"] ? "../assets/uploads/products/" . $ord["product_image"] : "../image/no-image.jpg",
+                                    "size" => $ord["size"],
+                                    "sku" => $ord["sku"] ?? "",
+                                    "current_stock" => $ord["current_stock"] ?? 0,
+                                    "qty" => $ord["quantity"],
+                                    "price" => $ord["unit_price"],
+                                    "total" => $ord["total_price"],
+                                    "subtotal" => $ord["total_price"] - ($ord["delivery_fee"] ?? 0),
+                                    "delivery" => $ord["delivery_fee"] ?? 0,
+                                    "commission" => $ord["admin_commission"] ?? 0,
+                                    "gateway" => $ord["gateway_fee"] ?? 0,
+                                    "net" => $ord["seller_earning"] * $ord["quantity"],
+                                    "buyer_name" => $ord["shipping_name"] ?? ($ord["first_name"] . " " . $ord["last_name"]),
+                                    "address" => cleanAddress($ord),
+                                    "phone" => $ord["phone1"] ?? "",
+                                    "email" => $ord["buyer_email"] ?? "",
+                                    "payment_method" => $ord["payment_method"] ?? "CARD",
+                                    "payment_status" => $ord["payment_status"] ?? ""
+                                ], JSON_HEX_APOS | JSON_HEX_QUOT));
+                            ?>
+                            <?php if (in_array($s, ['PAID', 'PENDING'])): ?>
+                                <button onclick='openOrderDetailsDrawer(<?= $orderJson ?>, "actions")' class="px-4 py-1.5 bg-[#0A1020] hover:bg-black text-white text-xs font-bold rounded-full transition-colors shadow-sm">Accept</button>
+                            <?php elseif ($s === 'ACCEPTED'): ?>
+                                <button onclick='openOrderDetailsDrawer(<?= $orderJson ?>, "actions")' class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-full transition-colors shadow-sm">Mark Packed</button>
+                            <?php elseif ($s === 'PACKED' || $s === 'HANDOVER_TO_CENTER' || $s === 'RECEIVED_AT_CENTER'): ?>
+                                <button onclick='openOrderDetailsDrawer(<?= $orderJson ?>, "actions")' class="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-full transition-colors shadow-sm">Ship</button>
+                            <?php elseif ($s === 'PENDING_PAYMENT'): ?>
+                                <button onclick='openOrderDetailsDrawer(<?= $orderJson ?>, "actions")' class="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-full transition-colors">Review</button>
+                            <?php else: ?>
+                                <button onclick='openOrderDetailsDrawer(<?= $orderJson ?>)' class="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-full transition-colors">View</button>
+                            <?php endif; ?>
+                            
+                            <button class="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors flex items-center justify-center" onclick='openOrderDetailsDrawer(<?= $orderJson ?>)'>
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
                 <?php endforeach; else: ?>
                 <tr>
                     <td colspan="7" class="p-12 text-center">
-                        <img src="../image/empty-orders.svg" onerror="this.src='https://illustrations.popsy.co/gray/crashed-error.svg'" class="w-48 h-48 mx-auto mb-4 opacity-50">
+                        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400 text-4xl"><i class="fas fa-shopping-bag"></i></div>
                         <h3 class="text-lg font-black text-navy mb-1">No Orders Found</h3>
                         <p class="text-gray-500">There are no orders matching your criteria.</p>
                     </td>
@@ -268,8 +344,10 @@ if (!function_exists('sortLink')) {
                     <p class="text-xs text-gray-500 font-bold"><?= date('M d, Y h:i A', strtotime($ord['order_date'])) ?></p>
                 </div>
                 <div>
-                    <?php if (strtoupper($ord['status']) == 'PENDING'): ?>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-yellow-100 text-yellow-800 uppercase tracking-wide">Pending</span>
+                    <?php if (strtoupper($ord['status']) == 'PENDING_PAYMENT'): ?>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wide"><i class="fas fa-circle-notch fa-spin mr-1 text-slate-400"></i> Awaiting Payment</span>
+                    <?php elseif (in_array(strtoupper($ord['status']), ['PENDING', 'PAID'])): ?>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-yellow-100 text-yellow-800 uppercase tracking-wide">Paid - Action Req</span>
                     <?php elseif (strtoupper($ord['status']) == 'ACCEPTED'): ?>
                         <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800 uppercase tracking-wide">Accepted</span>
                     <?php elseif (strtoupper($ord['status']) == 'HANDOVER_TO_CENTER'): ?>
@@ -306,36 +384,57 @@ if (!function_exists('sortLink')) {
             <?php endif; ?>
             
             <div class="flex justify-end gap-2 pt-2 border-t border-gray-50">
-                <button onclick='openOrderDetailsModal(<?= htmlspecialchars(json_encode([
-                    "order_id" => $ord["order_code"],
-                    "date" => date("M d, Y h:i A", strtotime($ord["order_date"])),
-                    "status" => $ord["status"],
-                    "tracking_number" => $ord["tracking_number"] ?? "",
-                    "courier_company" => $ord["courier_company"] ?? "",
-                    "product_name" => $ord["product_name"],
-                    "brand_name" => $ord["brand_name"] ?? "",
-                    "color_name" => $ord["color_name"] ?? "",
-                    "product_image" => $ord["product_image"],
-                    "size" => $ord["size"],
-                    "qty" => $ord["quantity"],
-                    "price" => $ord["unit_price"],
-                    "total" => $ord["total_price"],
-                    "buyer_name" => $ord["shipping_name"] ?? ($ord["first_name"] . " " . $ord["last_name"]),
-                    "address" => ($ord["address_line1"] ?? "") . ", " . ($ord["city"] ?? "") . ", " . ($ord["province"] ?? ""),
-                    "phone" => $ord["phone1"] ?? ""
-                ], JSON_HEX_APOS | JSON_HEX_QUOT)) ?>)' class="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs font-bold transition-colors flex items-center gap-1">
-                    <i class="fas fa-eye"></i> View
-                </button>
-                <?php if(in_array(strtoupper($ord['status']), ['PENDING', 'ACCEPTED'])): ?>
-                <button onclick="openSellerStatusModal('<?= $ord['order_id'] ?>', '<?= strtoupper($ord['status']) ?>', '<?= htmlspecialchars($ord['order_code']) ?>')" class="px-3 py-1.5 rounded-lg bg-blue-50 text-[#0066FF] hover:bg-blue-100 text-xs font-bold transition-colors flex items-center gap-1">
-                    <i class="fas fa-edit"></i> Status
-                </button>
+                <?php 
+                    $orderJson = htmlspecialchars(json_encode([
+                        "order_id" => $ord["order_code"],
+                        "date" => date("M d, Y h:i A", strtotime($ord["order_date"])),
+                        "status" => strtoupper($ord['status']),
+                        "tracking_number" => $ord["tracking_number"] ?? "",
+                        "courier_company" => $ord["courier_company"] ?? "",
+                        "product_name" => $ord["product_name"],
+                        "brand_name" => $ord["brand_name"] ?? "",
+                        "color_name" => $ord["color_name"] ?? "",
+                        "product_image" => $ord["product_image"] ? "../assets/uploads/products/" . $ord["product_image"] : "../image/no-image.jpg",
+                        "size" => $ord["size"],
+                        "sku" => $ord["sku"] ?? "",
+                        "current_stock" => $ord["current_stock"] ?? 0,
+                        "qty" => $ord["quantity"],
+                        "price" => $ord["unit_price"],
+                        "total" => $ord["total_price"],
+                        "subtotal" => $ord["total_price"] - ($ord["delivery_fee"] ?? 0),
+                        "delivery" => $ord["delivery_fee"] ?? 0,
+                        "commission" => $ord["admin_commission"] ?? 0,
+                        "gateway" => $ord["gateway_fee"] ?? 0,
+                        "net" => $ord["seller_earning"] * $ord["quantity"],
+                        "buyer_name" => $ord["shipping_name"] ?? ($ord["first_name"] . " " . $ord["last_name"]),
+                        "address" => cleanAddress($ord),
+                        "phone" => $ord["phone1"] ?? "",
+                        "email" => $ord["buyer_email"] ?? "",
+                        "payment_method" => $ord["payment_method"] ?? "CARD",
+                        "payment_status" => $ord["payment_status"] ?? ""
+                    ], JSON_HEX_APOS | JSON_HEX_QUOT));
+                    $s = strtoupper($ord['status']);
+                ?>
+                <?php if (in_array($s, ['PAID', 'PENDING'])): ?>
+                    <button onclick='openOrderDetailsDrawer(<?= $orderJson ?>, "actions")' class="px-4 py-1.5 bg-[#0A1020] hover:bg-black text-white text-xs font-bold rounded-xl transition-colors shadow-sm flex items-center gap-1">Accept</button>
+                <?php elseif ($s === 'ACCEPTED'): ?>
+                    <button onclick='openOrderDetailsDrawer(<?= $orderJson ?>, "actions")' class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm flex items-center gap-1">Mark Packed</button>
+                <?php elseif ($s === 'PACKED' || $s === 'HANDOVER_TO_CENTER' || $s === 'RECEIVED_AT_CENTER'): ?>
+                    <button onclick='openOrderDetailsDrawer(<?= $orderJson ?>, "actions")' class="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition-colors shadow-sm flex items-center gap-1">Ship</button>
+                <?php elseif ($s === 'PENDING_PAYMENT'): ?>
+                    <button onclick='openOrderDetailsDrawer(<?= $orderJson ?>, "actions")' class="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1">Review</button>
+                <?php else: ?>
+                    <button onclick='openOrderDetailsDrawer(<?= $orderJson ?>)' class="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1"><i class="fas fa-eye"></i> View</button>
                 <?php endif; ?>
+                
+                <button class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors flex items-center justify-center" onclick='openOrderDetailsDrawer(<?= $orderJson ?>)'>
+                    <i class="fas fa-ellipsis-v text-xs"></i>
+                </button>
             </div>
         </div>
         <?php endforeach; else: ?>
         <div class="text-center p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
-            <img src="../image/empty-orders.svg" onerror="this.src='https://illustrations.popsy.co/gray/crashed-error.svg'" class="w-32 h-32 mx-auto mb-4 opacity-50">
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400 text-2xl"><i class="fas fa-shopping-bag"></i></div>
             <h3 class="text-lg font-black text-navy mb-1">No Orders</h3>
             <p class="text-sm text-gray-500 mb-4">You haven't received any orders yet.</p>
         </div>
@@ -365,322 +464,544 @@ if (!function_exists('sortLink')) {
     <?php endif; ?>
 </div>
 
-<!-- Order Details Modal -->
-<div id="orderDetailsModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeOrderDetailsModal()"></div>
-    <div class="bg-white rounded-3xl w-full max-w-2xl relative z-10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transform scale-95 transition-transform duration-300" id="orderDetailsModalContent">
-        <div class="p-6 border-b border-gray-100 flex justify-between items-center shrink-0 bg-gradient-to-r from-[#0066FF] to-blue-800 text-white">
-            <h3 class="font-black uppercase tracking-wide text-xl">Order Details</h3>
-            <button onclick="closeOrderDetailsModal()" class="text-blue-200 hover:text-white transition-colors"><i class="fas fa-times text-xl"></i></button>
+<!-- Enterprise Order Details Drawer -->
+<div id="orderDetailsDrawerOverlay" class="fixed inset-0 z-[100] hidden bg-slate-900/50 backdrop-blur-sm transition-opacity opacity-0" onclick="closeOrderDetailsDrawer()"></div>
+<div id="orderDetailsDrawer" class="fixed inset-y-0 right-0 z-[101] w-full max-w-[700px] bg-[#F8FAFC] shadow-2xl transform translate-x-full transition-transform duration-300 flex flex-col">
+    
+    <!-- Header -->
+    <div class="px-6 py-5 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
+        <div>
+            <div class="flex items-center gap-3 mb-1">
+                <h3 class="text-xl font-black text-slate-800 tracking-tight" id="drawer_order_id"></h3>
+                <span id="drawer_status_badge" class="px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider"></span>
+            </div>
+            <p class="text-[13px] font-semibold text-slate-500" id="drawer_date_payment"></p>
         </div>
-        
-        <div class="p-6 overflow-y-auto">
-            <div class="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center mb-6 pb-6 border-b border-gray-100 gap-4">
-                <div>
-                    <h4 class="text-2xl font-black text-navy" id="modal_view_order_id"></h4>
-                    <p class="text-sm font-bold text-gray-400 mt-1" id="modal_view_date"></p>
-                </div>
-                <div id="modal_view_status_badge"></div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-                <!-- Product Details -->
-                <div>
-                    <h5 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Product Info</h5>
-                    <div class="flex gap-4">
-                        <img id="modal_view_image" src="" class="w-20 h-20 rounded-xl object-cover bg-gray-50 border border-gray-100 shadow-sm">
-                        <div>
-                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5" id="modal_view_brand_name"></p>
-                            <h6 class="font-bold text-navy text-sm mb-1" id="modal_view_product_name"></h6>
-                            <p class="text-xs font-bold text-gray-500 mb-2">Size: <span id="modal_view_size" class="text-navy"></span> <span id="modal_view_color_container">| Color: <span id="modal_view_color" class="text-navy"></span></span> | Qty: <span id="modal_view_qty" class="text-navy"></span></p>
-                            <p class="text-lg font-black text-[#0066FF]">Rs. <span id="modal_view_total"></span></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Shipping Details -->
-                <div>
-                    <h5 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Shipping Info</h5>
-                    <div class="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        <p class="font-bold text-navy text-sm mb-1" id="modal_view_buyer_name"></p>
-                        <p class="text-xs font-medium text-gray-500 mb-2"><i class="fas fa-map-marker-alt w-4 text-gray-400"></i> <span id="modal_view_address"></span></p>
-                        <p class="text-xs font-medium text-gray-500"><i class="fas fa-phone-alt w-4 text-gray-400"></i> <span id="modal_view_phone"></span></p>
-                    </div>
-                </div>
-            </div>
-
-            <div id="modal_view_tracking_section" class="hidden bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                <h5 class="text-xs font-black text-[#0066FF] uppercase tracking-widest mb-2"><i class="fas fa-truck mr-1"></i> Delivery Information</h5>
-                <p class="text-sm font-bold text-navy mt-1">Courier: <span id="modal_view_courier" class="text-gray-500"></span></p>
-                <p class="text-sm font-bold text-navy mt-1">Tracking No: <span id="modal_view_tracking" class="text-gray-500"></span></p>
-            </div>
-            
-            <div class="mt-6 pt-6 border-t border-gray-100 text-center">
-                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wide">Status updates are managed by the OXXA GEAR Admin team once the package is handed over to the collection center.</p>
-            </div>
-        </div>
+        <button onclick="closeOrderDetailsDrawer()" class="w-10 h-10 rounded-full bg-slate-50 text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors">
+            <i class="fas fa-times text-lg"></i>
+        </button>
     </div>
-</div>
 
-<!-- Seller Order Status Update Modal -->
-<div id="sellerStatusModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeSellerStatusModal()"></div>
-    <div class="bg-white rounded-3xl w-full max-w-md relative z-10 shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300" id="sellerStatusModalContent">
-        <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-[#F8FAFC]">
-            <h3 class="font-black text-navy uppercase tracking-wide">Update Order</h3>
-            <button onclick="closeSellerStatusModal()" class="text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-times text-xl"></i></button>
-        </div>
+    <!-- Tabs Header -->
+    <div class="px-6 bg-white border-b border-slate-100 shrink-0 flex gap-6">
+        <button onclick="switchTab('details')" class="drawer-tab pb-3 pt-4 text-sm font-bold border-b-2 transition-colors border-[#0A1020] text-[#0A1020]" id="tab_btn_details">Details</button>
+        <button onclick="switchTab('timeline')" class="drawer-tab pb-3 pt-4 text-sm font-bold border-b-2 transition-colors border-transparent text-slate-500 hover:text-slate-800" id="tab_btn_timeline">Timeline</button>
+        <button onclick="switchTab('actions')" class="drawer-tab pb-3 pt-4 text-sm font-bold border-b-2 transition-colors border-transparent text-slate-500 hover:text-slate-800" id="tab_btn_actions">Actions</button>
+        <button onclick="switchTab('earnings')" class="drawer-tab pb-3 pt-4 text-sm font-bold border-b-2 transition-colors border-transparent text-slate-500 hover:text-slate-800" id="tab_btn_earnings">Earnings</button>
+    </div>
+
+    <!-- Scrollable Content -->
+    <div class="flex-1 overflow-y-auto p-6" id="drawer_content">
         
-        <form action="../Backend/seller-order-action.php" method="POST" class="p-6" id="sellerStatusForm">
-            <input type="hidden" name="order_id" id="status_order_id">
-            
-            <div class="mb-6 text-center">
-                <p class="text-sm text-gray-500 font-bold">Order ID</p>
-                <p class="text-2xl font-black text-[#0066FF]" id="status_order_code_display"></p>
-            </div>
-            
-            <div class="mb-8">
-                <label class="block text-xs font-black text-navy uppercase tracking-widest mb-3">Status Option</label>
-                
-                <div class="space-y-3">
-                    <label class="flex items-center p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors relative group" id="status_option_accepted_container">
-                        <input type="radio" name="new_status" value="accepted" id="status_option_accepted" class="w-5 h-5 text-[#0066FF] border-gray-300 focus:ring-[#0066FF]">
-                        <div class="ml-3">
-                            <span class="block text-sm font-bold text-navy">Accept Order</span>
-                            <span class="block text-xs text-gray-500">I acknowledge this order and have stock to pack.</span>
-                        </div>
-                    </label>
-
-                    <label class="flex items-center p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors relative group" id="status_option_reject_container">
-                        <input type="radio" name="new_status" value="cancelled" id="status_option_reject" class="w-5 h-5 text-[#0066FF] border-gray-300 focus:ring-[#0066FF]" onchange="toggleRejectionReason()">
-                        <div class="ml-3">
-                            <span class="block text-sm font-bold text-red-600">Reject Order</span>
-                            <span class="block text-xs text-gray-500">I cannot fulfill this order (Out of stock, etc).</span>
-                        </div>
-                    </label>
-                    
-                    <label class="flex items-center p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors relative group" id="status_option_handover_container">
-                        <input type="radio" name="new_status" value="handover_to_center" id="status_option_handover" class="w-5 h-5 text-[#0066FF] border-gray-300 focus:ring-[#0066FF]">
-                        <div class="ml-3">
-                            <span class="block text-sm font-bold text-navy">Handing over to Collecting Center</span>
-                            <span class="block text-xs text-gray-500">I have handed over the item to the OXXA collection center.</span>
-                        </div>
-                    </label>
+        <!-- Tab 1: Details -->
+        <div id="tab_content_details" class="drawer-panel space-y-6 block">
+            <!-- Product Card -->
+            <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex flex-col sm:flex-row gap-5">
+                <img id="drawer_product_image" src="" class="w-24 h-24 rounded-xl object-cover bg-slate-50 border border-slate-100">
+                <div class="flex-1">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1" id="drawer_brand_name"></p>
+                    <h4 class="font-bold text-slate-800 text-[15px] leading-snug mb-2" id="drawer_product_name"></h4>
+                    <div class="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500 mb-3">
+                        <span class="bg-slate-50 px-2 py-1 rounded border border-slate-100">Size: <span id="drawer_size" class="text-slate-700"></span></span>
+                        <span class="bg-slate-50 px-2 py-1 rounded border border-slate-100" id="drawer_color_wrap">Color: <span id="drawer_color" class="text-slate-700"></span></span>
+                        <span class="bg-slate-50 px-2 py-1 rounded border border-slate-100">SKU: <span id="drawer_sku" class="text-slate-700"></span></span>
+                        <span class="bg-slate-50 px-2 py-1 rounded border border-slate-100">Qty: <span id="drawer_qty" class="text-slate-700"></span></span>
+                    </div>
+                    <p class="text-[11px] font-bold text-emerald-600" id="drawer_stock"></p>
                 </div>
             </div>
 
-            <!-- Rejection Reason Text Area -->
-            <div id="rejection_reason_container" class="mb-8 hidden">
-                <label class="block text-xs font-black text-navy uppercase tracking-widest mb-2">Rejection Reason <span class="text-red-500">*</span></label>
-                <textarea name="cancellation_reason" id="cancellation_reason" rows="3" placeholder="Please state why you are rejecting this order. (Required)" class="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all"></textarea>
-                <p class="text-xs text-gray-500 mt-1">If the buyer paid via Card, a 100% refund will be issued.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Buyer Card -->
+                <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                    <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5"><i class="fas fa-user"></i> Buyer Information</h5>
+                    <p class="font-bold text-slate-800 text-sm mb-2" id="drawer_buyer_name"></p>
+                    <div class="space-y-2 text-xs font-medium text-slate-600">
+                        <p class="flex items-center gap-2"><i class="fas fa-phone w-3 text-slate-400"></i> <a id="drawer_phone_link" href="#" class="hover:text-[#0066FF] transition-colors"><span id="drawer_phone"></span></a></p>
+                        <p class="flex items-center gap-2"><i class="fas fa-envelope w-3 text-slate-400"></i> <span id="drawer_email"></span></p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-50 flex gap-2">
+                        <a id="drawer_whatsapp" href="#" target="_blank" class="flex-1 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 text-[11px] font-bold rounded-lg text-center transition-colors"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+                        <a id="drawer_call" href="#" class="flex-1 py-1.5 bg-slate-50 text-slate-700 hover:bg-slate-100 text-[11px] font-bold rounded-lg text-center transition-colors"><i class="fas fa-phone"></i> Call</a>
+                    </div>
+                </div>
+
+                <!-- Shipping Card -->
+                <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex flex-col">
+                    <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5"><i class="fas fa-truck"></i> Shipping Address</h5>
+                    <p class="text-[13px] font-semibold text-slate-600 leading-relaxed flex-1" id="drawer_address"></p>
+                    <div class="mt-4 pt-4 border-t border-slate-50">
+                        <a id="drawer_map_link" href="#" target="_blank" class="block w-full py-1.5 bg-blue-50 text-[#0066FF] hover:bg-blue-100 text-[11px] font-bold rounded-lg text-center transition-colors"><i class="fas fa-map-marked-alt"></i> View on Map</a>
+                    </div>
+                </div>
             </div>
             
-            <button type="submit" class="w-full bg-[#0066FF] hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/30">
-                Update Status
-            </button>
-        </form>
+            <!-- Delivery Courier Info -->
+            <div id="drawer_courier_info" class="hidden bg-purple-50 rounded-2xl p-5 border border-purple-100 shadow-sm">
+                 <h5 class="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-3 flex items-center gap-1.5"><i class="fas fa-box"></i> Shipping Details</h5>
+                 <div class="grid grid-cols-2 gap-4">
+                     <div>
+                         <p class="text-[10px] text-purple-500 font-bold mb-0.5">Courier</p>
+                         <p class="text-sm font-bold text-purple-900" id="drawer_courier_name"></p>
+                     </div>
+                     <div>
+                         <p class="text-[10px] text-purple-500 font-bold mb-0.5">Tracking No</p>
+                         <p class="text-sm font-bold text-purple-900" id="drawer_tracking_no"></p>
+                     </div>
+                 </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Timeline -->
+        <div id="tab_content_timeline" class="drawer-panel hidden">
+            <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                <div class="relative border-l-2 border-slate-100 ml-3 space-y-8 py-2" id="drawer_timeline_container">
+                    <!-- Dynamic Timeline -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Actions -->
+        <div id="tab_content_actions" class="drawer-panel hidden">
+            <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm" id="action_container">
+                <!-- Dynamic Actions Form -->
+            </div>
+        </div>
+
+        <!-- Tab 4: Earnings -->
+        <div id="tab_content_earnings" class="drawer-panel hidden space-y-4">
+            <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+                <h5 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Price Breakdown</h5>
+                
+                <div class="space-y-3 text-[13px] font-semibold text-slate-600">
+                    <div class="flex justify-between items-center">
+                        <p>Subtotal (Qty x Price)</p>
+                        <p class="text-slate-800" id="drawer_earn_subtotal"></p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-red-500">
+                        <p>Commission (OXXA Fee)</p>
+                        <p id="drawer_earn_commission"></p>
+                    </div>
+                    
+                    <div class="flex justify-between items-center text-red-500">
+                        <p>Payment Gateway Fee</p>
+                        <p id="drawer_earn_gateway"></p>
+                    </div>
+                </div>
+                
+                <div class="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
+                    <p class="text-sm font-black text-slate-800 uppercase tracking-wide">Net Payout</p>
+                    <p class="text-xl font-black text-emerald-600" id="drawer_earn_net"></p>
+                </div>
+                
+                <div class="mt-4 p-3 bg-slate-50 rounded-xl text-center">
+                    <p class="text-[11px] font-bold text-slate-500" id="drawer_earn_hold_text">Funds will be held until the 14-day return window completes.</p>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
 <script>
-// Order Details Modal
-function openOrderDetailsModal(order) {
-    document.getElementById('modal_view_order_id').textContent = order.order_id;
-    document.getElementById('modal_view_date').textContent = order.date;
+let currentOrder = null;
+
+function openOrderDetailsDrawer(order, defaultTab = 'details') {
+    currentOrder = order;
     
-    // Set status badge
-    const badgeContainer = document.getElementById('modal_view_status_badge');
-    let badgeClass = '';
-    let badgeText = order.status;
+    // Header
+    document.getElementById('drawer_order_id').textContent = order.order_id;
+    document.getElementById('drawer_date_payment').innerHTML = `${order.date} &bull; ${order.payment_method === 'CARD' ? '💳 Card' : '🚚 COD'} Payment`;
     
-    if (order.status.toUpperCase() === 'PENDING') badgeClass = 'bg-yellow-100 text-yellow-800';
-    else if (order.status.toUpperCase() === 'ACCEPTED') badgeClass = 'bg-purple-100 text-purple-800';
-    else if (order.status.toUpperCase() === 'HANDOVER_TO_CENTER') { badgeClass = 'bg-orange-100 text-orange-800'; badgeText = 'Handed to Center'; }
-    else if (order.status.toUpperCase() === 'RECEIVED_AT_CENTER') { badgeClass = 'bg-indigo-100 text-indigo-800'; badgeText = 'At Center'; }
-    else if (order.status.toUpperCase() === 'SHIPPED') badgeClass = 'bg-blue-100 text-blue-800';
-    else if (order.status.toUpperCase() === 'OUT_FOR_DELIVERY') badgeClass = 'bg-teal-100 text-teal-800';
-    else if (order.status.toUpperCase() === 'DELIVERED' || order.status.toUpperCase() === 'COMPLETED') badgeClass = 'bg-green-100 text-green-800';
-    else if (order.status.toUpperCase() === 'CANCELLED') badgeClass = 'bg-red-100 text-red-800';
-    else badgeClass = 'bg-gray-100 text-gray-800';
+    // Status Badge
+    const badgeContainer = document.getElementById('drawer_status_badge');
+    const s = order.status.toUpperCase();
+    let bg, text;
+    if(s==='PENDING_PAYMENT') { bg='bg-slate-100'; text='text-slate-600'; }
+    else if(s==='PAID' || s==='PENDING') { bg='bg-yellow-100'; text='text-yellow-700'; }
+    else if(s==='ACCEPTED') { bg='bg-blue-100'; text='text-blue-700'; }
+    else if(s==='PACKED') { bg='bg-indigo-100'; text='text-indigo-700'; }
+    else if(s==='SHIPPED') { bg='bg-purple-100'; text='text-purple-700'; }
+    else if(s==='DELIVERED') { bg='bg-emerald-100'; text='text-emerald-700'; }
+    else if(s==='CANCELLED') { bg='bg-red-100'; text='text-red-700'; }
+    else { bg='bg-gray-100'; text='text-gray-700'; }
     
-    badgeContainer.innerHTML = `<span class="px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${badgeClass}">${badgeText}</span>`;
-    
-    // Set product details
-    document.getElementById('modal_view_product_name').textContent = order.product_name;
-    document.getElementById('modal_view_brand_name').textContent = order.brand_name || 'Generic';
-    document.getElementById('modal_view_image').src = order.product_image ? '../assets/uploads/products/' + order.product_image : '../image/no-image.jpg';
-    document.getElementById('modal_view_size').textContent = order.size;
+    badgeContainer.className = `px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${bg} ${text}`;
+    badgeContainer.textContent = s.replace('_', ' ');
+
+    // Details Tab
+    document.getElementById('drawer_product_name').textContent = order.product_name;
+    document.getElementById('drawer_brand_name').textContent = order.brand_name || 'Generic';
+    document.getElementById('drawer_product_image').src = order.product_image;
+    document.getElementById('drawer_size').textContent = order.size;
+    document.getElementById('drawer_sku').textContent = order.sku || 'N/A';
+    document.getElementById('drawer_qty').textContent = order.qty;
     
     if (order.color_name) {
-        document.getElementById('modal_view_color_container').style.display = 'inline';
-        document.getElementById('modal_view_color').textContent = order.color_name;
+        document.getElementById('drawer_color_wrap').style.display = 'inline';
+        document.getElementById('drawer_color').textContent = order.color_name;
     } else {
-        document.getElementById('modal_view_color_container').style.display = 'none';
+        document.getElementById('drawer_color_wrap').style.display = 'none';
     }
     
-    document.getElementById('modal_view_qty').textContent = order.qty;
-    document.getElementById('modal_view_total').textContent = parseFloat(order.total).toLocaleString('en-US', {minimumFractionDigits: 2});
+    const stockEl = document.getElementById('drawer_stock');
+    stockEl.innerHTML = `Your Stock: ${order.current_stock} <i class="fas fa-check-circle ml-0.5"></i>`;
+    stockEl.className = order.current_stock > 5 ? 'text-[11px] font-bold text-emerald-600 mt-2 block' : 'text-[11px] font-bold text-red-500 mt-2 block';
+
+    // Buyer & Shipping
+    document.getElementById('drawer_buyer_name').textContent = order.buyer_name;
+    document.getElementById('drawer_address').textContent = order.address;
+    document.getElementById('drawer_phone').textContent = order.phone;
+    document.getElementById('drawer_email').textContent = order.email || 'No email provided';
     
-    // Set shipping details
-    document.getElementById('modal_view_buyer_name').textContent = order.buyer_name;
-    document.getElementById('modal_view_address').textContent = order.address;
-    document.getElementById('modal_view_phone').textContent = order.phone;
-    
-    // Set tracking details if available
-    const trackingSection = document.getElementById('modal_view_tracking_section');
+    const p1 = order.phone.replace(/\\s+/g, '');
+    document.getElementById('drawer_phone_link').href = `tel:${p1}`;
+    document.getElementById('drawer_call').href = `tel:${p1}`;
+    document.getElementById('drawer_whatsapp').href = `https://wa.me/94${p1.substring(1)}`;
+    document.getElementById('drawer_map_link').href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`;
+
+    // Courier Info
+    const courierBox = document.getElementById('drawer_courier_info');
     if (order.tracking_number && order.courier_company) {
-        trackingSection.classList.remove('hidden');
-        document.getElementById('modal_view_courier').textContent = order.courier_company;
-        document.getElementById('modal_view_tracking').textContent = order.tracking_number;
+        courierBox.classList.remove('hidden');
+        document.getElementById('drawer_courier_name').textContent = order.courier_company;
+        document.getElementById('drawer_tracking_no').textContent = order.tracking_number;
     } else {
-        trackingSection.classList.add('hidden');
+        courierBox.classList.add('hidden');
     }
+
+    // Earnings Tab
+    document.getElementById('drawer_earn_subtotal').textContent = `Rs. ${parseFloat(order.subtotal).toLocaleString('en-US', {minimumFractionDigits:2})}`;
+    document.getElementById('drawer_earn_commission').textContent = `- Rs. ${parseFloat(order.commission).toLocaleString('en-US', {minimumFractionDigits:2})}`;
+    document.getElementById('drawer_earn_gateway').textContent = `- Rs. ${parseFloat(order.gateway).toLocaleString('en-US', {minimumFractionDigits:2})}`;
+    document.getElementById('drawer_earn_net').textContent = `Rs. ${parseFloat(order.net).toLocaleString('en-US', {minimumFractionDigits:2})}`;
+
+    // Action Form Builder
+    buildActions(order);
     
-    // Show modal with animation
-    const modal = document.getElementById('orderDetailsModal');
-    const content = document.getElementById('orderDetailsModalContent');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    // Timeline Builder
+    buildTimeline(order);
+
+    // Switch to Details
+    switchTab(defaultTab);
+
+    // Show Drawer
+    const overlay = document.getElementById('orderDetailsDrawerOverlay');
+    const drawer = document.getElementById('orderDetailsDrawer');
+    
+    overlay.classList.remove('hidden');
+    // slight delay for transition
     setTimeout(() => {
-        content.classList.remove('scale-95');
-        content.classList.add('scale-100');
+        overlay.classList.remove('opacity-0');
+        drawer.classList.remove('translate-x-full');
     }, 10);
 }
 
-function closeOrderDetailsModal() {
-    const modal = document.getElementById('orderDetailsModal');
-    const content = document.getElementById('orderDetailsModalContent');
-    content.classList.remove('scale-100');
-    content.classList.add('scale-95');
+function closeOrderDetailsDrawer() {
+    const overlay = document.getElementById('orderDetailsDrawerOverlay');
+    const drawer = document.getElementById('orderDetailsDrawer');
+    
+    overlay.classList.add('opacity-0');
+    drawer.classList.add('translate-x-full');
+    
     setTimeout(() => {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+        overlay.classList.add('hidden');
     }, 300);
 }
 
-// Seller Status Modal
-function openSellerStatusModal(id, currentStatus, orderCode) {
-    document.getElementById('status_order_id').value = id;
-    document.getElementById('status_order_code_display').textContent = orderCode;
-    
-    // Handle available options based on current status
-    const acceptedContainer = document.getElementById('status_option_accepted_container');
-    const rejectContainer = document.getElementById('status_option_reject_container');
-    const handoverContainer = document.getElementById('status_option_handover_container');
-    
-    const acceptedInput = document.getElementById('status_option_accepted');
-    const rejectInput = document.getElementById('status_option_reject');
-    const handoverInput = document.getElementById('status_option_handover');
-    
-    if (currentStatus === 'PENDING') {
-        acceptedContainer.style.display = 'flex';
-        rejectContainer.style.display = 'flex';
-        handoverContainer.style.display = 'none';
-        acceptedInput.checked = true;
-    } else if (currentStatus === 'ACCEPTED') {
-        acceptedContainer.style.display = 'none';
-        rejectContainer.style.display = 'none';
-        handoverContainer.style.display = 'flex';
-        handoverInput.checked = true;
-    }
-    toggleRejectionReason();
-    
-    // Show modal
-    const modal = document.getElementById('sellerStatusModal');
-    const content = document.getElementById('sellerStatusModalContent');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    setTimeout(() => {
-        content.classList.remove('scale-95');
-        content.classList.add('scale-100');
-    }, 10);
-}
-
-function closeSellerStatusModal() {
-    const modal = document.getElementById('sellerStatusModal');
-    const content = document.getElementById('sellerStatusModalContent');
-    content.classList.remove('scale-100');
-    content.classList.add('scale-95');
-    setTimeout(() => {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }, 300);
-}
-
-// Make radio containers clickable
-document.querySelectorAll('input[type="radio"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        // Reset all borders
-        document.querySelectorAll('input[type="radio"]').forEach(r => {
-            r.closest('label').classList.remove('border-[#0066FF]', 'bg-blue-50/50');
-            r.closest('label').classList.add('border-gray-200');
-        });
-        
-        // Add active style to selected
-        if (this.checked) {
-            this.closest('label').classList.remove('border-gray-200');
-            this.closest('label').classList.add('border-[#0066FF]', 'bg-blue-50/50');
-        }
-        
-        toggleRejectionReason();
-    });
-});
-
-function toggleRejectionReason() {
-    const rejectInput = document.getElementById('status_option_reject');
-    const reasonContainer = document.getElementById('rejection_reason_container');
-    const reasonTextarea = document.getElementById('cancellation_reason');
-    
-    if (rejectInput && rejectInput.checked) {
-        reasonContainer.classList.remove('hidden');
-        reasonTextarea.required = true;
-    } else {
-        reasonContainer.classList.add('hidden');
-        reasonTextarea.required = false;
-        reasonTextarea.value = '';
-    }
-}
-
-// Add ajax submit for sellerStatusForm
-document.getElementById('sellerStatusForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    
-    fetch('../Backend/seller-order-action.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            Swal.fire({
-                title: 'Success!',
-                text: data.message,
-                icon: 'success',
-                confirmButtonColor: '#0066FF'
-            }).then(() => {
-                window.location.reload();
-            });
+function switchTab(tabId) {
+    const tabs = ['details', 'timeline', 'actions', 'earnings'];
+    tabs.forEach(t => {
+        const content = document.getElementById(`tab_content_${t}`);
+        const btn = document.getElementById(`tab_btn_${t}`);
+        if(t === tabId) {
+            content.classList.remove('hidden');
+            content.classList.add('block');
+            btn.classList.remove('border-transparent', 'text-slate-500');
+            btn.classList.add('border-[#0A1020]', 'text-[#0A1020]');
         } else {
-            Swal.fire({
-                title: 'Error!',
-                text: data.message,
-                icon: 'error',
-                confirmButtonColor: '#d33'
-            });
+            content.classList.remove('block');
+            content.classList.add('hidden');
+            btn.classList.remove('border-[#0A1020]', 'text-[#0A1020]');
+            btn.classList.add('border-transparent', 'text-slate-500');
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        Swal.fire({
-            title: 'Error!',
-            text: 'An unexpected error occurred.',
-            icon: 'error',
-            confirmButtonColor: '#d33'
-        });
     });
-});
+}
 
+function buildActions(order) {
+    const container = document.getElementById('action_container');
+    const s = order.status.toUpperCase();
+    
+    if (s === 'PENDING_PAYMENT') {
+        container.innerHTML = `
+            <div class="text-center py-6">
+                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400 text-2xl"><i class="fas fa-hourglass-half"></i></div>
+                <h4 class="text-lg font-black text-slate-800 mb-2">Awaiting Payment</h4>
+                <p class="text-sm font-medium text-slate-500 max-w-[250px] mx-auto mb-6">The buyer has not completed the payment yet. Do not pack or ship this item.</p>
+                <div class="flex flex-col gap-2 max-w-[250px] mx-auto">
+                    <button type="button" onclick="document.getElementById('pending_payment_reject_box').classList.toggle('hidden')" class="px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold rounded-xl transition-colors">Reject Order</button>
+                    <form id="drawerActionFormForce" class="w-full">
+                        <input type="hidden" name="order_id" value="${order.order_id}">
+                        <input type="hidden" name="new_status" value="accepted">
+                        <button type="submit" class="w-full px-5 py-2 border border-slate-200 text-slate-500 hover:bg-slate-50 text-[10px] font-bold rounded-xl transition-colors" title="Use this if payment was received outside the system or for local testing">Force Accept (Manual)</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="pending_payment_reject_box" class="hidden mb-2 border-t border-slate-100 pt-6">
+                <form id="drawerActionForm">
+                    <input type="hidden" name="order_id" value="${order.order_id}">
+                    <input type="hidden" name="new_status" value="cancelled">
+                    <label class="block text-xs font-bold text-slate-700 mb-2">Rejection Reason *</label>
+                    <select name="cancellation_reason_type" class="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm font-medium mb-3 focus:outline-none focus:border-[#0A1020]">
+                        <option value="Out of Stock">Out of Stock</option>
+                        <option value="Pricing Error">Pricing Error</option>
+                        <option value="Cannot Deliver to Area">Cannot Deliver to Area</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <textarea name="cancellation_reason" rows="2" placeholder="Additional details..." class="w-full p-3 rounded-xl border border-slate-200 text-sm font-medium focus:outline-none focus:border-[#0A1020] mb-4"></textarea>
+                    
+                    <button type="submit" class="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-200 transition-colors">Confirm Rejection</button>
+                </form>
+            </div>
+        `;
+    } else if (s === 'PAID' || s === 'PENDING') {
+        container.innerHTML = `
+            <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">Accept or Reject Order</h4>
+            <form id="drawerActionForm">
+                <input type="hidden" name="order_id" value="${order.order_id}">
+                <div class="space-y-4 mb-6">
+                    <label class="flex items-start p-4 border-2 border-[#0A1020] bg-slate-50 rounded-xl cursor-pointer">
+                        <input type="radio" name="new_status" value="accepted" class="mt-0.5 w-4 h-4 text-[#0066FF]" checked onchange="toggleRejectReason()">
+                        <div class="ml-3">
+                            <span class="block text-sm font-bold text-slate-800">Accept Order</span>
+                            <span class="block text-xs font-medium text-slate-500 mt-1">Stock will be verified and you can pack the item.</span>
+                        </div>
+                    </label>
+                    <label class="flex items-start p-4 border border-slate-200 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors" id="reject_label">
+                        <input type="radio" name="new_status" value="cancelled" class="mt-0.5 w-4 h-4 text-[#0066FF]" onchange="toggleRejectReason()">
+                        <div class="ml-3">
+                            <span class="block text-sm font-bold text-red-600">Reject Order</span>
+                            <span class="block text-xs font-medium text-slate-500 mt-1">Auto-refund buyer if paid by card.</span>
+                        </div>
+                    </label>
+                </div>
+                
+                <div id="reject_reason_box" class="hidden mb-6">
+                    <label class="block text-xs font-bold text-slate-700 mb-2">Rejection Reason *</label>
+                    <select name="cancellation_reason_type" class="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm font-medium mb-3 focus:outline-none focus:border-[#0A1020] focus:ring-1 focus:ring-[#0A1020]">
+                        <option value="Out of Stock">Out of Stock</option>
+                        <option value="Pricing Error">Pricing Error</option>
+                        <option value="Cannot Deliver to Area">Cannot Deliver to Area</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <textarea name="cancellation_reason" rows="2" placeholder="Additional details..." class="w-full p-3 rounded-xl border border-slate-200 text-sm font-medium focus:outline-none focus:border-[#0A1020] focus:ring-1 focus:ring-[#0A1020]"></textarea>
+                </div>
+                
+                <button type="submit" class="w-full h-12 bg-[#0A1020] text-white font-bold rounded-xl shadow-lg shadow-slate-200 hover:bg-black transition-colors">Submit Decision</button>
+            </form>
+        `;
+    } else if (s === 'ACCEPTED') {
+        container.innerHTML = `
+            <div class="text-center py-6 mb-6 border-b border-slate-100">
+                <h4 class="text-lg font-black text-slate-800 mb-2">Order Confirmed</h4>
+                <p class="text-sm font-medium text-slate-500">Please pack the item securely.</p>
+            </div>
+            <form id="drawerActionForm">
+                <input type="hidden" name="order_id" value="${order.order_id}">
+                <input type="hidden" name="new_status" value="handover_to_center">
+                <button type="submit" class="w-full h-12 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-colors">Mark as Packed / Handed Over</button>
+            </form>
+        `;
+    } else if (s === 'PACKED' || s === 'HANDOVER_TO_CENTER' || s === 'RECEIVED_AT_CENTER') {
+        container.innerHTML = `
+            <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">Shipping Details</h4>
+            <form id="drawerShippingForm">
+                <input type="hidden" name="order_id" value="${order.order_id}">
+                <input type="hidden" name="new_status" value="shipped">
+                
+                <div class="space-y-4 mb-6">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-2">Courier Company</label>
+                        <select name="courier_company" required class="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm font-medium focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
+                            <option value="Koombiyo">Koombiyo Delivery</option>
+                            <option value="Pronto">Pronto</option>
+                            <option value="Domex">Domex</option>
+                            <option value="Self Delivery">Self Delivery (In-house riders)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-2">Tracking Number</label>
+                        <input type="text" name="tracking_number" required placeholder="e.g. SPX-123456" class="w-full p-3 rounded-xl border border-slate-200 text-sm font-medium focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500">
+                    </div>
+                </div>
+                
+                <button type="submit" class="w-full h-12 bg-purple-600 text-white font-bold rounded-xl shadow-lg shadow-purple-200 hover:bg-purple-700 transition-colors">Dispatch Order</button>
+            </form>
+        `;
+    } else {
+        container.innerHTML = `
+            <div class="text-center py-8">
+                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400 text-2xl"><i class="fas fa-lock"></i></div>
+                <h4 class="text-lg font-black text-slate-800 mb-2">Status Locked</h4>
+                <p class="text-sm font-medium text-slate-500 max-w-[250px] mx-auto">This order is in <b>${s}</b> state. Further updates will be handled by the admin team.</p>
+            </div>
+        `;
+    }
+    
+    bindActionForms();
+}
+
+function toggleRejectReason() {
+    const radio = document.querySelector('input[name="new_status"]:checked');
+    const rejectBox = document.getElementById('reject_reason_box');
+    const rejectLabel = document.getElementById('reject_label');
+    
+    // Reset borders
+    document.querySelectorAll('input[name="new_status"]').forEach(r => {
+        r.closest('label').classList.remove('border-[#0A1020]', 'bg-slate-50', 'border-red-500', 'bg-red-50');
+        r.closest('label').classList.add('border-slate-200');
+    });
+    
+    if (radio && radio.value === 'cancelled') {
+        rejectBox.classList.remove('hidden');
+        rejectLabel.classList.add('border-red-500', 'bg-red-50');
+        rejectLabel.classList.remove('border-slate-200');
+    } else if (radio) {
+        rejectBox.classList.add('hidden');
+        radio.closest('label').classList.add('border-[#0A1020]', 'bg-slate-50');
+        radio.closest('label').classList.remove('border-slate-200');
+    }
+}
+
+function bindActionForms() {
+    const actionForm = document.getElementById('drawerActionForm');
+    if (actionForm) {
+        actionForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('../Backend/seller-order-action.php', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    Swal.fire('Success', data.message, 'success').then(() => window.location.reload());
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            });
+        });
+    }
+
+    const forceActionForm = document.getElementById('drawerActionFormForce');
+    if (forceActionForm) {
+        forceActionForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            Swal.fire({
+                title: 'Force Accept?',
+                text: "Only use this if you verified payment outside the system (e.g. testing). Continue?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#0A1020',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, force accept'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const formData = new FormData(this);
+                    fetch('../Backend/seller-order-action.php', { method: 'POST', body: formData })
+                    .then(res => res.json())
+                    .then(data => {
+                        if(data.success) {
+                            Swal.fire('Success', data.message, 'success').then(() => window.location.reload());
+                        } else {
+                            Swal.fire('Error', data.message, 'error');
+                        }
+                    });
+                }
+            });
+        });
+    }
+    
+    const shippingForm = document.getElementById('drawerShippingForm');
+    if (shippingForm) {
+        shippingForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('../Backend/seller-order-action.php', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    Swal.fire('Success', data.message, 'success').then(() => window.location.reload());
+                } else {
+                    Swal.fire('Error', data.message, 'error');
+                }
+            });
+        });
+    }
+}
+
+function buildTimeline(order) {
+    const container = document.getElementById('drawer_timeline_container');
+    const s = order.status.toUpperCase();
+    
+    let html = `
+        <div class="relative">
+            <span class="absolute -left-[21px] top-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white ring-4 ring-blue-50"></span>
+            <p class="text-xs font-bold text-slate-800">Order Placed</p>
+            <p class="text-[10px] font-semibold text-slate-500 mt-0.5">${order.date}</p>
+        </div>
+    `;
+    
+    if (s !== 'PENDING_PAYMENT') {
+        html += `
+            <div class="relative">
+                <span class="absolute -left-[21px] top-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white ring-4 ring-emerald-50"></span>
+                <p class="text-xs font-bold text-slate-800">Payment Success - ${order.payment_method}</p>
+                <p class="text-[10px] font-semibold text-slate-500 mt-0.5">Paid Confirmed</p>
+            </div>
+        `;
+    }
+    
+    if (['ACCEPTED', 'PACKED', 'HANDOVER_TO_CENTER', 'RECEIVED_AT_CENTER', 'SHIPPED', 'DELIVERED', 'COMPLETED'].includes(s)) {
+        html += `
+            <div class="relative">
+                <span class="absolute -left-[21px] top-1 w-3 h-3 bg-slate-800 rounded-full border-2 border-white ring-4 ring-slate-100"></span>
+                <p class="text-xs font-bold text-slate-800">Order Confirmed by Seller</p>
+                <p class="text-[10px] font-semibold text-slate-500 mt-0.5">Accepted</p>
+            </div>
+        `;
+    }
+    
+    if (['SHIPPED', 'DELIVERED', 'COMPLETED'].includes(s)) {
+        html += `
+            <div class="relative">
+                <span class="absolute -left-[21px] top-1 w-3 h-3 bg-purple-500 rounded-full border-2 border-white ring-4 ring-purple-50"></span>
+                <p class="text-xs font-bold text-slate-800">Dispatched</p>
+                <p class="text-[10px] font-semibold text-slate-500 mt-0.5">${order.courier_company || 'Assigned Courier'}</p>
+            </div>
+        `;
+    }
+    
+    if (s === 'DELIVERED' || s === 'COMPLETED') {
+        html += `
+            <div class="relative">
+                <span class="absolute -left-[21px] top-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white ring-4 ring-green-50"></span>
+                <p class="text-xs font-bold text-slate-800">Delivered</p>
+                <p class="text-[10px] font-semibold text-slate-500 mt-0.5">Successfully handed over to buyer</p>
+            </div>
+        `;
+    }
+    
+    if (s === 'CANCELLED') {
+        html += `
+            <div class="relative">
+                <span class="absolute -left-[21px] top-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white ring-4 ring-red-50"></span>
+                <p class="text-xs font-bold text-slate-800">Cancelled / Rejected</p>
+                <p class="text-[10px] font-semibold text-slate-500 mt-0.5">Order was cancelled.</p>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
 </script>

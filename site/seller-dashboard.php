@@ -40,11 +40,11 @@ $total_orders = $earningData['total_orders'] ?? 0;
 $total_earned = $earningData['total_earned'] ?? 0.00;
 
 // 3. Pending & Locked Payouts (From Wallet)
-$pendingStmt = $pdo->prepare("SELECT pending_balance, locked_balance FROM seller_wallets WHERE seller_id = ?");
+$pendingStmt = $pdo->prepare("SELECT available_balance, return_window_hold, pending_withdrawal FROM seller_balances WHERE seller_id = ?");
 $pendingStmt->execute([$_SESSION['userid']]);
 $walletData = $pendingStmt->fetch(PDO::FETCH_ASSOC);
-$pending_balance = $walletData['pending_balance'] ?? 0.00;
-$locked_balance = $walletData['locked_balance'] ?? 0.00;
+$pending_balance = $walletData['available_balance'] ?? 0.00;
+$locked_balance = ($walletData['return_window_hold'] ?? 0.00) + ($walletData['pending_withdrawal'] ?? 0.00);
 
 // 4. Low Stock Alert
 $stockStmt = $pdo->prepare("SELECT COUNT(*) FROM products WHERE seller_id = ? AND total_qty < 5");
@@ -108,10 +108,10 @@ $joined_date = $joinStmt->fetchColumn();
 
         <div class="flex flex-col lg:flex-row gap-8">
             <!-- Sidebar Navigation -->
-            <div id="mobileMenu" class="fixed inset-0 z-50 hidden lg:static lg:block lg:w-64 shrink-0">
+            <div id="mobileMenu" class="fixed inset-0 z-40 hidden lg:static lg:block lg:w-64 shrink-0">
                 <div class="absolute inset-0 bg-black/50 lg:hidden" onclick="document.getElementById('mobileMenu').classList.add('hidden')"></div>
                 
-                <div class="absolute top-0 left-0 w-[80%] max-w-[300px] h-full bg-white shadow-2xl lg:w-full lg:static lg:h-auto lg:shadow-none lg:bg-transparent overflow-y-auto lg:overflow-visible">
+                <div class="absolute top-0 left-0 w-[80%] max-w-[300px] h-full bg-white shadow-2xl lg:w-full lg:static lg:h-auto lg:shadow-none lg:bg-transparent overflow-y-auto lg:overflow-visible pt-[100px] lg:pt-0">
                     
                     <!-- Mobile Close Header -->
                     <div class="p-4 border-b border-gray-100 flex justify-between items-center lg:hidden">

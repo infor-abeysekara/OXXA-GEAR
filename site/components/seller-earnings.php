@@ -1,16 +1,29 @@
 <?php
 // Fetch wallet info
-$walletStmt = $pdo->prepare("SELECT * FROM seller_wallets WHERE seller_id = ?");
+$walletStmt = $pdo->prepare("SELECT * FROM seller_balances WHERE seller_id = ?");
 $walletStmt->execute([$_SESSION['userid']]);
 $wallet = $walletStmt->fetch(PDO::FETCH_ASSOC);
 
-$pending_balance = $wallet['pending_balance'] ?? 0;
-$locked_balance = $wallet['locked_balance'] ?? 0;
-$paid_balance = $wallet['paid_balance'] ?? 0;
+// If no balance record exists yet, create one
+if (!$wallet) {
+    $insertWallet = $pdo->prepare("INSERT INTO seller_balances (seller_id) VALUES (?)");
+    $insertWallet->execute([$_SESSION['userid']]);
+    $wallet = [
+        'available_balance' => 0.00,
+        'return_window_hold' => 0.00,
+        'pending_withdrawal' => 0.00,
+        'total_withdrawn' => 0.00,
+        'total_earnings' => 0.00
+    ];
+}
+
+$available_balance = $wallet['available_balance'] ?? 0;
+$locked_processing_balance = ($wallet['return_window_hold'] ?? 0) + ($wallet['pending_withdrawal'] ?? 0);
+$total_paid_out = $wallet['total_withdrawn'] ?? 0;
 $total_earnings = $wallet['total_earnings'] ?? 0;
 
 // Check if any pending withdrawal exists
-$checkReqStmt = $pdo->prepare("SELECT id FROM withdrawal_requests WHERE seller_id = ? AND status = 'Pending'");
+$checkReqStmt = $pdo->prepare("SELECT id FROM withdrawals WHERE seller_id = ? AND status IN ('PENDING', 'PROCESSING')");
 $checkReqStmt->execute([$_SESSION['userid']]);
 $has_pending_request = $checkReqStmt->fetchColumn() ? true : false;
 
@@ -23,7 +36,7 @@ $status = $_GET['status'] ?? 'all';
 $sort = $_GET['sort'] ?? 'id';
 $dir = $_GET['dir'] ?? 'DESC';
 
-$allowed_sorts = ['amount', 'created_at', 'status', 'id'];
+$allowed_sorts = ['amount', 'requested_at', 'status', 'id'];
 $allowed_dirs = ['ASC', 'DESC'];
 
 if (!in_array($sort, $allowed_sorts)) $sort = 'id';
@@ -35,17 +48,17 @@ $where = "WHERE seller_id = ?";
 
 if ($status !== 'all') {
     $where .= " AND status = ?";
-    $params[] = ucfirst($status);
+    $params[] = strtoupper($status);
 }
 
 // Count total
-$countQuery = $pdo->prepare("SELECT COUNT(*) FROM withdrawal_requests $where");
+$countQuery = $pdo->prepare("SELECT COUNT(*) FROM withdrawals $where");
 $countQuery->execute($params);
 $total_requests = $countQuery->fetchColumn();
 $total_pages = ceil($total_requests / $limit);
 
 // Fetch requests
-$sql = "SELECT * FROM withdrawal_requests $where ORDER BY $sort $dir LIMIT ? OFFSET ?";
+$sql = "SELECT * FROM withdrawals $where ORDER BY $sort $dir LIMIT ? OFFSET ?";
 $reqQuery = $pdo->prepare($sql);
 $paramIndex = 1;
 foreach ($params as $param) {
@@ -86,21 +99,21 @@ if (!function_exists('sortLink')) {
             <div class="bg-[#0066FF] rounded-2xl p-6 text-white shadow-lg shadow-blue-500/30 relative overflow-hidden">
                 <div class="absolute -right-4 -top-4 w-24 h-24 bg-white opacity-10 rounded-full"></div>
                 <p class="text-xs font-bold text-blue-100 uppercase tracking-wide">Available to Withdraw</p>
-                <p class="text-3xl font-black mt-2">Rs. <?= number_format($pending_balance, 2) ?></p>
+                <p class="text-3xl font-black mt-2">Rs. <?= number_format($available_balance, 2) ?></p>
                 <p class="text-xs text-blue-200 mt-2"><i class="fas fa-info-circle me-1"></i> Minimum withdrawal Rs. 2,500</p>
             </div>
             
             <div class="bg-white border border-yellow-200 rounded-2xl p-6 relative overflow-hidden">
                 <div class="absolute right-0 top-0 w-16 h-16 bg-yellow-50 rounded-bl-3xl flex items-center justify-center text-yellow-500 text-xl"><i class="fas fa-lock"></i></div>
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Locked (Processing)</p>
-                <p class="text-2xl font-black text-yellow-600 mt-2">Rs. <?= number_format($locked_balance, 2) ?></p>
-                <p class="text-xs text-gray-400 mt-2">Requested & waiting for transfer</p>
+                <p class="text-2xl font-black text-yellow-600 mt-2">Rs. <?= number_format($locked_processing_balance, 2) ?></p>
+                <p class="text-xs text-gray-400 mt-2">Requested & waiting for transfer / Return Window</p>
             </div>
             
             <div class="bg-white border border-green-200 rounded-2xl p-6 relative overflow-hidden">
                 <div class="absolute right-0 top-0 w-16 h-16 bg-green-50 rounded-bl-3xl flex items-center justify-center text-green-500 text-xl"><i class="fas fa-check-circle"></i></div>
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Paid Out</p>
-                <p class="text-2xl font-black text-green-600 mt-2">Rs. <?= number_format($paid_balance, 2) ?></p>
+                <p class="text-2xl font-black text-green-600 mt-2">Rs. <?= number_format($total_paid_out, 2) ?></p>
                 <p class="text-xs text-gray-400 mt-2">Lifetime earnings transferred</p>
             </div>
         </div>
@@ -115,7 +128,7 @@ if (!function_exists('sortLink')) {
                 <button disabled class="bg-gray-300 text-gray-500 px-6 py-3 rounded-xl font-bold uppercase tracking-wide cursor-not-allowed">
                     <i class="fas fa-clock me-2"></i> Request Pending
                 </button>
-            <?php elseif ($pending_balance < 2500): ?>
+            <?php elseif ($available_balance < 2500): ?>
                 <button disabled class="bg-blue-100 text-[#0066FF] px-6 py-3 rounded-xl font-bold uppercase tracking-wide cursor-not-allowed opacity-70">
                     <i class="fas fa-lock me-2"></i> Min Rs. 2,500 Needed
                 </button>
@@ -140,17 +153,17 @@ if (!function_exists('sortLink')) {
                     <option value="all" <?= $status === 'all' ? 'selected' : '' ?>>All Statuses</option>
                     <option value="pending" <?= $status === 'pending' ? 'selected' : '' ?>>Pending</option>
                     <option value="approved" <?= $status === 'approved' ? 'selected' : '' ?>>Approved</option>
-                    <option value="paid" <?= $status === 'paid' ? 'selected' : '' ?>>Paid</option>
+                    <option value="completed" <?= $status === 'completed' ? 'selected' : '' ?>>Paid (Completed)</option>
                     <option value="rejected" <?= $status === 'rejected' ? 'selected' : '' ?>>Rejected</option>
                 </select>
             </form>
 
             <!-- Export Buttons -->
             <div class="flex gap-2 border-l border-gray-200 pl-4 ml-2">
-                <button type="button" onclick="openExportModal('withdrawals', 'Withdrawals', 'csv', [{value: 'pending', label: 'Pending'}, {value: 'approved', label: 'Approved'}, {value: 'paid', label: 'Paid'}, {value: 'rejected', label: 'Rejected'}])" class="h-10 px-4 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl text-sm font-bold text-gray-700 transition-colors flex items-center gap-2">
+                <button type="button" onclick="openExportModal('withdrawals', 'Withdrawals', 'csv', [{value: 'pending', label: 'Pending'}, {value: 'approved', label: 'Approved'}, {value: 'completed', label: 'Paid'}, {value: 'rejected', label: 'Rejected'}])" class="h-10 px-4 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl text-sm font-bold text-gray-700 transition-colors flex items-center gap-2">
                     <i class="fas fa-file-csv text-gray-400"></i> Export CSV
                 </button>
-                <button type="button" onclick="openExportModal('withdrawals', 'Withdrawals', 'pdf', [{value: 'pending', label: 'Pending'}, {value: 'approved', label: 'Approved'}, {value: 'paid', label: 'Paid'}, {value: 'rejected', label: 'Rejected'}])" class="h-10 px-4 bg-black text-white hover:bg-gray-800 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-lg shadow-black/10">
+                <button type="button" onclick="openExportModal('withdrawals', 'Withdrawals', 'pdf', [{value: 'pending', label: 'Pending'}, {value: 'approved', label: 'Approved'}, {value: 'completed', label: 'Paid'}, {value: 'rejected', label: 'Rejected'}])" class="h-10 px-4 bg-black text-white hover:bg-gray-800 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 shadow-lg shadow-black/10">
                     <i class="fas fa-file-pdf text-red-400"></i> Export PDF
                 </button>
             </div>
@@ -181,33 +194,33 @@ if (!function_exists('sortLink')) {
                 <?php if (count($requests) > 0): foreach ($requests as $req): ?>
                 <tr class="hover:bg-[#F8FAFC] transition-colors">
                     <td class="p-4 border-t border-[#F1F5F9]">
-                        <p class="font-bold text-navy"><?= date('M d, Y', strtotime($req['created_at'])) ?></p>
-                        <p class="text-[11px] text-gray-400 font-bold tracking-wide"><?= date('h:i A', strtotime($req['created_at'])) ?></p>
+                        <p class="font-bold text-navy"><?= date('M d, Y', strtotime($req['requested_at'])) ?></p>
+                        <p class="text-[11px] text-gray-400 font-bold tracking-wide"><?= date('h:i A', strtotime($req['requested_at'])) ?></p>
                     </td>
                     <td class="p-4 border-t border-[#F1F5F9] font-black text-[#0066FF] text-lg">
                         Rs. <?= number_format($req['amount'], 2) ?>
                     </td>
                     <td class="p-4 border-t border-[#F1F5F9]">
                         <p class="font-bold text-gray-700"><?= htmlspecialchars($req['bank_name']) ?></p>
-                        <p class="text-[11px] text-gray-500 font-bold tracking-wide"><?= htmlspecialchars($req['account_number']) ?></p>
+                        <p class="text-[11px] text-gray-500 font-bold tracking-wide"><?= htmlspecialchars($req['bank_account_no_masked']) ?></p>
                     </td>
                     <td class="p-4 border-t border-[#F1F5F9] text-center">
-                        <?php if ($req['status'] == 'Pending'): ?>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 uppercase tracking-wide"><i class="fas fa-clock me-1"></i> Pending</span>
-                        <?php elseif ($req['status'] == 'Approved'): ?>
+                        <?php if ($req['status'] == 'PENDING' || $req['status'] == 'PROCESSING'): ?>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 uppercase tracking-wide"><i class="fas fa-clock me-1"></i> <?= htmlspecialchars($req['status']) ?></span>
+                        <?php elseif ($req['status'] == 'APPROVED'): ?>
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-[#0066FF] uppercase tracking-wide"><i class="fas fa-thumbs-up me-1"></i> Approved</span>
-                        <?php elseif ($req['status'] == 'Paid'): ?>
+                        <?php elseif ($req['status'] == 'COMPLETED'): ?>
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 uppercase tracking-wide"><i class="fas fa-check-circle me-1"></i> Paid</span>
-                        <?php elseif ($req['status'] == 'Rejected'): ?>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 uppercase tracking-wide"><i class="fas fa-times-circle me-1"></i> Rejected</span>
+                        <?php elseif ($req['status'] == 'REJECTED' || $req['status'] == 'FAILED'): ?>
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 uppercase tracking-wide"><i class="fas fa-times-circle me-1"></i> <?= htmlspecialchars($req['status']) ?></span>
                         <?php endif; ?>
                     </td>
                     <td class="p-4 border-t border-[#F1F5F9]">
-                        <?php if ($req['status'] == 'Paid'): ?>
-                            <p class="text-xs text-green-600 font-bold uppercase tracking-wide">Ref: <?= htmlspecialchars($req['reference_no']) ?></p>
-                            <p class="text-[11px] text-gray-400 font-bold mt-0.5"><?= date('M d, Y', strtotime($req['paid_at'])) ?></p>
-                        <?php elseif ($req['status'] == 'Rejected'): ?>
-                            <p class="text-xs text-red-500 font-bold">Reason: <?= htmlspecialchars($req['reject_reason']) ?></p>
+                        <?php if ($req['status'] == 'COMPLETED'): ?>
+                            <p class="text-xs text-green-600 font-bold uppercase tracking-wide">Ref: <?= htmlspecialchars($req['withdrawal_code']) ?></p>
+                            <p class="text-[11px] text-gray-400 font-bold mt-0.5"><?= date('M d, Y', strtotime($req['completed_at'])) ?></p>
+                        <?php elseif ($req['status'] == 'REJECTED' || $req['status'] == 'FAILED'): ?>
+                            <p class="text-xs text-red-500 font-bold">Reason: <?= htmlspecialchars($req['rejection_reason']) ?></p>
                         <?php else: ?>
                             <p class="text-xs text-gray-400">-</p>
                         <?php endif; ?>
@@ -216,7 +229,7 @@ if (!function_exists('sortLink')) {
                 <?php endforeach; else: ?>
                 <tr>
                     <td colspan="5" class="p-12 text-center">
-                        <img src="../image/empty-wallet.svg" onerror="this.src='https://illustrations.popsy.co/gray/crashed-error.svg'" class="w-48 h-48 mx-auto mb-4 opacity-50">
+                        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400 text-4xl"><i class="fas fa-wallet"></i></div>
                         <h3 class="text-lg font-black text-navy mb-1">No Withdrawals Yet</h3>
                         <p class="text-gray-500">You haven't requested any payouts matching this criteria.</p>
                     </td>
@@ -233,35 +246,35 @@ if (!function_exists('sortLink')) {
             <div class="flex justify-between items-start">
                 <div>
                     <p class="font-black text-[#0066FF] text-xl">Rs. <?= number_format($req['amount'], 2) ?></p>
-                    <p class="text-xs text-gray-500 font-bold mt-1"><?= date('M d, Y h:i A', strtotime($req['created_at'])) ?></p>
+                    <p class="text-xs text-gray-500 font-bold mt-1"><?= date('M d, Y h:i A', strtotime($req['requested_at'])) ?></p>
                 </div>
                 <div>
-                    <?php if ($req['status'] == 'Pending'): ?>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-yellow-100 text-yellow-800 uppercase tracking-wide">Pending</span>
-                    <?php elseif ($req['status'] == 'Approved'): ?>
+                    <?php if ($req['status'] == 'PENDING' || $req['status'] == 'PROCESSING'): ?>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-yellow-100 text-yellow-800 uppercase tracking-wide"><?= htmlspecialchars($req['status']) ?></span>
+                    <?php elseif ($req['status'] == 'APPROVED'): ?>
                         <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-[#0066FF] uppercase tracking-wide">Approved</span>
-                    <?php elseif ($req['status'] == 'Paid'): ?>
+                    <?php elseif ($req['status'] == 'COMPLETED'): ?>
                         <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-green-100 text-green-800 uppercase tracking-wide">Paid</span>
-                    <?php elseif ($req['status'] == 'Rejected'): ?>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-100 text-red-800 uppercase tracking-wide">Rejected</span>
+                    <?php elseif ($req['status'] == 'REJECTED' || $req['status'] == 'FAILED'): ?>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-100 text-red-800 uppercase tracking-wide"><?= htmlspecialchars($req['status']) ?></span>
                     <?php endif; ?>
                 </div>
             </div>
             
             <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
                 <p class="font-bold text-gray-700 text-sm"><?= htmlspecialchars($req['bank_name']) ?></p>
-                <p class="text-[11px] text-gray-500 font-bold"><?= htmlspecialchars($req['account_number']) ?></p>
+                <p class="text-[11px] text-gray-500 font-bold"><?= htmlspecialchars($req['bank_account_no_masked']) ?></p>
             </div>
             
-            <?php if ($req['status'] == 'Paid'): ?>
-                <p class="text-[11px] text-green-600 font-bold uppercase">Ref: <?= htmlspecialchars($req['reference_no']) ?></p>
-            <?php elseif ($req['status'] == 'Rejected'): ?>
-                <p class="text-[11px] text-red-500 font-bold">Reason: <?= htmlspecialchars($req['reject_reason']) ?></p>
+            <?php if ($req['status'] == 'COMPLETED'): ?>
+                <p class="text-[11px] text-green-600 font-bold uppercase">Ref: <?= htmlspecialchars($req['withdrawal_code']) ?></p>
+            <?php elseif ($req['status'] == 'REJECTED' || $req['status'] == 'FAILED'): ?>
+                <p class="text-[11px] text-red-500 font-bold">Reason: <?= htmlspecialchars($req['rejection_reason']) ?></p>
             <?php endif; ?>
         </div>
         <?php endforeach; else: ?>
         <div class="text-center p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
-            <img src="../image/empty-wallet.svg" onerror="this.src='https://illustrations.popsy.co/gray/crashed-error.svg'" class="w-32 h-32 mx-auto mb-4 opacity-50">
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400 text-2xl"><i class="fas fa-wallet"></i></div>
             <h3 class="text-lg font-black text-navy mb-1">No Withdrawals</h3>
             <p class="text-sm text-gray-500 mb-4">You haven't requested any payouts yet.</p>
         </div>

@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             FROM order_items o 
             JOIN orders ord ON o.order_id = ord.id 
             JOIN products p ON o.product_id = p.id 
-            WHERE ord.id = ? AND p.seller_id = ?
+            WHERE ord.order_code = ? AND p.seller_id = ?
             LIMIT 1
         ");
         $verifyStmt->execute([$order_id, $seller_id]);
@@ -48,22 +48,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ? "payment_status = 'REFUND_PENDING'," 
                 : "";
             
-            $updateStmt = $pdo->prepare("UPDATE orders SET status = 'CANCELLED', $payment_status_update cancellation_reason = ? WHERE id = ?");
+            $updateStmt = $pdo->prepare("UPDATE orders SET status = 'CANCELLED', $payment_status_update cancellation_reason = ? WHERE order_code = ?");
             $updateStmt->execute([$cancellation_reason, $order_id]);
             
             echo json_encode(['success' => true, 'message' => 'Order rejected successfully.']);
             
         } elseif ($new_status === 'accepted') {
-            $updateStmt = $pdo->prepare("UPDATE orders SET status = 'ACCEPTED' WHERE id = ?");
+            $updateStmt = $pdo->prepare("UPDATE orders SET status = 'ACCEPTED', payment_status = 'paid' WHERE order_code = ?");
             $updateStmt->execute([$order_id]);
             
             echo json_encode(['success' => true, 'message' => 'Order accepted successfully.']);
             
         } elseif ($new_status === 'handover_to_center') {
-            $updateStmt = $pdo->prepare("UPDATE orders SET status = 'HANDOVER_TO_CENTER' WHERE id = ?");
+            $updateStmt = $pdo->prepare("UPDATE orders SET status = 'HANDOVER_TO_CENTER' WHERE order_code = ?");
             $updateStmt->execute([$order_id]);
             
             echo json_encode(['success' => true, 'message' => 'Order marked as Handed over to Collecting Center.']);
+            
+        } elseif ($new_status === 'shipped') {
+            $tracking = $_POST['tracking_number'] ?? null;
+            $courier = $_POST['courier_company'] ?? null;
+            $updateStmt = $pdo->prepare("UPDATE orders SET status = 'SHIPPED', tracking_number = ?, courier_company = ? WHERE order_code = ?");
+            $updateStmt->execute([$tracking, $courier, $order_id]);
+            
+            echo json_encode(['success' => true, 'message' => 'Order marked as Shipped.']);
             
         } else {
             echo json_encode(['success' => false, 'message' => 'Invalid status option']);

@@ -45,6 +45,10 @@ $cartStmt = $pdo->prepare("
 $cartStmt->execute([$user_id]);
 $cartItems = $cartStmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Calculate totals
+$subtotal = 0;
+$allFreeShipping = true;
+
 // Normalize price and group by seller
 $sellerGroups = [];
 foreach ($cartItems as &$item) {
@@ -68,22 +72,19 @@ foreach ($cartItems as &$item) {
         ];
     }
     $sellerGroups[$sId]['items'][] = $item;
+    
+    // Calculate subtotal and shipping directly in this loop
+    $subtotal += ($item['price'] * $item['qty']);
+    if (empty($item['is_free_shipping'])) {
+        $allFreeShipping = false;
+    }
 }
+unset($item); // clear the reference just to be safe
 
 // If cart is empty, redirect to shop page
 if (empty($cartItems)) {
     header('Location: shop.php');
     exit;
-}
-
-// Calculate totals
-$subtotal = 0;
-$allFreeShipping = true;
-foreach ($cartItems as $item) {
-    $subtotal += ($item['price'] * $item['qty']);
-    if (empty($item['is_free_shipping'])) {
-        $allFreeShipping = false;
-    }
 }
 
 $isFreeShipping = ($allFreeShipping && count($cartItems) > 0);

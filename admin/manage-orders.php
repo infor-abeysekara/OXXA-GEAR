@@ -644,7 +644,6 @@ $filteredCount = count($orders);
                                 <th class="p-3.5 text-center whitespace-nowrap">Payment Method</th>
                                 <th class="p-3.5 text-center whitespace-nowrap">Payment Status</th>
                                 <th class="p-3.5 text-center whitespace-nowrap">Order Status</th>
-                                <th class="p-3.5 whitespace-nowrap">Courier & Tracking</th>
                                 <th class="p-3.5 text-center whitespace-nowrap">Actions</th>
                             </tr>
                         </thead>
@@ -725,25 +724,25 @@ $filteredCount = count($orders);
                                     </td>
 
                                     <!-- 5. Seller -->
-                                    <td class="p-3.5 whitespace-nowrap">
-                                        <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-50 border border-slate-200 text-[11px] font-bold text-slate-700 max-w-[140px] truncate" title="<?= htmlspecialchars($ord['seller_name']) ?>">
-                                            <i class="fas fa-store text-[10px] text-slate-400"></i>
-                                            <span class="truncate"><?= htmlspecialchars($ord['seller_name']) ?></span>
+                                    <td class="p-3.5 whitespace-normal min-w-[180px]">
+                                        <div class="inline-flex items-start gap-1.5 px-2 py-1.5 rounded-md bg-slate-50 border border-slate-200 text-[11px] font-bold text-slate-700 w-full" title="<?= htmlspecialchars($ord['seller_name']) ?>">
+                                            <i class="fas fa-store text-[10px] text-slate-400 mt-0.5 shrink-0"></i>
+                                            <span class="line-clamp-2 break-words leading-tight"><?= htmlspecialchars($ord['seller_name']) ?></span>
                                         </div>
                                     </td>
 
                                     <!-- 6. Items & Qty -->
-                                    <td class="p-3.5 whitespace-nowrap">
-                                        <div class="flex items-center gap-2">
+                                    <td class="p-3.5 whitespace-normal min-w-[250px]">
+                                        <div class="flex items-start gap-2.5">
                                             <img src="<?= htmlspecialchars($imgSrc) ?>" onerror="this.src='../image/placeholder.png'" 
-                                                 class="w-8 h-8 rounded-lg object-cover border border-slate-200 shadow-sm shrink-0">
-                                            <div class="max-w-[120px]">
-                                                <div class="font-bold text-slate-900 truncate" title="<?= htmlspecialchars($ord['primary_product_name']) ?>">
+                                                 class="w-10 h-10 rounded-lg object-cover border border-slate-200 shadow-sm shrink-0">
+                                            <div class="flex-1 min-w-0">
+                                                <div class="font-bold text-slate-900 line-clamp-2 leading-snug" title="<?= htmlspecialchars($ord['primary_product_name']) ?>">
                                                     <?= htmlspecialchars($ord['primary_product_name']) ?>
                                                 </div>
-                                                <div class="text-[10px] text-slate-400 flex items-center gap-1">
-                                                    <span class="px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-mono"><?= htmlspecialchars($ord['primary_sku']) ?></span>
-                                                    <span>• <?= $ord['item_count'] ?> item<?= $ord['item_count'] > 1 ? 's' : '' ?></span>
+                                                <div class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-1">
+                                                    <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono leading-none"><?= htmlspecialchars($ord['primary_sku']) ?></span>
+                                                    <span class="whitespace-nowrap">• <?= $ord['item_count'] ?> item<?= $ord['item_count'] > 1 ? 's' : '' ?></span>
                                                 </div>
                                             </div>
                                         </div>
@@ -841,23 +840,7 @@ $filteredCount = count($orders);
                                         <?php endif; ?>
                                     </td>
 
-                                    <!-- 11. Courier & Tracking -->
-                                    <td class="p-3.5 whitespace-nowrap" onclick="event.stopPropagation()">
-                                        <?php if (!empty($ord['tracking_number'])): ?>
-                                            <div class="flex items-center gap-1.5">
-                                                <div class="text-[11px] font-bold text-slate-800 font-mono"><?= htmlspecialchars($ord['tracking_number']) ?></div>
-                                                <button onclick="copyToClipboard('<?= htmlspecialchars($ord['tracking_number']) ?>', this)" class="text-slate-300 hover:text-slate-600 transition" title="Copy Tracking #">
-                                                    <i class="far fa-copy text-[10px]"></i>
-                                                </button>
-                                            </div>
-                                            <div class="text-[10px] text-slate-400 font-medium">via <?= htmlspecialchars($ord['courier_company'] ?: 'Koombiyo') ?></div>
-                                        <?php else: ?>
-                                            <button onclick="openQuickStatusModal(<?= $ord['id'] ?>, '<?= htmlspecialchars($ord['order_code']) ?>', '<?= $st ?>', 'Koombiyo Delivery', '')" 
-                                                    class="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold transition">
-                                                <i class="fas fa-plus text-[8px]"></i> Assign Courier
-                                            </button>
-                                        <?php endif; ?>
-                                    </td>
+
 
                                     <!-- 12. Actions -->
                                     <td class="p-3.5 text-center whitespace-nowrap" onclick="event.stopPropagation()">

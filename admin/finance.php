@@ -14,8 +14,40 @@ if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
 if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_paid'])) {
     $payout_id = intval($_POST['payout_id'] ?? 0);
     if ($payout_id > 0) {
-        $stmt = $pdo->prepare("UPDATE seller_payouts SET payout_status = 'paid' WHERE id = ?");
-        $stmt->execute([$payout_id]);
+        $pdo->beginTransaction();
+        try {
+            // Get payout details
+            $stmt = $pdo->prepare("SELECT seller_id, seller_earning, payout_status, order_item_id FROM seller_payouts WHERE id = ? FOR UPDATE");
+            $stmt->execute([$payout_id]);
+            $payout = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($payout && $payout['payout_status'] !== 'paid') {
+                // If it was 'locked', it means the funds are still in return_window_hold
+                if ($payout['payout_status'] === 'locked') {
+                    $amount = $payout['seller_earning'];
+                    $seller_id = $payout['seller_id'];
+
+                    // Move from return_window_hold to available_balance
+                    $updateWallet = $pdo->prepare("
+                        UPDATE seller_balances 
+                        SET return_window_hold = GREATEST(0, return_window_hold - ?),
+                            available_balance = available_balance + ?
+                        WHERE seller_id = ?
+                    ");
+                    $updateWallet->execute([$amount, $amount, $seller_id]);
+
+                    // Mark order_items as Settled
+                    $updateItem = $pdo->prepare("UPDATE order_items SET settlement_status = 'Settled' WHERE id = ?");
+                    $updateItem->execute([$payout['order_item_id']]);
+                }
+
+                $updatePayout = $pdo->prepare("UPDATE seller_payouts SET payout_status = 'paid' WHERE id = ?");
+                $updatePayout->execute([$payout_id]);
+            }
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+        }
     }
 }
 

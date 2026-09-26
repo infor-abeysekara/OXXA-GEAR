@@ -69,8 +69,9 @@ try {
             exit;
         }
 
-        // Calculate Subtotal
+        // Calculate Subtotal and Shipping
         $subtotal = 0;
+        $allFreeShipping = true;
         foreach ($cartItems as &$item) {
             $basePrice = (!empty($item['variant_price']) && $item['variant_price'] > 0) ? (float)$item['variant_price'] : (float)$item['base_price'];
             $isHotDeal = ($item['is_hot_deal'] == 1 && $item['hot_deal_status'] === 'approved' && 
@@ -84,15 +85,12 @@ try {
             $item['unit_price'] = $unitPrice;
             $item['total_price'] = $unitPrice * $item['quantity'];
             $subtotal += $item['total_price'];
-        }
-        
-        $allFreeShipping = true;
-        foreach ($cartItems as $item) {
+            
             if (empty($item['is_free_shipping'])) {
                 $allFreeShipping = false;
-                break;
             }
         }
+        unset($item);
         
         $isFreeShipping = ($allFreeShipping && count($cartItems) > 0);
         $deliveryFee = ($subtotal > 0 && !$isFreeShipping) ? 300.00 : 0.00;
@@ -297,6 +295,27 @@ try {
                         $seller_earning * $item['quantity'],
                         $sellerPayoutStatus
                     ]);
+
+                    // Update seller_wallets (initialize if not exists)
+                    $walletCheck = $pdo->prepare("SELECT seller_id FROM seller_wallets WHERE seller_id = ?");
+                    $walletCheck->execute([$item['seller_id']]);
+                    if (!$walletCheck->fetch()) {
+                        $pdo->prepare("INSERT INTO seller_wallets (seller_id, total_earnings, pending_balance, locked_balance, paid_balance, total_oxxa_fee) VALUES (?, 0, 0, 0, 0, 0)")->execute([$item['seller_id']]);
+                    }
+
+                    $updateWallet = $pdo->prepare("
+                        UPDATE seller_wallets 
+                        SET total_earnings = total_earnings + ?,
+                            locked_balance = locked_balance + ?,
+                            total_oxxa_fee = total_oxxa_fee + ?
+                        WHERE seller_id = ?
+                    ");
+                    $updateWallet->execute([
+                        $seller_earning * $item['quantity'],
+                        $seller_earning * $item['quantity'],
+                        $oxxa_fee * $item['quantity'],
+                        $item['seller_id']
+                    ]);
                 } catch (Exception $payoutEx) {
                     // Fail-safe if seller_payouts already tracked elsewhere
                 }
@@ -325,11 +344,9 @@ try {
                 }
             }
 
-            // 4. Empty Cart (only if not CARD/KOKO, those wait for payment success)
-            if ($paymentMethod !== 'CARD' && $paymentMethod !== 'KOKO') {
-                $emptyCartStmt = $pdo->prepare("DELETE FROM cart WHERE user_id = ?");
-                $emptyCartStmt->execute([$user_id]);
-            }
+            // 4. Empty Cart
+            $emptyCartStmt = $pdo->prepare("DELETE FROM cart WHERE user_id = ?");
+            $emptyCartStmt->execute([$user_id]);
 
             $pdo->commit();
 

@@ -16,7 +16,7 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
 $pendingStmt = $pdo->prepare("
     SELECT COUNT(id) FROM reviews 
     WHERE seller_id = ? AND status != 'hidden' 
-    AND reply_status = 'pending'
+    AND (seller_reply IS NULL OR seller_reply = '')
 ");
 $pendingStmt->execute([$seller_id]);
 $pending_replies = $pendingStmt->fetchColumn();
@@ -42,7 +42,7 @@ $params = [$seller_id];
 $where = "WHERE r.seller_id = ? AND r.status != 'hidden'";
 
 if (!empty($search)) {
-    $where .= " AND (p.pname LIKE ? OR u.first_name LIKE ? OR r.review_text LIKE ?)";
+    $where .= " AND (p.name LIKE ? OR u.first_name LIKE ? OR r.comment LIKE ?)";
     $params[] = "%$search%";
     $params[] = "%$search%";
     $params[] = "%$search%";
@@ -50,9 +50,9 @@ if (!empty($search)) {
 
 if ($status !== 'all') {
     if ($status === 'pending') {
-        $where .= " AND r.reply_status = 'pending'";
+        $where .= " AND (r.seller_reply IS NULL OR r.seller_reply = '')";
     } else if ($status === 'replied') {
-        $where .= " AND r.reply_status = 'replied'";
+        $where .= " AND r.seller_reply IS NOT NULL AND r.seller_reply != ''";
     } else if ($status === 'reported') {
         $where .= " AND r.status = 'reported'";
     }
@@ -73,7 +73,7 @@ $total_pages = ceil($total_reviews / $limit);
 // 2. Get Reviews
 $sql = "
     SELECT r.*, 
-           p.pname as product_name, (SELECT image_path FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as product_image, 
+           p.name as product_name, (SELECT image_path FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as product_image, 
            CONCAT(u.first_name, ' ', u.last_name) as customer_name
     FROM reviews r
     JOIN products p ON r.product_id = p.id
@@ -201,7 +201,9 @@ if (!function_exists('sortLink')) {
         
         <?php if(count($reviews) == 0): ?>
             <div class="p-12 text-center text-slate">
-                <img src="../image/empty-reviews.svg" onerror="this.src='https://illustrations.popsy.co/gray/crashed-error.svg'" class="w-48 h-48 mx-auto mb-4 opacity-50">
+                <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400 text-4xl">
+                    <i class="fas fa-comment-slash"></i>
+                </div>
                 <h3 class="text-lg font-black text-navy mb-1">No Reviews Found</h3>
                 <p class="text-gray-500">There are no reviews matching your criteria.</p>
             </div>
@@ -243,7 +245,7 @@ if (!function_exists('sortLink')) {
                                     <div class="absolute -top-2 left-6 text-gray-100">
                                         <i class="fas fa-quote-left text-2xl"></i>
                                     </div>
-                                    <p class="text-sm text-gray-700 relative z-10 leading-relaxed">"<?= nl2br(htmlspecialchars($r['review_text'])) ?>"</p>
+                                    <p class="text-sm text-gray-700 relative z-10 leading-relaxed">"<?= nl2br(htmlspecialchars($r['comment'])) ?>"</p>
                                 </div>
                                 
                                 <?php if($r['seller_reply']): ?>

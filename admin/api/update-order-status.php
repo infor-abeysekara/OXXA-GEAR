@@ -28,7 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $pdo->beginTransaction();
 
         // Update the order status
-        if ($status === 'delivered' || $status === 'completed') {
+        if ($status === 'delivered') {
+            $stmt = $pdo->prepare("UPDATE orders SET status = ?, tracking_number = ?, courier_company = ?, delivered_at = NOW(), return_window_ends = DATE_ADD(CURDATE(), INTERVAL 14 DAY) WHERE id = ?");
+        } else if ($status === 'completed') {
             $stmt = $pdo->prepare("UPDATE orders SET status = ?, tracking_number = ?, courier_company = ?, delivered_at = NOW() WHERE id = ?");
         } else {
             $stmt = $pdo->prepare("UPDATE orders SET status = ?, tracking_number = ?, courier_company = ? WHERE id = ?");
@@ -44,8 +46,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $buyerId = $buyer['user_id'];
             $orderCode = $buyer['order_code'];
             
-            $notifMsg = "Your order #$orderCode has been updated to " . strtoupper(str_replace('_', ' ', $status));
-            if ($status === 'shipped' && $tracking_number) {
+            $statusMsgs = [
+                'pending' => "is pending and waiting for seller acceptance.",
+                'accepted' => "has been accepted by the seller.",
+                'confirmed' => "has been confirmed and is ready to pack.",
+                'handover_to_center' => "has been handed over to the collecting center.",
+                'received_at_center' => "has been received at our sorting center.",
+                'packed' => "has been packed and is ready to ship.",
+                'shipped' => "has been shipped and is on the way.",
+                'out_for_delivery' => "is out for delivery.",
+                'delivered' => "has been delivered.",
+                'return_window' => "is in the 14-day return window.",
+                'completed' => "has been completed.",
+                'cancelled' => "has been cancelled."
+            ];
+            
+            $friendlyMsg = isset($statusMsgs[strtolower($status)]) ? $statusMsgs[strtolower($status)] : "has been updated to " . strtoupper(str_replace('_', ' ', $status));
+            $notifMsg = "Your order #$orderCode $friendlyMsg";
+            
+            if (strtolower($status) === 'shipped' && $tracking_number) {
                 $notifMsg .= " (Tracking: $tracking_number via $courier_company)";
             }
             
@@ -55,9 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // If status is delivered, process payouts for ALL pending items in this order
         if ($status === 'delivered' || $status === 'completed') {
             $itemsStmt = $pdo->prepare("
-                SELECT o.id, o.seller_earning, o.oxxa_fee, o.selling_price, o.cost_price, o.profit, p.seller_id 
+                SELECT o.id, sp.seller_earning, o.oxxa_fee, o.selling_price, o.cost_price, o.profit, p.seller_id 
                 FROM order_items o
                 JOIN products p ON o.product_id = p.id
+                LEFT JOIN seller_payouts sp ON o.id = sp.order_item_id
                 WHERE o.order_id = ? AND o.settlement_status = 'Pending'
             ");
             $itemsStmt->execute([$order_id]);
@@ -65,47 +85,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             foreach ($pendingItems as $item) {
                 $seller_id = $item['seller_id'];
+                $earning = $item['seller_earning'];
 
                 // Mark item as Locked
                 $updateItem = $pdo->prepare("UPDATE order_items SET settlement_status = 'Locked' WHERE id = ?");
                 $updateItem->execute([$item['id']]);
-
-                // Ensure seller wallet exists
-                $walletCheck = $pdo->prepare("SELECT seller_id FROM seller_wallets WHERE seller_id = ?");
-                $walletCheck->execute([$seller_id]);
-                if (!$walletCheck->fetch()) {
-                    $pdo->prepare("INSERT INTO seller_wallets (seller_id, total_earnings, pending_balance, locked_balance, paid_balance, total_oxxa_fee) VALUES (?, 0, 0, 0, 0, 0)")->execute([$seller_id]);
+                
+                // Add to seller_balances return_window_hold
+                $checkBal = $pdo->prepare("SELECT seller_id FROM seller_balances WHERE seller_id = ?");
+                $checkBal->execute([$seller_id]);
+                if (!$checkBal->fetch()) {
+                    $insBal = $pdo->prepare("INSERT INTO seller_balances (seller_id, available_balance, return_window_hold, pending_withdrawal, total_withdrawn, total_earnings) VALUES (?, 0, ?, 0, 0, ?)");
+                    $insBal->execute([$seller_id, $earning, $earning]);
+                } else {
+                    $updBal = $pdo->prepare("UPDATE seller_balances SET return_window_hold = return_window_hold + ?, total_earnings = total_earnings + ? WHERE seller_id = ?");
+                    $updBal->execute([$earning, $earning, $seller_id]);
                 }
 
-                // Update seller wallet
-                $updateWallet = $pdo->prepare("
-                    UPDATE seller_wallets 
-                    SET total_earnings = total_earnings + ?,
-                        locked_balance = locked_balance + ?,
-                        total_oxxa_fee = total_oxxa_fee + ?
-                    WHERE seller_id = ?
-                ");
-                $updateWallet->execute([$item['seller_earning'], $item['seller_earning'], $item['oxxa_fee'], $seller_id]);
-                
-                // Insert into seller_payouts ledger
-                $insertPayout = $pdo->prepare("
-                    INSERT INTO seller_payouts (
-                        seller_id, order_item_id, seller_earning, payout_status, 
-                        selling_price, cost_price, profit, admin_commission, created_at
-                    ) VALUES (?, ?, ?, 'locked', ?, ?, ?, ?, NOW())
-                ");
-                $insertPayout->execute([
-                    $seller_id, 
-                    $item['id'], 
-                    $item['seller_earning'], 
-                    $item['selling_price'], 
-                    $item['cost_price'], 
-                    $item['profit'], 
-                    $item['oxxa_fee']
-                ]);
-                
                 // Add Notification for Seller
-                addNotification($conn, $seller_id, "Order #$orderCode has been delivered! Rs." . number_format($item['seller_earning'], 2) . " has been added to your locked balance for 14 days.", 'success', 'Payouts', 'site/seller-dashboard.php?tab=earnings');
+                addNotification($conn, $seller_id, "Order #$orderCode has been delivered! The 14-day return window for this item has started.", 'success', 'Payouts', 'site/seller-dashboard.php?tab=earnings');
             }
         }
 

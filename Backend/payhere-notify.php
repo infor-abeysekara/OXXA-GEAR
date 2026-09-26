@@ -24,8 +24,8 @@ $local_md5sig = strtoupper(
 if (($local_md5sig === $md5sig) && ($status_code == 2) ) {
     // Payment is verified and successful
     
-    // Update order payment status and set order status to pending so sellers can process it
-    $stmt = $pdo->prepare("UPDATE orders SET payment_status = 'paid', status = 'pending' WHERE order_code = ?");
+    // Update order payment status and set order status to PAID so sellers can process it
+    $stmt = $pdo->prepare("UPDATE orders SET payment_status = 'paid', status = 'PAID' WHERE order_code = ?");
     $stmt->execute([$order_id]);
 
     // Update related seller payouts to 'pending' instead of 'locked'
@@ -55,6 +55,22 @@ if (($local_md5sig === $md5sig) && ($status_code == 2) ) {
                 $pdo->prepare("UPDATE color_sizes SET qty = qty - ? WHERE id = ?")->execute([$item['quantity'], $item['variant_id']]);
             }
             $pdo->prepare("UPDATE products SET total_qty = total_qty - ? WHERE id = ?")->execute([$item['quantity'], $item['product_id']]);
+        }
+        
+        // Notify sellers
+        foreach ($items as $item) {
+            $sellerQ = $pdo->prepare("SELECT seller_id FROM products WHERE id = ?");
+            $sellerQ->execute([$item['product_id']]);
+            $seller = $sellerQ->fetch(PDO::FETCH_ASSOC);
+            if ($seller) {
+                // Check if addNotification function exists, if so include it
+                if (file_exists('../include/functions.php')) {
+                    include_once('../include/functions.php');
+                    if (function_exists('addNotification')) {
+                        addNotification($pdo, $seller['seller_id'], "New Order Paid: $order_id. Please prepare the items.", 'info', 'Orders', 'site/seller-dashboard.php?tab=orders');
+                    }
+                }
+            }
         }
     }
 }

@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
         'Weight (Grams)': ['50g', '100g', '250g', '500g', '750g'],
         'Pieces / Bars': ['Single Bar', 'Pack of 3', 'Pack of 6', 'Box of 12', 'Box of 24'],
         'Servings': ['14 Servings', '30 Servings', '60 Servings', '90 Servings'],
+        'Bottles': ['1 Bottle', '2 Bottles', '4 Bottles', '6 Bottles', '12 Bottles'],
         'One Size': ['Standard']
     };
 
@@ -338,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
         '1': ['Clothing Sizes', 'One Size'], // Sports Wear
         '2': ['US Sizes', 'UK Sizes', 'EUR Sizes', 'JP Sizes (cm)', 'CN Sizes (mm)', 'CM Sizes'], // Footwear
         '3': ['Clothing Sizes', 'One Size'], // Fitness & Gym
-        '4': ['Weight (LBS)', 'Weight (KG)', 'Weight (Grams)', 'Pieces / Bars', 'Servings'], // Nutrition
+        '4': ['Weight (LBS)', 'Weight (KG)', 'Weight (Grams)', 'Pieces / Bars', 'Servings', 'Bottles'], // Nutrition
         '5': ['One Size', 'Clothing Sizes'], // Accessories
         '6': ['One Size'] // Equipment
     };

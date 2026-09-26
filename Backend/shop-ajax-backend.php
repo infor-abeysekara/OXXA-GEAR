@@ -101,6 +101,7 @@ if (empty($products)) {
     </div>
     <?php
 } else {
+    echo '<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">';
     foreach ($products as $p) {
         ?>
         <div class="group relative bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
@@ -148,6 +149,7 @@ if (empty($products)) {
         </div>
         <?php
     }
+    echo '</div>';
 }
 $html = ob_get_clean();
 

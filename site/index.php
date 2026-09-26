@@ -289,6 +289,7 @@ include(__DIR__ . '/../include/header.php');
     </section>
 
     <!-- Hot Deals Section -->
+    <?php /* ?>
     <section class="mb-16 py-12 px-4 rounded-[2rem] bg-[#F8FAFF] border border-gray-200 relative overflow-hidden shadow-sm">
         <div class="absolute inset-0 opacity-5 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
         <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary rounded-full blur-3xl opacity-10"></div>
@@ -392,6 +393,7 @@ include(__DIR__ . '/../include/header.php');
             <?php endif; ?>
         </div>
     </section>
+    <?php */ ?>
 
     <!-- Shop By Goal -->
     <section class="mb-16 py-8">

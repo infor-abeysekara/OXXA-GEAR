@@ -24,9 +24,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_SESSION['userid'])) {
     try {
         $pdo->beginTransaction();
 
+        // Get seller_id from products
+        $sellerStmt = $pdo->prepare("SELECT seller_id FROM products WHERE id = ?");
+        $sellerStmt->execute([$product_id]);
+        $seller_id = $sellerStmt->fetchColumn();
+
         // Insert review
-        $stmt = $pdo->prepare("INSERT INTO reviews (user_id, product_id, order_id, rating, title, comment, fit_feedback, is_anonymous, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')");
-        $stmt->execute([$user_id, $product_id, $order_id, $rating, $title, $comment, $fit_feedback, $is_anonymous]);
+        $stmt = $pdo->prepare("INSERT INTO reviews (user_id, product_id, seller_id, order_id, rating, title, comment, fit_feedback, is_anonymous, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')");
+        $stmt->execute([$user_id, $product_id, $seller_id, $order_id, $rating, $title, $comment, $fit_feedback, $is_anonymous]);
         $review_id = $pdo->lastInsertId();
 
         // Handle Image Uploads
@@ -55,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_SESSION['userid'])) {
         }
 
         $pdo->commit();
-        $_SESSION['success_msg'] = "Your review has been submitted and is pending approval. Thank you!";
+        $_SESSION['success_msg'] = "Your review has been submitted successfully! Thank you.";
     } catch (Exception $e) {
         $pdo->rollBack();
         $_SESSION['error_msg'] = "Failed to submit review: " . $e->getMessage();

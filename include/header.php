@@ -118,7 +118,7 @@ if (isset($_SESSION['userid'])) {
   </script>
 </head>
 
-<body class="bg-offwhite text-navy min-h-screen pb-20 lg:pb-0">
+<body class="bg-offwhite text-navy min-h-screen pb-20 lg:pb-0 overflow-x-hidden">
 
   <!-- Navigation Header -->
   <header class="fixed w-full top-0 z-50 bg-white/85 backdrop-blur-md shadow-sm border-b border-gray-100 transition-all duration-300">
@@ -186,12 +186,12 @@ if (isset($_SESSION['userid'])) {
             <span class="text-[13px] font-space font-bold uppercase tracking-[0.5px] text-black group-hover:text-primary transition-colors whitespace-nowrap">Equipment</span>
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
           </a>
-          <a href="<?php echo $base_path; ?>site/hot-deals.php" class="relative group">
+          <!-- <a href="<?php echo $base_path; ?>site/hot-deals.php" class="relative group">
             <span class="text-[13px] font-space font-bold uppercase tracking-[0.5px] text-red-600 group-hover:text-red-700 transition-colors whitespace-nowrap flex items-center gap-1">
               <i class="fas fa-fire animate-pulse"></i> Hot Deals
             </span>
             <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-red-600 transition-all duration-300 group-hover:w-full"></span>
-          </a>
+          </a> -->
           
         </nav>
         
@@ -346,15 +346,17 @@ if (isset($_SESSION['userid'])) {
       </button>
     </div>
     <div class="p-6 overflow-y-auto flex-grow flex flex-col font-space font-bold uppercase tracking-wider text-sm">
-      <a href="<?php echo $base_path; ?>site/hot-deals.php" class="flex items-center text-red-600 font-extrabold hover:text-red-700 hover:bg-red-50 transition-colors px-3 py-3 rounded-xl mb-4 border border-red-100 bg-red-50/50">
+      <!-- <a href="<?php echo $base_path; ?>site/hot-deals.php" class="flex items-center text-red-600 font-extrabold hover:text-red-700 hover:bg-red-50 transition-colors px-3 py-3 rounded-xl mb-4 border border-red-100 bg-red-50/50">
         <i class="fas fa-fire w-6 text-center me-3 text-red-500 animate-pulse"></i> Hot Deals
-      </a>
+      </a> -->
       
       <div class="text-gray-400 text-[10px] tracking-widest mb-2 px-3">Categories</div>
       <a href="<?php echo $base_path; ?>site/shop.php?category=sports-wear" class="flex items-center text-navy hover:text-[#0066FF] hover:bg-blue-50 transition-colors px-3 py-2.5 rounded-xl"><i class="fas fa-tshirt w-6 text-center me-3 text-gray-400"></i> Sports Wear</a>
       <a href="<?php echo $base_path; ?>site/shop.php?category=footwear" class="flex items-center text-navy hover:text-[#0066FF] hover:bg-blue-50 transition-colors px-3 py-2.5 rounded-xl"><i class="fas fa-shoe-prints w-6 text-center me-3 text-gray-400"></i> Footwear</a>
       <a href="<?php echo $base_path; ?>site/shop.php?category=fitness-gym" class="flex items-center text-navy hover:text-[#0066FF] hover:bg-blue-50 transition-colors px-3 py-2.5 rounded-xl"><i class="fas fa-dumbbell w-6 text-center me-3 text-gray-400"></i> Fitness & Gym</a>
       <a href="<?php echo $base_path; ?>site/shop.php?category=nutrition" class="flex items-center text-navy hover:text-[#0066FF] hover:bg-blue-50 transition-colors px-3 py-2.5 rounded-xl"><i class="fas fa-prescription-bottle-alt w-6 text-center me-3 text-gray-400"></i> Nutrition</a>
+      <a href="<?php echo $base_path; ?>site/shop.php?category=accessories" class="flex items-center text-navy hover:text-[#0066FF] hover:bg-blue-50 transition-colors px-3 py-2.5 rounded-xl"><i class="fas fa-tags w-6 text-center me-3 text-gray-400"></i> Accessories</a>
+      <a href="<?php echo $base_path; ?>site/shop.php?category=equipment" class="flex items-center text-navy hover:text-[#0066FF] hover:bg-blue-50 transition-colors px-3 py-2.5 rounded-xl"><i class="fas fa-futbol w-6 text-center me-3 text-gray-400"></i> Equipment</a>
       
       <?php if(isset($_SESSION['userid']) && $_SESSION['type'] == 'seller'): ?>
         <hr class="border-gray-100 my-4 mx-3">

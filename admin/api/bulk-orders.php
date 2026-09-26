@@ -42,6 +42,17 @@ if (empty($action) || empty($order_ids)) {
 
 $idPlaceholders = implode(',', array_fill(0, count($order_ids), '?'));
 
+function notifyBulkOrders($pdo, $order_ids, $statusMsg) {
+    global $conn;
+    $idPlaceholders = implode(',', array_fill(0, count($order_ids), '?'));
+    $notifStmt = $pdo->prepare("SELECT id, user_id, order_code FROM orders WHERE id IN ($idPlaceholders)");
+    $notifStmt->execute($order_ids);
+    $notifOrders = $notifStmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($notifOrders as $nord) {
+        addNotification($conn, $nord['user_id'], "Your order #{$nord['order_code']} $statusMsg", 'info', 'Orders', 'site/order-details.php?id=' . $nord['id']);
+    }
+}
+
 try {
     $pdo->beginTransaction();
 
@@ -49,23 +60,27 @@ try {
         case 'mark_accepted':
             $stmt = $pdo->prepare("UPDATE orders SET status = 'ACCEPTED' WHERE id IN ($idPlaceholders)");
             $stmt->execute($order_ids);
+            notifyBulkOrders($pdo, $order_ids, "has been accepted by the seller.");
             $msg = count($order_ids) . " order(s) marked as ACCEPTED";
             break;
 
         case 'mark_handover_to_center':
             $stmt = $pdo->prepare("UPDATE orders SET status = 'HANDOVER_TO_CENTER' WHERE id IN ($idPlaceholders)");
             $stmt->execute($order_ids);
+            notifyBulkOrders($pdo, $order_ids, "has been handed over to the collecting center.");
             $msg = count($order_ids) . " order(s) marked as HANDOVER_TO_CENTER";
             break;
 
         case 'mark_received_at_center':
             $stmt = $pdo->prepare("UPDATE orders SET status = 'RECEIVED_AT_CENTER' WHERE id IN ($idPlaceholders)");
             $stmt->execute($order_ids);
+            notifyBulkOrders($pdo, $order_ids, "has been received at our sorting center.");
             $msg = count($order_ids) . " order(s) marked as RECEIVED_AT_CENTER";
             break;
         case 'mark_packed':
             $stmt = $pdo->prepare("UPDATE orders SET status = 'PACKED', packed_at = NOW() WHERE id IN ($idPlaceholders)");
             $stmt->execute($order_ids);
+            notifyBulkOrders($pdo, $order_ids, "has been packed and is ready to ship.");
             $msg = count($order_ids) . " order(s) marked as PACKED (Ready to Ship)";
             break;
 
@@ -84,6 +99,8 @@ try {
                 
                 $upd = $pdo->prepare("UPDATE orders SET status = 'SHIPPED', shipped_at = NOW(), courier_company = ?, tracking_number = ? WHERE id = ?");
                 $upd->execute([$cour, $track, $ord['id']]);
+                
+                addNotification($conn, $ord['user_id'], "Your order #{$ord['order_code']} has been shipped and is on the way. (Tracking: {$track} via {$cour})", 'info', 'Orders', 'site/order-details.php?id=' . $ord['id']);
             }
             $msg = count($order_ids) . " order(s) marked as SHIPPED with courier tracking";
             break;
@@ -97,6 +114,43 @@ try {
                 WHERE id IN ($idPlaceholders)
             ");
             $stmt->execute($order_ids);
+            
+            // Lock funds and notify sellers
+            foreach ($order_ids as $oid) {
+                $itemsStmt = $pdo->prepare("
+                    SELECT o.id, p.seller_id, ord.order_code, sp.seller_earning
+                    FROM order_items o
+                    JOIN products p ON o.product_id = p.id
+                    JOIN orders ord ON o.order_id = ord.id
+                    LEFT JOIN seller_payouts sp ON o.id = sp.order_item_id
+                    WHERE o.order_id = ? AND o.settlement_status = 'Pending'
+                ");
+                $itemsStmt->execute([$oid]);
+                $pendingItems = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($pendingItems as $item) {
+                    $earning = $item['seller_earning'];
+                    $seller_id = $item['seller_id'];
+
+                    $updateItem = $pdo->prepare("UPDATE order_items SET settlement_status = 'Locked' WHERE id = ?");
+                    $updateItem->execute([$item['id']]);
+                    
+                    // Update seller_balances
+                    $checkBal = $pdo->prepare("SELECT seller_id FROM seller_balances WHERE seller_id = ?");
+                    $checkBal->execute([$seller_id]);
+                    if (!$checkBal->fetch()) {
+                        $insBal = $pdo->prepare("INSERT INTO seller_balances (seller_id, available_balance, return_window_hold, pending_withdrawal, total_withdrawn, total_earnings) VALUES (?, 0, ?, 0, 0, ?)");
+                        $insBal->execute([$seller_id, $earning, $earning]);
+                    } else {
+                        $updBal = $pdo->prepare("UPDATE seller_balances SET return_window_hold = return_window_hold + ?, total_earnings = total_earnings + ? WHERE seller_id = ?");
+                        $updBal->execute([$earning, $earning, $seller_id]);
+                    }
+
+                    addNotification($conn, $seller_id, "Order #{$item['order_code']} has been delivered! The 14-day return window for this item has started.", 'success', 'Payouts', 'site/seller-dashboard.php?tab=earnings');
+                }
+            }
+
+            notifyBulkOrders($pdo, $order_ids, "has been delivered.");
             $msg = count($order_ids) . " order(s) marked as DELIVERED (14-day Return Window started)";
             break;
 
@@ -109,12 +163,50 @@ try {
                 WHERE id IN ($idPlaceholders)
             ");
             $stmt->execute($order_ids);
+            notifyBulkOrders($pdo, $order_ids, "is in the 14-day return window.");
             $msg = count($order_ids) . " order(s) moved to RETURN_WINDOW (Active customer inspection)";
             break;
 
         case 'mark_completed':
             $stmt = $pdo->prepare("UPDATE orders SET status = 'COMPLETED', completed_at = NOW() WHERE id IN ($idPlaceholders)");
             $stmt->execute($order_ids);
+            
+            // Lock funds and notify sellers
+            foreach ($order_ids as $oid) {
+                $itemsStmt = $pdo->prepare("
+                    SELECT o.id, p.seller_id, ord.order_code, sp.seller_earning
+                    FROM order_items o
+                    JOIN products p ON o.product_id = p.id
+                    JOIN orders ord ON o.order_id = ord.id
+                    LEFT JOIN seller_payouts sp ON o.id = sp.order_item_id
+                    WHERE o.order_id = ? AND o.settlement_status = 'Pending'
+                ");
+                $itemsStmt->execute([$oid]);
+                $pendingItems = $itemsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($pendingItems as $item) {
+                    $earning = $item['seller_earning'];
+                    $seller_id = $item['seller_id'];
+
+                    $updateItem = $pdo->prepare("UPDATE order_items SET settlement_status = 'Locked' WHERE id = ?");
+                    $updateItem->execute([$item['id']]);
+
+                    // Update seller_balances
+                    $checkBal = $pdo->prepare("SELECT seller_id FROM seller_balances WHERE seller_id = ?");
+                    $checkBal->execute([$seller_id]);
+                    if (!$checkBal->fetch()) {
+                        $insBal = $pdo->prepare("INSERT INTO seller_balances (seller_id, available_balance, return_window_hold, pending_withdrawal, total_withdrawn, total_earnings) VALUES (?, 0, ?, 0, 0, ?)");
+                        $insBal->execute([$seller_id, $earning, $earning]);
+                    } else {
+                        $updBal = $pdo->prepare("UPDATE seller_balances SET return_window_hold = return_window_hold + ?, total_earnings = total_earnings + ? WHERE seller_id = ?");
+                        $updBal->execute([$earning, $earning, $seller_id]);
+                    }
+
+                    addNotification($conn, $seller_id, "Order #{$item['order_code']} has been completed! The return window is closed.", 'success', 'Payouts', 'site/seller-dashboard.php?tab=earnings');
+                }
+            }
+
+            notifyBulkOrders($pdo, $order_ids, "has been completed.");
             $msg = count($order_ids) . " order(s) marked as COMPLETED (Escrow Payouts Released)";
             break;
 
@@ -133,6 +225,7 @@ try {
         case 'cancel':
             $stmt = $pdo->prepare("UPDATE orders SET status = 'CANCELLED' WHERE id IN ($idPlaceholders)");
             $stmt->execute($order_ids);
+            notifyBulkOrders($pdo, $order_ids, "has been cancelled.");
             $msg = count($order_ids) . " order(s) marked as CANCELLED";
             break;
 

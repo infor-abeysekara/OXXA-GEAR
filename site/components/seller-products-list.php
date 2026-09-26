@@ -218,7 +218,7 @@ function sortLink($column, $label, $current_sort, $current_dir, $search, $status
                 <?php endforeach; else: ?>
                 <tr>
                     <td colspan="6" class="p-12 text-center">
-                        <img src="../image/empty-products.svg" onerror="this.src='https://illustrations.popsy.co/gray/crashed-error.svg'" class="w-48 h-48 mx-auto mb-4 opacity-50">
+                        <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400 text-4xl"><i class="fas fa-box-open"></i></div>
                         <h3 class="text-lg font-black text-navy mb-1">No Products Found</h3>
                         <p class="text-gray-500 mb-4">You haven't added any products matching this criteria yet.</p>
                         <a href="seller-add-product.php" class="bg-[#0066FF] hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-colors inline-flex items-center gap-2">
@@ -278,7 +278,7 @@ function sortLink($column, $label, $current_sort, $current_dir, $search, $status
         </div>
         <?php endforeach; else: ?>
         <div class="text-center p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
-            <img src="../image/empty-products.svg" onerror="this.src='https://illustrations.popsy.co/gray/crashed-error.svg'" class="w-32 h-32 mx-auto mb-4 opacity-50">
+            <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400 text-2xl"><i class="fas fa-box-open"></i></div>
             <h3 class="text-lg font-black text-navy mb-1">No Products</h3>
             <p class="text-sm text-gray-500 mb-4">Start selling by adding your first product.</p>
             <a href="seller-add-product.php" class="bg-[#0066FF] hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors block w-full">

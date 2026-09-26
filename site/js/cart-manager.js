@@ -641,7 +641,8 @@ const CartManager = {
             body.classList.add('hidden');
             footer.classList.add('hidden');
             emptyState.classList.remove('hidden');
-            document.getElementById('freeShippingBanner').classList.add('hidden');
+            const banner = document.getElementById('freeShippingBanner');
+            if (banner) banner.classList.add('hidden');
             return;
         }
 
